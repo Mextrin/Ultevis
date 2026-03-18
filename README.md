@@ -9,5 +9,5 @@ Raghav Khurana\
 Sachin Prabhu Ram\
 Sebastian Tryscien\
 Stanislaw Jerzy Rybak\
-Tony Qiu\
+Tony Qiu
 
