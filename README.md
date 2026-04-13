@@ -1,6 +1,6 @@
 # Airchestra
 
-Airchestra is a Windows-first C++ desktop prototype for a KTH II1305 gesture-controlled music system.
+Airchestra is a cross-platform C++ desktop prototype for a KTH II1305 gesture-controlled music system. The project is Windows-first for the II1305 team workflow, but this branch also includes macOS build presets for Apple Silicon and Intel Macs.
 
 The current repository contains the Week 1 application scaffold: CMake, vcpkg dependencies, a JUCE desktop window, a Dear ImGui UI/debug layer, OpenCV verification, and lightweight local event logging. Camera capture, MediaPipe landmarks, real audio synthesis, and MIDI output are intentionally not wired into the active app target yet.
 
@@ -14,7 +14,7 @@ The current repository contains the Week 1 application scaffold: CMake, vcpkg de
 - A debug overlay that can be toggled from the UI.
 - Structured JSONL event logging for app startup, window creation, ImGui initialization, screen changes, panel selection, button clicks, settings changes, session state changes, overlay toggles, and app shutdown.
 - JUCE as a Git submodule under `external/JUCE`.
-- vcpkg manifest dependencies for OpenCV and ImGui.
+- vcpkg manifest dependencies for OpenCV and ImGui, with platform-specific OpenCV camera backend features.
 
 ## Repository Layout
 
@@ -44,7 +44,22 @@ The current repository contains the Week 1 application scaffold: CMake, vcpkg de
 
 `src/theremin` contains earlier Week 1 theremin/audio/MIDI prototype code, but it is not currently linked into the active `Airchestra` target. The active UI/debug skeleton lives in `src/airchestra`.
 
-## Prerequisites
+## Clone
+
+Clone with the JUCE submodule:
+
+```powershell
+git clone --branch airchestra-macos-support --recurse-submodules https://github.com/Mextrin/Ultevis.git
+cd Ultevis
+```
+
+If the repository was cloned without submodules:
+
+```powershell
+git submodule update --init --recursive
+```
+
+## Windows Prerequisites
 
 Use Windows 11 with:
 
@@ -66,13 +81,34 @@ Set the vcpkg root for the current shell:
 $env:VCPKG_ROOT = "C:\Users\Tony\dev\vcpkg"
 ```
 
-If you clone this repo fresh, initialize submodules:
+## macOS Prerequisites
 
-```powershell
-git submodule update --init --recursive
+Use macOS 12 or newer with:
+
+- Xcode Command Line Tools.
+- CMake 3.25 or newer.
+- Ninja.
+- vcpkg installed locally, for example at `$HOME/dev/vcpkg`.
+- JUCE submodule initialized under `external/JUCE`.
+
+Install common tools with Homebrew if needed:
+
+```bash
+brew install cmake ninja git
 ```
 
-## Build
+Install vcpkg if needed:
+
+```bash
+mkdir -p "$HOME/dev"
+git clone https://github.com/microsoft/vcpkg.git "$HOME/dev/vcpkg"
+"$HOME/dev/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+export VCPKG_ROOT="$HOME/dev/vcpkg"
+```
+
+If you already have vcpkg somewhere else, set `VCPKG_ROOT` to that path instead.
+
+## Build On Windows
 
 From the repository root:
 
@@ -89,10 +125,62 @@ The build output goes to:
 build/windows-vcpkg-debug/
 ```
 
-## Run The App
+## Build On macOS
+
+For Apple Silicon Macs:
+
+```bash
+cd Ultevis
+export VCPKG_ROOT="$HOME/dev/vcpkg"
+cmake --preset macos-vcpkg-debug
+cmake --build --preset macos-vcpkg-debug
+```
+
+For Intel Macs:
+
+```bash
+cd Ultevis
+export VCPKG_ROOT="$HOME/dev/vcpkg"
+cmake --preset macos-vcpkg-debug-x64
+cmake --build --preset macos-vcpkg-debug-x64
+```
+
+The Apple Silicon build output goes to:
+
+```text
+build/macos-vcpkg-debug/
+```
+
+The Intel build output goes to:
+
+```text
+build/macos-vcpkg-debug-x64/
+```
+
+## Run The App On Windows
 
 ```powershell
 .\build\windows-vcpkg-debug\Airchestra.exe
+```
+
+## Run The App On macOS
+
+For Apple Silicon:
+
+```bash
+open build/macos-vcpkg-debug/Airchestra.app
+```
+
+For Intel:
+
+```bash
+open build/macos-vcpkg-debug-x64/Airchestra.app
+```
+
+If CMake places the app bundle in a generator-specific subfolder, locate it with:
+
+```bash
+find build -name "Airchestra.app" -print
 ```
 
 Expected result:
@@ -104,10 +192,16 @@ Expected result:
 
 ## Smoke Tests
 
-Run the app smoke test:
+Run the app smoke test on Windows:
 
 ```powershell
 Start-Process ".\build\windows-vcpkg-debug\Airchestra.exe" -ArgumentList "--smoke-test" -Wait
+```
+
+Run the app smoke test on macOS:
+
+```bash
+./build/macos-vcpkg-debug/Airchestra.app/Contents/MacOS/Airchestra --smoke-test
 ```
 
 Run the OpenCV smoke test:
@@ -116,10 +210,22 @@ Run the OpenCV smoke test:
 .\build\windows-vcpkg-debug\opencv_smoke.exe
 ```
 
+On macOS:
+
+```bash
+./build/macos-vcpkg-debug/opencv_smoke
+```
+
 Optional camera smoke path:
 
 ```powershell
 .\build\windows-vcpkg-debug\opencv_smoke.exe --camera
+```
+
+On macOS:
+
+```bash
+./build/macos-vcpkg-debug/opencv_smoke --camera
 ```
 
 ## Logs

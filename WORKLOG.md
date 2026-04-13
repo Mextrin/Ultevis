@@ -33,3 +33,11 @@
 - Commands: `cmake --build --preset windows-vcpkg-debug --target Airchestra`; `Start-Process ".\build\windows-vcpkg-debug\Airchestra.exe" -ArgumentList "--smoke-test" -Wait`; interactive launch/close check for `Airchestra.exe`.
 - Result: Build succeeded; smoke exited with code `0` and logged the new interaction events; interactive launch reported main window title `Airchestra` and closed cleanly.
 - Known limitations: Controls are useful UI/debug state only; they still do not initialize real camera, audio, MIDI, or MediaPipe systems.
+
+### Milestone 5 - macOS build branch
+
+- Status: Implemented and pushed from Windows; macOS runtime validation still requires a Mac.
+- Implemented: Added macOS CMake presets for Apple Silicon and Intel builds; made vcpkg OpenCV features platform-specific; added macOS bundle metadata; changed the OpenCV smoke camera backend to use AVFoundation on macOS; documented macOS clone/build/run commands in `README.md`.
+- Commands: `cmake --list-presets`; `cmake --build --preset windows-vcpkg-debug`; `Start-Process ".\build\windows-vcpkg-debug\Airchestra.exe" -ArgumentList "--smoke-test" -Wait`; `.\build\windows-vcpkg-debug\opencv_smoke.exe`.
+- Result: Windows configure/build and smoke tests still pass after the cross-platform changes.
+- Known limitations: The macOS presets were not executed locally because this work was done on Windows.

@@ -11,7 +11,18 @@
         "dshow",
         "jpeg",
         "png"
-      ]
+      ],
+      "platform": "windows"
+    },
+    {
+      "name": "opencv4",
+      "default-features": false,
+      "features": [
+        "highgui",
+        "jpeg",
+        "png"
+      ],
+      "platform": "!windows"
     },
     {
       "name": "imgui",

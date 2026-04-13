@@ -29,6 +29,15 @@ juce_add_gui_app(Airchestra
     PRODUCT_NAME "Airchestra"
 )
 
+if (APPLE)
+    set_target_properties(Airchestra
+        PROPERTIES
+            MACOSX_BUNDLE_GUI_IDENTIFIER "se.kth.ii1305.airchestra"
+            MACOSX_BUNDLE_BUNDLE_NAME "Airchestra"
+            MACOSX_BUNDLE_COPYRIGHT "KTH II1305 Airchestra"
+    )
+endif()
+
 set_target_properties(Airchestra
     PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"

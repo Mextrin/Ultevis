@@ -12,12 +12,58 @@
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
         "VCPKG_TARGET_TRIPLET": "x64-windows"
       }
+    },
+    {
+      "name": "macos-vcpkg-debug",
+      "displayName": "macOS vcpkg Debug (Apple Silicon)",
+      "description": "Clang/Ninja debug build using vcpkg on macOS arm64.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/macos-vcpkg-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_TARGET_TRIPLET": "arm64-osx",
+        "CMAKE_OSX_ARCHITECTURES": "arm64",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "12.0"
+      }
+    },
+    {
+      "name": "macos-vcpkg-debug-x64",
+      "displayName": "macOS vcpkg Debug (Intel)",
+      "description": "Clang/Ninja debug build using vcpkg on macOS x64.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/macos-vcpkg-debug-x64",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_TARGET_TRIPLET": "x64-osx",
+        "CMAKE_OSX_ARCHITECTURES": "x86_64",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "12.0"
+      }
     }
   ],
   "buildPresets": [
     {
       "name": "windows-vcpkg-debug",
       "configurePreset": "windows-vcpkg-debug"
+    },
+    {
+      "name": "macos-vcpkg-debug",
+      "configurePreset": "macos-vcpkg-debug"
+    },
+    {
+      "name": "macos-vcpkg-debug-x64",
+      "configurePreset": "macos-vcpkg-debug-x64"
     }
   ]
 }

@@ -22,8 +22,15 @@ bool hasArgument(int argc, char** argv, std::string_view expected)
 
 cv::VideoCapture openCamera()
 {
-    // Prefer Windows-native camera backends for the II1305 Windows workflow.
-    for (const int backend : { cv::CAP_MSMF, cv::CAP_DSHOW, cv::CAP_ANY })
+#if defined(_WIN32)
+    constexpr int cameraBackends[] = { cv::CAP_MSMF, cv::CAP_DSHOW, cv::CAP_ANY };
+#elif defined(__APPLE__)
+    constexpr int cameraBackends[] = { cv::CAP_AVFOUNDATION, cv::CAP_ANY };
+#else
+    constexpr int cameraBackends[] = { cv::CAP_ANY };
+#endif
+
+    for (const int backend : cameraBackends)
     {
         cv::VideoCapture camera(0, backend);
         if (camera.isOpened())
@@ -61,7 +68,7 @@ int main(int argc, char** argv)
         cv::VideoCapture camera = openCamera();
         if (!camera.isOpened())
         {
-            std::cerr << "Could not open webcam 0 with MSMF, DirectShow, or default backend." << '\n';
+            std::cerr << "Could not open webcam 0 with the preferred platform camera backend or default backend." << '\n';
             return 2;
         }
 

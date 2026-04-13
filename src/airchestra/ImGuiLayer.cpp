@@ -83,6 +83,39 @@ void applyAirchestraTheme()
     c[ImGuiCol_NavCursor]             = kAccent;
     c[ImGuiCol_ModalWindowDimBg]      = ImVec4(0.0f, 0.0f, 0.0f, 0.60f);
 }
+
+juce::File findPreferredUiFont()
+{
+#if JUCE_WINDOWS
+    const char* candidates[] =
+    {
+        "C:\\Windows\\Fonts\\segoeui.ttf",
+        "C:\\Windows\\Fonts\\arial.ttf"
+    };
+#elif JUCE_MAC
+    const char* candidates[] =
+    {
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+        "/Library/Fonts/Arial.ttf",
+        "/System/Library/Fonts/SFNS.ttf"
+    };
+#else
+    const char* candidates[] =
+    {
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+    };
+#endif
+
+    for (const auto* candidate : candidates)
+    {
+        juce::File fontFile(candidate);
+        if (fontFile.existsAsFile())
+            return fontFile;
+    }
+
+    return {};
+}
 }
 
 namespace airchestra
@@ -167,10 +200,10 @@ void ImGuiLayer::newOpenGLContextCreated()
     fontCfg.OversampleV = 2;
     fontCfg.PixelSnapH = false;
 
-    const auto segoeUi = juce::File("C:\\Windows\\Fonts\\segoeui.ttf");
-    if (segoeUi.existsAsFile())
+    const auto uiFont = findPreferredUiFont();
+    if (uiFont.existsAsFile())
     {
-        const auto fontPath = segoeUi.getFullPathName();
+        const auto fontPath = uiFont.getFullPathName();
         io.Fonts->AddFontFromFileTTF(fontPath.toRawUTF8(), 16.0f, &fontCfg);
     }
     else
