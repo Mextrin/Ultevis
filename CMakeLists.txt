@@ -9,8 +9,8 @@ add_subdirectory(JUCE)
 juce_add_console_app(Airchestra)
 
 target_sources(Airchestra PRIVATE 
-    main.cpp
-    Audio/AudioEngine.cpp
+    src/main.cpp
+    src/Audio/AudioEngine.cpp
 )
 
 target_link_libraries(Airchestra PRIVATE
