@@ -59,7 +59,7 @@ void LandingPageView::render(ViewState& state, EventLogger& logger)
         ImGui::SetCursorPosX(centerX - wrapWidth * 0.5f);
         ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + wrapWidth);
         ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
-        ImGui::TextWrapped("A KTH II1305 desktop prototype for exploring webcam hand gestures as musical control data. Camera, audio, and MIDI modules are represented as placeholders in this UI skeleton.");
+        ImGui::TextWrapped("A KTH II1305 desktop prototype for exploring hand gestures as musical control data. Start the mock x/y session to hear a sine theremin tone and send MIDI pitch bend plus CC11 expression.");
         ImGui::PopStyleColor();
         ImGui::PopTextWrapPos();
     }

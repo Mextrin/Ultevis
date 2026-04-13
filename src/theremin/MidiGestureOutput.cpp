@@ -73,7 +73,7 @@ void MidiGestureOutput::openPreferredDevice()
     {
         midiOutput.reset();
         openedDeviceName = {};
-        statusText = "No MIDI outputs available. Start loopMIDI and create a port, then relaunch or wait for retry.";
+        statusText = "No MIDI outputs available. Start loopMIDI on Windows or enable IAC Driver on macOS, then relaunch or wait for retry.";
         return;
     }
 
@@ -98,6 +98,12 @@ juce::MidiDeviceInfo MidiGestureOutput::choosePreferredDevice(const juce::Array<
     for (const auto& device : devices)
     {
         if (device.name.containsIgnoreCase("loopMIDI"))
+            return device;
+    }
+
+    for (const auto& device : devices)
+    {
+        if (device.name.containsIgnoreCase("IAC"))
             return device;
     }
 

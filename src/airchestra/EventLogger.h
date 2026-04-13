@@ -19,6 +19,7 @@ enum class AppEventType
     PanelSelected,
     SettingChanged,
     SessionStateChanged,
+    MidiStatusChanged,
     AppClosing
 };
 

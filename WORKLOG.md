@@ -41,3 +41,11 @@
 - Commands: `cmake --list-presets`; `cmake --build --preset windows-vcpkg-debug`; `Start-Process ".\build\windows-vcpkg-debug\Airchestra.exe" -ArgumentList "--smoke-test" -Wait`; `.\build\windows-vcpkg-debug\opencv_smoke.exe`.
 - Result: Windows configure/build and smoke tests still pass after the cross-platform changes.
 - Known limitations: The macOS presets were not executed locally because this work was done on Windows.
+
+### Milestone 6 - Active Airchestra theremin integration
+
+- Status: Complete on Windows; macOS compile validation still requires a Mac.
+- Implemented: Linked the reusable theremin engine files into the active `Airchestra` target; added JUCE audio/MIDI modules; made `MainComponent` own the shared hand-control state, mock input, sine audio output, and MIDI output; added live x/y, frequency, pitch bend, CC11, audio, and MIDI readouts to the ImGui Control Room and overlay; added `midi_status_changed` logging.
+- Commands: `cmake --preset windows-vcpkg-debug`; `cmake --build --preset windows-vcpkg-debug --target Airchestra`; `Start-Process ".\build\windows-vcpkg-debug\Airchestra.exe" -ArgumentList "--smoke-test" -Wait`; `.\build\windows-vcpkg-debug\opencv_smoke.exe`; interactive launch/close check for `Airchestra.exe`.
+- Result: Windows configure/build succeeded; Airchestra smoke exited successfully; OpenCV smoke exited successfully; interactive launch reported main window title `Airchestra` and closed cleanly.
+- Known limitations: Real camera/MediaPipe input is still not connected; audio audibility and external DAW MIDI reception still need a manual session check with speakers and loopMIDI/Ableton.

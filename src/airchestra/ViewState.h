@@ -93,14 +93,23 @@ struct ViewState
     bool showLogPathInOverlay = true;
     bool simulateInputPreview = true;
     bool cameraPreviewEnabled = false;
-    bool audioPlaceholderArmed = false;
-    bool midiPlaceholderArmed = false;
     bool highContrastUi = false;
+    bool handActive = false;
+    bool mockInputActive = false;
+    bool audioRunning = false;
+    bool midiOpen = false;
     float mockSensitivity = 0.65f;
+    float handX = 0.5f;
+    float handY = 0.5f;
+    float frequencyHz = 440.0f;
+    int pitchBend = 8192;
+    int expression = 0;
     AppScreen currentScreen = AppScreen::Landing;
     DetailPanel selectedPanel = DetailPanel::SystemState;
     int interactionCount = 0;
     juce::String appStatus = "Ready";
     juce::String lastInteraction = "App launched";
+    juce::String midiDeviceName = {};
+    juce::String midiStatus = "MIDI: Not initialized";
 };
 }

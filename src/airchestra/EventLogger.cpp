@@ -68,6 +68,7 @@ const char* EventLogger::toEventName(AppEventType eventType) noexcept
         case AppEventType::PanelSelected: return "panel_selected";
         case AppEventType::SettingChanged: return "setting_changed";
         case AppEventType::SessionStateChanged: return "session_state_changed";
+        case AppEventType::MidiStatusChanged: return "midi_status_changed";
         case AppEventType::AppClosing: return "app_closing";
     }
 

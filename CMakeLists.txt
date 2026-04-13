@@ -54,6 +54,9 @@ target_sources(Airchestra
         src/airchestra/OverlayView.cpp
         src/airchestra/UiActions.cpp
         src/airchestra/UiRenderer.cpp
+        src/theremin/MidiGestureOutput.cpp
+        src/theremin/MockHandInput.cpp
+        src/theremin/ThereminAudioComponent.cpp
 )
 
 target_compile_features(Airchestra PRIVATE cxx_std_20)
@@ -70,6 +73,9 @@ target_link_libraries(Airchestra
     PRIVATE
         imgui::imgui
         OpenGL::GL
+        juce::juce_audio_basics
+        juce::juce_audio_devices
+        juce::juce_audio_utils
         juce::juce_gui_extra
         juce::juce_opengl
         juce::juce_recommended_config_flags

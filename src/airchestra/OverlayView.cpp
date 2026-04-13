@@ -79,11 +79,20 @@ void OverlayView::render(ViewState& state, EventLogger& logger)
 
     ImGui::Separator();
 
+    const auto cameraStatus = state.mockInputActive ? "Mock x/y: active" : "Mock x/y: idle";
+    const auto trackingStatus = juce::String("Tracking: x ") + juce::String(state.handX, 3)
+                              + ", y " + juce::String(state.handY, 3);
+    const auto audioStatus = state.handActive ? "Audio: tone audible" : "Audio: muted";
+    const auto frequencyStatus = juce::String("Freq: ") + juce::String(state.frequencyHz, 1)
+                               + " Hz, PB: " + juce::String(state.pitchBend);
+    const auto midiStatus = state.midiOpen ? juce::String("MIDI: ") + state.midiDeviceName
+                                           : state.midiStatus;
+
     // Status sections with colored dots
-    renderStatusSection(state, logger, DetailPanel::Camera, "Camera: Not connected", "Tracking: No data");
-    renderStatusSection(state, logger, DetailPanel::Audio, "Audio: Not initialized", "MIDI: Not initialized");
+    renderStatusSection(state, logger, DetailPanel::Camera, cameraStatus, trackingStatus.toRawUTF8());
+    renderStatusSection(state, logger, DetailPanel::Audio, audioStatus, midiStatus.toRawUTF8());
     renderStatusSection(state, logger, DetailPanel::UI, "Navigation: Active", "Controls: Start / Settings / About");
-    renderStatusSection(state, logger, DetailPanel::SystemState, "Runtime: Dev skeleton", "Deps: JUCE + Dear ImGui");
+    renderStatusSection(state, logger, DetailPanel::SystemState, frequencyStatus.toRawUTF8(), "Deps: JUCE + Dear ImGui");
 
     if (!state.compactOverlay)
         renderStatusSection(state, logger, DetailPanel::InteractionLog, "Event log: Enabled", "Format: JSONL");

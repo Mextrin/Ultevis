@@ -80,8 +80,9 @@ void setSessionRunning(ViewState& state,
         return;
 
     state.sessionRunning = running;
-    state.appStatus = running ? "Session armed with mock placeholders" : "Session stopped";
+    state.appStatus = running ? "Session running: mock x/y drives audio and MIDI" : "Session stopped: audio muted";
     state.lastInteraction = running ? "Session started" : "Session stopped";
+    state.mockInputActive = running && state.simulateInputPreview;
     ++state.interactionCount;
 
     logger.log(AppEventType::SessionStateChanged,

@@ -103,7 +103,8 @@ void renderPanelDetails(airchestra::ViewState& state, airchestra::EventLogger& l
         {
             ImGui::PushStyleColor(ImGuiCol_Text, kTextSecondary);
             ImGui::BulletText("Status: Not connected");
-            ImGui::BulletText("Tracking: No data");
+            ImGui::BulletText("Mock input: %s", state.mockInputActive ? "Driving x/y" : "Idle");
+            ImGui::BulletText("Tracking data: x %.3f, y %.3f", static_cast<double>(state.handX), static_cast<double>(state.handY));
             ImGui::PopStyleColor();
             ImGui::Spacing();
 
@@ -130,24 +131,18 @@ void renderPanelDetails(airchestra::ViewState& state, airchestra::EventLogger& l
         case airchestra::DetailPanel::Audio:
         {
             ImGui::PushStyleColor(ImGuiCol_Text, kTextSecondary);
-            ImGui::BulletText("Audio: Not initialized");
-            ImGui::BulletText("MIDI: Not initialized");
+            ImGui::BulletText("Audio: %s", state.audioRunning ? "Initialized" : "Not initialized");
+            ImGui::BulletText("Tone: %s", state.handActive ? "Audible" : "Muted until Start");
+            ImGui::BulletText("Frequency: %.1f Hz", static_cast<double>(state.frequencyHz));
+            ImGui::BulletText("MIDI: %s", state.midiStatus.toRawUTF8());
+            ImGui::BulletText("Pitch bend: %d / 16383", state.pitchBend);
+            ImGui::BulletText("CC11 expression: %d / 127", state.expression);
             ImGui::PopStyleColor();
             ImGui::Spacing();
 
-            auto audioArmed = state.audioPlaceholderArmed;
-            if (ImGui::Checkbox("Arm audio placeholder", &audioArmed))
-            {
-                state.audioPlaceholderArmed = audioArmed;
-                airchestra::ui_actions::recordSettingChanged(state, logger, "audio_placeholder_armed", audioArmed ? "true" : "false");
-            }
-
-            auto midiArmed = state.midiPlaceholderArmed;
-            if (ImGui::Checkbox("Arm MIDI placeholder", &midiArmed))
-            {
-                state.midiPlaceholderArmed = midiArmed;
-                airchestra::ui_actions::recordSettingChanged(state, logger, "midi_placeholder_armed", midiArmed ? "true" : "false");
-            }
+            ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
+            ImGui::TextWrapped("MIDI is sent from a timer, not the audio callback. Start loopMIDI before launch for the preferred Windows output.");
+            ImGui::PopStyleColor();
             break;
         }
 
@@ -175,7 +170,10 @@ void renderPanelDetails(airchestra::ViewState& state, airchestra::EventLogger& l
         {
             ImGui::PushStyleColor(ImGuiCol_Text, kTextSecondary);
             ImGui::BulletText("Session: %s", state.sessionRunning ? "Running" : "Stopped");
-            ImGui::BulletText("Mock sensitivity: %.2f", static_cast<double>(state.mockSensitivity));
+            ImGui::BulletText("Mock input: %s", state.mockInputActive ? "Enabled" : "Disabled");
+            ImGui::BulletText("Hand active: %s", state.handActive ? "true" : "false");
+            ImGui::BulletText("Audio device: %s", state.audioRunning ? "Initialized" : "Not initialized");
+            ImGui::BulletText("MIDI open: %s", state.midiOpen ? "true" : "false");
             ImGui::PopStyleColor();
             ImGui::Spacing();
 
@@ -203,8 +201,8 @@ void renderPanelDetails(airchestra::ViewState& state, airchestra::EventLogger& l
                 state.compactOverlay = false;
                 state.showLogPathInOverlay = true;
                 state.cameraPreviewEnabled = false;
-                state.audioPlaceholderArmed = false;
-                state.midiPlaceholderArmed = false;
+                state.simulateInputPreview = true;
+                state.mockSensitivity = 0.65f;
                 state.selectedPanel = airchestra::DetailPanel::SystemState;
                 airchestra::ui_actions::recordButtonClick(state, logger, "reset_ui_state", "UI state reset");
             }
@@ -308,7 +306,7 @@ void renderControlRoom(airchestra::ViewState& state, airchestra::EventLogger& lo
     ImGui::PopFont();
 
     ImGui::PushStyleColor(ImGuiCol_Text, kTextSecondary);
-    ImGui::TextWrapped("Clickable Week 1 shell for Camera, Audio, UI, System State, and Interaction Log. Camera/audio/MIDI not yet initialized.");
+    ImGui::TextWrapped("Week 1 runtime: mock hand x/y drives the sine theremin and MIDI pitch bend/CC11 while the UI shows the live state.");
     ImGui::PopStyleColor();
 
     ImGui::Dummy(ImVec2(0.0f, 8.0f));
@@ -345,6 +343,22 @@ void renderControlRoom(airchestra::ViewState& state, airchestra::EventLogger& lo
     }
 
     ImGui::Dummy(ImVec2(0.0f, 8.0f));
+    ImGui::SeparatorText("Live Theremin");
+    ImGui::Dummy(ImVec2(0.0f, 4.0f));
+    ImGui::Columns(4, "LiveThereminReadout", false);
+    ImGui::Text("x: %.3f", static_cast<double>(state.handX));
+    ImGui::NextColumn();
+    ImGui::Text("y: %.3f", static_cast<double>(state.handY));
+    ImGui::NextColumn();
+    ImGui::Text("frequency: %.1f Hz", static_cast<double>(state.frequencyHz));
+    ImGui::NextColumn();
+    ImGui::Text("CC11: %d / 127", state.expression);
+    ImGui::Columns(1);
+    ImGui::Text("pitch bend: %d / 16383", state.pitchBend);
+    ImGui::SameLine();
+    ImGui::Text("| MIDI: %s", state.midiStatus.toRawUTF8());
+
+    ImGui::Dummy(ImVec2(0.0f, 8.0f));
     ImGui::SeparatorText("Panels");
     ImGui::Dummy(ImVec2(0.0f, 4.0f));
 
@@ -352,12 +366,12 @@ void renderControlRoom(airchestra::ViewState& state, airchestra::EventLogger& lo
     if (ImGui::BeginTable("Panel Cards", 5, ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_PadOuterX))
     {
         ImGui::TableNextColumn();
-        renderPanelCard("Camera", "Webcam and hand landmark placeholder.",
-            state.cameraPreviewEnabled, airchestra::DetailPanel::Camera, state, logger);
+        renderPanelCard("Camera", "Webcam later; mock x/y is live now.",
+            state.mockInputActive, airchestra::DetailPanel::Camera, state, logger);
 
         ImGui::TableNextColumn();
-        renderPanelCard("Audio", "Audio and MIDI placeholder.",
-            state.audioPlaceholderArmed || state.midiPlaceholderArmed,
+        renderPanelCard("Audio", "Sine output plus MIDI pitch bend/CC11.",
+            state.audioRunning || state.midiOpen,
             airchestra::DetailPanel::Audio, state, logger);
 
         ImGui::TableNextColumn();
@@ -393,7 +407,7 @@ void renderSettings(airchestra::ViewState& state, airchestra::EventLogger& logge
     ImGui::PopFont();
 
     ImGui::PushStyleColor(ImGuiCol_Text, kTextSecondary);
-    ImGui::TextWrapped("Local UI/debug controls. Safe to replace with real Camera/Audio/MIDI settings later.");
+    ImGui::TextWrapped("Local UI/debug controls for the Week 1 mock-control path. Real camera and instrument settings can replace these later.");
     ImGui::PopStyleColor();
 
     ImGui::Dummy(ImVec2(0.0f, 12.0f));
@@ -430,7 +444,7 @@ void renderSettings(airchestra::ViewState& state, airchestra::EventLogger& logge
     ImGui::Indent(8.0f);
 
     auto simulatePreview = state.simulateInputPreview;
-    if (ImGui::Checkbox("Enable mock input preview", &simulatePreview))
+    if (ImGui::Checkbox("Enable mock x/y input", &simulatePreview))
     {
         state.simulateInputPreview = simulatePreview;
         airchestra::ui_actions::recordSettingChanged(state, logger, "simulate_input_preview", simulatePreview ? "true" : "false");
@@ -483,12 +497,13 @@ void renderAbout(airchestra::ViewState& state, airchestra::EventLogger& logger)
     ImGui::Dummy(ImVec2(0.0f, 8.0f));
 
     ImGui::PushStyleColor(ImGuiCol_Text, kTextSecondary);
-    ImGui::TextWrapped("Airchestra is a KTH II1305 gesture-controlled music prototype. This app shell focuses on the UX/debug layer: windowing, ImGui rendering, clickable placeholders, and local event logging.");
+    ImGui::TextWrapped("Airchestra is a KTH II1305 gesture-controlled music prototype. This build combines the ImGui control room with a mock x/y theremin path for sine-wave audio and MIDI output.");
     ImGui::PopStyleColor();
 
     ImGui::Dummy(ImVec2(0.0f, 8.0f));
     ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
-    ImGui::BulletText("Camera, MediaPipe, audio synthesis, and MIDI output are intentionally not initialized in this task.");
+    ImGui::BulletText("Camera and MediaPipe are still future integrations; mock hand data is active for Week 1 testing.");
+    ImGui::BulletText("Audio synthesis and MIDI output are initialized in the active Airchestra target.");
     ImGui::BulletText("Logs are stored as JSONL next to the executable.");
     ImGui::PopStyleColor();
 
