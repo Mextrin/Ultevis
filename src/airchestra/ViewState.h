@@ -6,6 +6,23 @@
 namespace airchestra
 {
 
+enum class AppScreen
+{
+    Landing,
+    Session,
+    Settings,
+    About
+};
+
+enum class DetailPanel
+{
+    Camera,
+    Audio,
+    UI,
+    SystemState,
+    InteractionLog
+};
+
 namespace theme
 {
     inline constexpr ImVec4 kBgDark        {0.063f, 0.071f, 0.086f, 1.0f};
@@ -39,22 +56,6 @@ namespace theme
         return IM_COL32(128, 128, 128, 255);
     }
 }
-enum class AppScreen
-{
-    Landing,
-    Session,
-    Settings,
-    About
-};
-
-enum class DetailPanel
-{
-    Camera,
-    Audio,
-    UI,
-    SystemState,
-    InteractionLog
-};
 
 inline const char* toDisplayName(AppScreen screen) noexcept
 {
@@ -85,7 +86,7 @@ inline const char* toDisplayName(DetailPanel panel) noexcept
 
 struct ViewState
 {
-    bool debugOverlayVisible = true;
+    bool debugOverlayVisible = false;
     bool landingPageShownLogged = false;
     bool sessionRunning = false;
     bool compactOverlay = false;

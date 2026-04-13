@@ -163,8 +163,21 @@ void ImGuiLayer::newOpenGLContextCreated()
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
     ImFontConfig fontCfg;
-    fontCfg.SizePixels = 15.0f;
-    io.Fonts->AddFontDefault(&fontCfg);
+    fontCfg.OversampleH = 3;
+    fontCfg.OversampleV = 2;
+    fontCfg.PixelSnapH = false;
+
+    const auto segoeUi = juce::File("C:\\Windows\\Fonts\\segoeui.ttf");
+    if (segoeUi.existsAsFile())
+    {
+        const auto fontPath = segoeUi.getFullPathName();
+        io.Fonts->AddFontFromFileTTF(fontPath.toRawUTF8(), 16.0f, &fontCfg);
+    }
+    else
+    {
+        fontCfg.SizePixels = 16.0f;
+        io.Fonts->AddFontDefault(&fontCfg);
+    }
 
     imguiReady = ImGui_ImplOpenGL3_Init("#version 130");
     lastFrameTimeSeconds = juce::Time::getMillisecondCounterHiRes() * 0.001;

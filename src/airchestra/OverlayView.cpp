@@ -7,8 +7,13 @@ using namespace theme;
 
 void OverlayView::render(ViewState& state, EventLogger& logger)
 {
-    ImGui::SetNextWindowPos(ImVec2(24.0f, 24.0f), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(380.0f, 480.0f), ImGuiCond_FirstUseEver);
+    const auto displaySize = ImGui::GetIO().DisplaySize;
+    constexpr float overlayWidth = 380.0f;
+    constexpr float overlayHeight = 480.0f;
+    const auto overlayX = juce::jmax(24.0f, displaySize.x - overlayWidth - 24.0f);
+
+    ImGui::SetNextWindowPos(ImVec2(overlayX, 92.0f), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(overlayWidth, overlayHeight), ImGuiCond_Always);
     ImGui::SetNextWindowBgAlpha(0.92f);
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
@@ -18,7 +23,10 @@ void OverlayView::render(ViewState& state, EventLogger& logger)
 
     auto overlayOpen = state.debugOverlayVisible;
 
-    if (!ImGui::Begin("Airchestra Debug Overlay", &overlayOpen, ImGuiWindowFlags_NoCollapse))
+    constexpr auto overlayFlags = ImGuiWindowFlags_NoCollapse
+                                | ImGuiWindowFlags_NoSavedSettings;
+
+    if (!ImGui::Begin("Airchestra Debug Overlay", &overlayOpen, overlayFlags))
     {
         ImGui::End();
         ImGui::PopStyleColor(2);

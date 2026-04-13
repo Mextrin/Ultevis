@@ -199,7 +199,7 @@ void renderPanelDetails(airchestra::ViewState& state, airchestra::EventLogger& l
             if (ImGui::Button("Reset UI State", ImVec2(160.0f, 32.0f)))
             {
                 state.sessionRunning = false;
-                state.debugOverlayVisible = true;
+                state.debugOverlayVisible = false;
                 state.compactOverlay = false;
                 state.showLogPathInOverlay = true;
                 state.cameraPreviewEnabled = false;
