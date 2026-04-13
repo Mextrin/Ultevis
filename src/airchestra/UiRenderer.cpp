@@ -267,7 +267,9 @@ void renderTopBar(airchestra::ViewState& state, airchestra::EventLogger& logger)
 
             if (ImGui::BeginTabItem(label, nullptr, flags))
             {
-                if (state.currentScreen != target)
+                const auto wasClicked = ImGui::IsItemClicked();
+
+                if (wasClicked && state.currentScreen != target)
                 {
                     airchestra::ui_actions::recordButtonClick(state, logger, label,
                         juce::String("Opening ") + airchestra::toDisplayName(target));

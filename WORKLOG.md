@@ -49,3 +49,11 @@
 - Commands: `cmake --preset windows-vcpkg-debug`; `cmake --build --preset windows-vcpkg-debug --target Airchestra`; `Start-Process ".\build\windows-vcpkg-debug\Airchestra.exe" -ArgumentList "--smoke-test" -Wait`; `.\build\windows-vcpkg-debug\opencv_smoke.exe`; interactive launch/close check for `Airchestra.exe`.
 - Result: Windows configure/build succeeded; Airchestra smoke exited successfully; OpenCV smoke exited successfully; interactive launch reported main window title `Airchestra` and closed cleanly.
 - Known limitations: Real camera/MediaPipe input is still not connected; audio audibility and external DAW MIDI reception still need a manual session check with speakers and loopMIDI/Ableton.
+
+### Milestone 7 - Control Room launch reliability
+
+- Status: Complete on Windows.
+- Implemented: Fixed the top tab navigation so the app no longer bounces back to `Home` when the Control Room opens; added `--autostart-session` so the Windows theremin prototype can launch directly into a running Control Room session; updated `README.md` with the verified Windows theremin launch path.
+- Commands: `cmake --build --preset windows-vcpkg-debug --target Airchestra`; `.\build\windows-vcpkg-debug\Airchestra.exe --autostart-session`; screenshot check of the Control Room plus log verification for `session_state_changed`.
+- Result: The app now opens to the Control Room with changing x/y/frequency values visible while the sine theremin is running; the session no longer jumps back to the landing page.
+- Known limitations: Manual speaker output and external DAW MIDI reception still depend on the local Windows audio/MIDI environment.

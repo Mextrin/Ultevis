@@ -168,6 +168,14 @@ build/macos-vcpkg-debug-x64/
 
 There is no separate theremin demo executable in the current build. The Week 1 mock theremin prototype is part of `Airchestra.exe`.
 
+For the fastest verified theremin launch path on Windows, use:
+
+```powershell
+.\build\windows-vcpkg-debug\Airchestra.exe --autostart-session
+```
+
+That opens `Airchestra` directly in the running Control Room session with the mock x/y generator enabled.
+
 ## Windows Theremin Quick Start
 
 1. Optional for DAW/MIDI testing: start loopMIDI and create a port before launching the app.
@@ -182,16 +190,22 @@ There is no separate theremin demo executable in the current build. The Week 1 m
 3. Launch the active app target:
 
    ```powershell
-   .\build\windows-vcpkg-debug\Airchestra.exe
+   .\build\windows-vcpkg-debug\Airchestra.exe --autostart-session
    ```
 
-4. In the Airchestra window, click `Start` on the landing page.
-5. The mock x/y generator will begin driving the integrated theremin:
+4. The app should open directly to `Control Room` with the session already running.
+5. The mock x/y generator should be driving the integrated theremin immediately:
    - laptop speakers should play a sine-wave tone
    - the Control Room should show changing `x`, `y`, `frequency`, `pitch bend`, and `CC11`
    - the MIDI status line should show your loopMIDI port if available, otherwise the fallback MIDI output
 6. For Ableton or a MIDI monitor, select the loopMIDI port as the MIDI input and watch for pitch bend plus CC11 expression data.
 7. Use `Settings` if you want to disable mock x/y input or change mock sensitivity.
+
+If you prefer the normal UI flow instead, launch without the flag and click `Start` on the landing page:
+
+```powershell
+.\build\windows-vcpkg-debug\Airchestra.exe
+```
 
 ## Run The App On macOS
 
@@ -216,8 +230,9 @@ find build -name "Airchestra.app" -print
 Expected result:
 
 - A desktop window titled `Airchestra` opens.
-- The landing page shows the app name, subtitle, description, Start button, Settings button, About button, and a debug overlay toggle.
-- Clicking Start opens the Control Room, enables the mock x/y input, and starts the audible sine theremin tone.
+- With `--autostart-session`, the app opens directly to the Control Room with the session running.
+- Without the flag, the landing page shows the app name, subtitle, description, Start button, Settings button, About button, and a debug overlay toggle.
+- Clicking Start from the landing page opens the Control Room, enables the mock x/y input, and starts the audible sine theremin tone.
 - The Control Room shows changing x/y, frequency, pitch bend, CC11 expression, audio state, and MIDI status.
 - If loopMIDI is available on Windows or IAC is available on macOS, the app opens that MIDI output; otherwise it reports the fallback/no-output status.
 - UI interactions write events to the local JSONL log.

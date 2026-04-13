@@ -1,10 +1,11 @@
 #include "MainComponent.h"
+#include "UiActions.h"
 
 #include "../theremin/GestureMappings.h"
 
 namespace airchestra
 {
-MainComponent::MainComponent(EventLogger& eventLogger)
+MainComponent::MainComponent(EventLogger& eventLogger, bool startSessionImmediately)
     : logger(eventLogger),
       thereminAudio(handState),
       mockInput(handState),
@@ -20,6 +21,13 @@ MainComponent::MainComponent(EventLogger& eventLogger)
 
     addAndMakeVisible(imguiLayer);
     setSize(1280, 800);
+
+    if (startSessionImmediately)
+    {
+        ui_actions::setSessionRunning(viewState, logger, true, "launch_flag");
+        ui_actions::changeScreen(viewState, logger, AppScreen::Session, "launch_flag");
+    }
+
     startTimerHz(30);
 }
 

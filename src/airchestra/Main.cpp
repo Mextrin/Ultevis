@@ -35,17 +35,21 @@ public:
 
     void initialise(const juce::String& commandLine) override
     {
-        logger.log(airchestra::AppEventType::AppStarted,
-                   { { "mode", commandLine.contains("--smoke-test") ? "smoke-test" : "interactive" } });
+        const auto isSmokeTest = commandLine.contains("--smoke-test");
+        const auto autoStartSession = commandLine.contains("--autostart-session");
 
-        if (commandLine.contains("--smoke-test"))
+        logger.log(airchestra::AppEventType::AppStarted,
+                   { { "mode", isSmokeTest ? "smoke-test" : "interactive" },
+                     { "autostart_session", autoStartSession ? "true" : "false" } });
+
+        if (isSmokeTest)
         {
             setApplicationReturnValue(runSmokeTest(logger));
             quit();
             return;
         }
 
-        mainWindow = std::make_unique<MainWindow>(getApplicationName(), logger);
+        mainWindow = std::make_unique<MainWindow>(getApplicationName(), logger, autoStartSession);
         logger.log(airchestra::AppEventType::MainWindowCreated,
                    { { "title", getApplicationName() },
                      { "size", "1280x800" } });
@@ -71,14 +75,14 @@ private:
     class MainWindow final : public juce::DocumentWindow
     {
     public:
-        MainWindow(juce::String name, airchestra::EventLogger& logger)
+        MainWindow(juce::String name, airchestra::EventLogger& logger, bool autoStartSession)
             : DocumentWindow(name,
                              juce::Desktop::getInstance().getDefaultLookAndFeel()
                                  .findColour(juce::ResizableWindow::backgroundColourId),
                              juce::DocumentWindow::allButtons)
         {
             setUsingNativeTitleBar(true);
-            setContentOwned(new airchestra::MainComponent(logger), true);
+            setContentOwned(new airchestra::MainComponent(logger, autoStartSession), true);
             setResizable(true, true);
             setResizeLimits(960, 600, 2560, 1600);
             centreWithSize(1280, 800);

@@ -18,7 +18,7 @@ class MainComponent final : public juce::Component,
                             private juce::Timer
 {
 public:
-    explicit MainComponent(EventLogger& eventLogger);
+    MainComponent(EventLogger& eventLogger, bool startSessionImmediately = false);
     ~MainComponent() override;
 
     void resized() override;
