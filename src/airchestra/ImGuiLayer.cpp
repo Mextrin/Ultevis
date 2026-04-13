@@ -132,6 +132,9 @@ ImGuiLayer::ImGuiLayer(UiRenderer& rendererToUse, EventLogger& eventLogger)
     setInterceptsMouseClicks(true, true);
 
     openGLContext.setRenderer(this);
+#if JUCE_MAC
+    openGLContext.setOpenGLVersionRequired(juce::OpenGLContext::openGL3_2);
+#endif
     openGLContext.setComponentPaintingEnabled(false);
     openGLContext.setContinuousRepainting(true);
     openGLContext.attachTo(*this);
@@ -212,7 +215,13 @@ void ImGuiLayer::newOpenGLContextCreated()
         io.Fonts->AddFontDefault(&fontCfg);
     }
 
-    imguiReady = ImGui_ImplOpenGL3_Init("#version 130");
+    imguiReady = ImGui_ImplOpenGL3_Init(
+#if JUCE_MAC
+        "#version 150"
+#else
+        "#version 130"
+#endif
+    );
     lastFrameTimeSeconds = juce::Time::getMillisecondCounterHiRes() * 0.001;
 
     logger.log(AppEventType::ImGuiInitialized,
