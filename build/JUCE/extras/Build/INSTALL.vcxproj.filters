@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\petko\Documents\GitHub\Ultevis\build\CMakeFiles\2b54f7d0cc5b5c7dfc12b1014be4703d\INSTALL_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{131EA728-95C0-35EF-96FE-70629EB85249}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

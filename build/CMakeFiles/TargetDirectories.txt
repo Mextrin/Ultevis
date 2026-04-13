@@ -1,0 +1,10 @@
+C:/Users/petko/Documents/GitHub/Ultevis/build/CMakeFiles/Airchestra.dir
+C:/Users/petko/Documents/GitHub/Ultevis/build/CMakeFiles/Airchestra_rc_lib.dir
+C:/Users/petko/Documents/GitHub/Ultevis/build/CMakeFiles/INSTALL.dir
+C:/Users/petko/Documents/GitHub/Ultevis/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/petko/Documents/GitHub/Ultevis/build/CMakeFiles/ZERO_CHECK.dir
+C:/Users/petko/Documents/GitHub/Ultevis/build/JUCE/CMakeFiles/INSTALL.dir
+C:/Users/petko/Documents/GitHub/Ultevis/build/JUCE/CMakeFiles/ALL_BUILD.dir
+C:/Users/petko/Documents/GitHub/Ultevis/build/JUCE/modules/CMakeFiles/INSTALL.dir
+C:/Users/petko/Documents/GitHub/Ultevis/build/JUCE/extras/Build/CMakeFiles/INSTALL.dir
+C:/Users/petko/Documents/GitHub/Ultevis/build/JUCE/extras/Build/juceaide/CMakeFiles/INSTALL.dir

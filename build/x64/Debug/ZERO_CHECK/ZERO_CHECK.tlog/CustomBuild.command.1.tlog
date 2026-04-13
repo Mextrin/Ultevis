@@ -1,0 +1,10 @@
+^C:\USERS\PETKO\DOCUMENTS\GITHUB\ULTEVIS\BUILD\CMAKEFILES\71D3401BF00CF7C2F25EBE8BCFF1D703\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/petko/Documents/GitHub/Ultevis -BC:/Users/petko/Documents/GitHub/Ultevis/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/petko/Documents/GitHub/Ultevis/build/Airchestra.slnx
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
