@@ -46,18 +46,227 @@ The current repository contains the Week 1 application scaffold: CMake, vcpkg de
 
 ## Clone
 
+Always use the `airchestra-macos-support` branch for the macOS flow in this repository. Do not switch to `main`.
+
 Clone with the JUCE submodule:
 
-```powershell
+```bash
 git clone --branch airchestra-macos-support --recurse-submodules https://github.com/Mextrin/Ultevis.git
 cd Ultevis
 ```
 
 If the repository was cloned without submodules:
 
-```powershell
+```bash
 git submodule update --init --recursive
 ```
+
+## Start Here On A New Mac
+
+These are the exact steps to go from a fresh macOS machine to a running Airchestra app from the `airchestra-macos-support` branch. This flow was verified on macOS Tahoe 26.3 on Apple Silicon and also includes the Intel path.
+
+### 1. Install Xcode Command Line Tools
+
+Run:
+
+```bash
+xcode-select -p >/dev/null 2>&1 || xcode-select --install
+```
+
+If macOS opens an install dialog, finish that install first, then come back to Terminal and continue.
+
+### 2. Install Homebrew If Needed
+
+Check whether Homebrew is already installed:
+
+```bash
+command -v brew
+```
+
+If that prints nothing, install Homebrew:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+Then load Homebrew into the current shell:
+
+```bash
+if [ -x /opt/homebrew/bin/brew ]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [ -x /usr/local/bin/brew ]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+fi
+```
+
+### 3. Install Build Tools
+
+Install the tools required by the macOS presets:
+
+```bash
+brew install cmake ninja pkgconf gh
+```
+
+`pkgconf` provides the `pkg-config` binary that the vcpkg/OpenCV configure step needs.
+
+### 4. Make Sure GitHub Access Works
+
+This repository may require GitHub access. If `git clone` returns a 404 or asks for credentials, sign in first:
+
+```bash
+gh auth login --web --git-protocol https
+gh auth status
+```
+
+### 5. Install vcpkg
+
+```bash
+mkdir -p "$HOME/dev"
+if [ ! -d "$HOME/dev/vcpkg/.git" ]; then
+  git clone https://github.com/microsoft/vcpkg.git "$HOME/dev/vcpkg"
+fi
+"$HOME/dev/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+export VCPKG_ROOT="$HOME/dev/vcpkg"
+```
+
+### 6. Clone This Branch
+
+```bash
+mkdir -p "$HOME/dev"
+cd "$HOME/dev"
+git clone --branch airchestra-macos-support --recurse-submodules https://github.com/Mextrin/Ultevis.git
+cd Ultevis
+```
+
+If you already have the repository locally, update it instead:
+
+```bash
+cd "$HOME/dev/Ultevis"
+git fetch origin
+git switch airchestra-macos-support
+git pull --ff-only
+git submodule update --init --recursive
+```
+
+### 7. Verify The Checkout
+
+```bash
+git status --short --branch
+git log --oneline --decorate -3
+git submodule status
+git -C external/JUCE describe --tags --always --dirty
+```
+
+You should be on `airchestra-macos-support`. For the macOS OpenGL startup fix, make sure your branch includes commit `d7d5e96` or anything newer.
+
+### 8. Verify Prerequisites
+
+```bash
+xcode-select -p
+cmake --version
+ninja --version
+git --version
+echo "$VCPKG_ROOT"
+uname -m
+```
+
+### 9. Build Airchestra
+
+Run this exact block from the repository root:
+
+```bash
+export VCPKG_ROOT="${VCPKG_ROOT:-$HOME/dev/vcpkg}"
+ARCH="$(uname -m)"
+
+if [ "$ARCH" = "arm64" ]; then
+  cmake --preset macos-vcpkg-debug
+  cmake --build --preset macos-vcpkg-debug
+else
+  cmake --preset macos-vcpkg-debug-x64
+  cmake --build --preset macos-vcpkg-debug-x64
+fi
+```
+
+Build output locations:
+
+- Apple Silicon: `build/macos-vcpkg-debug/`
+- Intel: `build/macos-vcpkg-debug-x64/`
+
+### 10. Run Smoke Tests
+
+```bash
+ARCH="$(uname -m)"
+
+if [ "$ARCH" = "arm64" ]; then
+  ./build/macos-vcpkg-debug/Airchestra.app/Contents/MacOS/Airchestra --smoke-test
+  ./build/macos-vcpkg-debug/opencv_smoke
+else
+  ./build/macos-vcpkg-debug-x64/Airchestra.app/Contents/MacOS/Airchestra --smoke-test
+  ./build/macos-vcpkg-debug-x64/opencv_smoke
+fi
+```
+
+Expected result:
+
+- `Airchestra --smoke-test` exits successfully.
+- `opencv_smoke` exits successfully and prints the OpenCV version.
+
+Optional camera check:
+
+```bash
+ARCH="$(uname -m)"
+
+if [ "$ARCH" = "arm64" ]; then
+  ./build/macos-vcpkg-debug/opencv_smoke --camera
+else
+  ./build/macos-vcpkg-debug-x64/opencv_smoke --camera
+fi
+```
+
+### 11. Launch The App
+
+```bash
+find build -name "Airchestra.app" -print
+```
+
+Then open the app bundle that matches your architecture:
+
+```bash
+ARCH="$(uname -m)"
+
+if [ "$ARCH" = "arm64" ]; then
+  open build/macos-vcpkg-debug/Airchestra.app
+else
+  open build/macos-vcpkg-debug-x64/Airchestra.app
+fi
+```
+
+Expected result:
+
+- A desktop window titled `Airchestra` opens.
+- The landing page appears.
+- `Start` opens the Control Room.
+- `Settings` and `About` are clickable.
+- The debug overlay can be shown and hidden.
+- Closing the window exits cleanly.
+
+### 12. Check The Log File
+
+```bash
+LOG_FILE="$(find build -name 'airchestra-events.jsonl' -print | head -n 1)"
+echo "$LOG_FILE"
+tail -n 20 "$LOG_FILE"
+```
+
+The log should contain startup and UI events such as `app_started`, `main_window_created`, `imgui_initialized`, `landing_page_shown`, and `screen_changed`.
+
+### macOS Troubleshooting
+
+- If `git clone` fails with a GitHub authentication error or HTTP 404, run `gh auth login --web --git-protocol https` and retry.
+- If CMake says `Could not find pkg-config`, run `brew install pkgconf`.
+- If the app aborts at launch with a GLSL or OpenGL version error such as `#version 130 is not supported`, update to commit `d7d5e96` or newer on `airchestra-macos-support`.
+- If you are not sure where the app bundle landed, run `find build -name "Airchestra.app" -print`.
+- If `VCPKG_ROOT` is empty, run `export VCPKG_ROOT="$HOME/dev/vcpkg"` before configuring.
 
 ## Windows Prerequisites
 
@@ -86,27 +295,15 @@ $env:VCPKG_ROOT = "C:\Users\Tony\dev\vcpkg"
 Use macOS 12 or newer with:
 
 - Xcode Command Line Tools.
+- Homebrew.
 - CMake 3.25 or newer.
 - Ninja.
+- `pkg-config` available on `PATH` (for example via Homebrew `pkgconf`).
 - vcpkg installed locally, for example at `$HOME/dev/vcpkg`.
+- GitHub access to `https://github.com/Mextrin/Ultevis.git` if the repository is private.
 - JUCE submodule initialized under `external/JUCE`.
 
-Install common tools with Homebrew if needed:
-
-```bash
-brew install cmake ninja git
-```
-
-Install vcpkg if needed:
-
-```bash
-mkdir -p "$HOME/dev"
-git clone https://github.com/microsoft/vcpkg.git "$HOME/dev/vcpkg"
-"$HOME/dev/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
-export VCPKG_ROOT="$HOME/dev/vcpkg"
-```
-
-If you already have vcpkg somewhere else, set `VCPKG_ROOT` to that path instead.
+For a brand-new machine, follow the exact commands in [Start Here On A New Mac](#start-here-on-a-new-mac).
 
 ## Build On Windows
 
@@ -131,7 +328,7 @@ For Apple Silicon Macs:
 
 ```bash
 cd Ultevis
-export VCPKG_ROOT="$HOME/dev/vcpkg"
+export VCPKG_ROOT="${VCPKG_ROOT:-$HOME/dev/vcpkg}"
 cmake --preset macos-vcpkg-debug
 cmake --build --preset macos-vcpkg-debug
 ```
@@ -140,7 +337,7 @@ For Intel Macs:
 
 ```bash
 cd Ultevis
-export VCPKG_ROOT="$HOME/dev/vcpkg"
+export VCPKG_ROOT="${VCPKG_ROOT:-$HOME/dev/vcpkg}"
 cmake --preset macos-vcpkg-debug-x64
 cmake --build --preset macos-vcpkg-debug-x64
 ```
@@ -204,6 +401,12 @@ Run the app smoke test on macOS:
 ./build/macos-vcpkg-debug/Airchestra.app/Contents/MacOS/Airchestra --smoke-test
 ```
 
+On Intel Macs:
+
+```bash
+./build/macos-vcpkg-debug-x64/Airchestra.app/Contents/MacOS/Airchestra --smoke-test
+```
+
 Run the OpenCV smoke test:
 
 ```powershell
@@ -214,6 +417,12 @@ On macOS:
 
 ```bash
 ./build/macos-vcpkg-debug/opencv_smoke
+```
+
+On Intel Macs:
+
+```bash
+./build/macos-vcpkg-debug-x64/opencv_smoke
 ```
 
 Optional camera smoke path:
@@ -228,12 +437,30 @@ On macOS:
 ./build/macos-vcpkg-debug/opencv_smoke --camera
 ```
 
+On Intel Macs:
+
+```bash
+./build/macos-vcpkg-debug-x64/opencv_smoke --camera
+```
+
 ## Logs
 
 Airchestra writes local event logs to:
 
 ```text
 build/windows-vcpkg-debug/logs/airchestra-events.jsonl
+```
+
+On Apple Silicon macOS builds the log file is typically here:
+
+```text
+build/macos-vcpkg-debug/Airchestra.app/Contents/MacOS/logs/airchestra-events.jsonl
+```
+
+On Intel macOS builds the log file is typically here:
+
+```text
+build/macos-vcpkg-debug-x64/Airchestra.app/Contents/MacOS/logs/airchestra-events.jsonl
 ```
 
 The format is line-delimited JSON. Example event names include:
