@@ -5,7 +5,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-set(OpenCV_DIR "/opt/homebrew/opt/opencv/lib/cmake/opencv4")
 find_package(OpenCV REQUIRED)
 add_subdirectory(JUCE)
 
