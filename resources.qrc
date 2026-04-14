@@ -1,0 +1,15 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qml/main.qml</file>
+        <file>qml/LandingPage.qml</file>
+        <file>qml/InstrumentSelectPage.qml</file>
+        <file>qml/components/FloatingNote.qml</file>
+        <file>qml/components/SineWaveCanvas.qml</file>
+        <file>qml/components/InstrumentCard.qml</file>
+        <file>assets/icons/piano.svg</file>
+        <file>assets/icons/theremin.svg</file>
+        <file>assets/icons/drums.svg</file>
+        <file>assets/icons/guitar.svg</file>
+        <file>assets/fonts/Figtree-VariableFont_wght.ttf</file>
+    </qresource>
+</RCC>
