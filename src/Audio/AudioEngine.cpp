@@ -1,3 +1,38 @@
+/*
+==============================================================================
+AUDIO ENGINE IMPLEMENTATION (Real-Time Processing & Signal Flow)
+
+This file implements the behavior defined in AudioEngine.h. It contains all
+runtime logic required to transform hand-tracking input into audio output and
+MIDI messages.
+
+SineWaveVoice Implementation:
+Defines how sound is actually generated. It initializes ADSR parameters,
+handles note start/stop events, and continuously updates pitch and volume using
+smoothed values to avoid audio artifacts. The renderNextBlock function runs on
+the audio thread and produces a sine wave sample-by-sample, applying envelope
+and volume scaling before writing to the output buffer.
+
+HeadlessAudioEngine Implementation:
+Controls the overall audio pipeline. It initializes the audio device and JUCE
+synthesiser, then processes audio in the real-time callback. During each audio
+cycle it:
+- Reads hand position and visibility from GlobalState (lock-free)
+- Triggers note-on and note-off events based on visibility changes
+- Converts hand coordinates into frequency and amplitude values
+- Pushes these values into the active voice
+- Optionally converts gesture data into MIDI messages
+- Renders the final audio buffer via the synthesiser
+
+This file executes on the real-time audio thread and must remain deterministic
+and efficient. It performs no blocking operations and avoids dynamic allocation
+during audio processing.
+
+In summary, this file contains the working logic that connects gesture input
+to continuous sound generation and output.
+==============================================================================
+*/
+
 #include "AudioEngine.h"
 
 // ==============================================================================
