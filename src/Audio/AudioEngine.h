@@ -62,6 +62,7 @@ private:
     juce::AudioDeviceManager deviceManager;
     GlobalState* globalState; 
     juce::Synthesiser synth;
+    std::unique_ptr<juce::MidiOutput> midiOut;
 
     bool wasRightVisible = false; // Prevents triggering the note 340 times a second
 };
