@@ -11,5 +11,7 @@
         <file>assets/icons/drums.svg</file>
         <file>assets/icons/guitar.svg</file>
         <file>assets/fonts/Figtree-VariableFont_wght.ttf</file>
+        <file>assets/icons/airchestra-logo.png</file>
+        <file>assets/icons/airchestra-logo@2x.png</file>
     </qresource>
 </RCC>

@@ -64,19 +64,14 @@ Item {
         anchors.centerIn: parent
         spacing: 0
 
-        // Title
-        Text {
-            text: "Airchestra"
-            font.family: figTreeVariable.name
-            font.pixelSize: 72
-            font.weight: Font.Bold
-            font.letterSpacing: 2
-            color: "#E07A26"
+        // Title logo (SVG-sourced image — swap back to Text if needed)
+        Image {
+            source: "qrc:/assets/icons/airchestra-logo@2x.png"
+            width: 420
+            fillMode: Image.PreserveAspectFit
+            smooth: true
+            mipmap: true
             anchors.horizontalCenter: parent.horizontalCenter
-
-            // Subtle glow via drop shadow effect
-            layer.enabled: true
-            layer.effect: null
         }
 
         Item { width: 1; height: 12 }
