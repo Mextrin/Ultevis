@@ -1,2 +1,4 @@
 /build/*
+/.vs/*
+/out/*
 .vscode/c_cpp_properties.json
