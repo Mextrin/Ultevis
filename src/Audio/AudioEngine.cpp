@@ -108,14 +108,29 @@ void SineWaveVoice::renderNextBlock (juce::AudioBuffer<float>& outputBuffer, int
 // ==============================================================================
 // HEADLESS AUDIO ENGINE IMPLEMENTATION
 // ==============================================================================
-HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr) : globalState(statePtr) 
+HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr) : globalState(statePtr)
 {
-
     bool midiOutSwitch = globalState->routeToMidiOut.load(); // load from globalstate
     auto midiOutputs = juce::MidiOutput::getAvailableDevices(); // gets all midi devices
     if (midiOutSwitch && midiOutputs.size() > 0) {
-        midiOut = juce::MidiOutput::openDevice(midiOutputs[0].identifier); // takes 1st device identifier
-        std::cout << "\nSUCCESS: Connected to MIDI Port -> " << midiOutputs[0].name.toStdString() << "\n\n";
+
+        std::cout << "\nAvailable MIDI output devices:\n"; 
+        for (size_t i = 0; i < midiOutputs.size(); ++i) {
+            std::cout << "[" << i << "] " << midiOutputs[i].name.toStdString() << '\n';
+        }
+
+        std::cout << "\nSelect device number (-1 to disable): ";
+        int choice = -1;
+        std::cin >> choice;
+
+        if (choice >= 0 && choice < static_cast<int>(midiOutputs.size())) {
+            midiOut = juce::MidiOutput::openDevice(midiOutputs[choice].identifier);
+            std::cout << "\nSUCCESS: Connected to MIDI Port -> " << midiOutputs[choice].name.toStdString() << "\n\n";
+        } else {
+            midiOut = nullptr;
+            std::cout << "\nMIDI Disabled" << std::endl;
+        }
+
     } else if (midiOutSwitch && (midiOutputs.size() == 0)) {
         midiOut = nullptr; // if midi route switch off, or there is no MIDI device is available, set to null
         std::cout << "\nUNSUCCESSFUL: No Midi Port" << std::endl;
@@ -124,8 +139,8 @@ HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr) : globalState(st
         std::cout << "\nMIDI Switch Off" << std::endl;
     }
 
-    synth.addVoice (new SineWaveVoice()); // Add 1 voice (Monophonic Theremin)
-    synth.addSound (new SineWaveSound());
+    synth.addVoice(new SineWaveVoice());
+    synth.addSound(new SineWaveSound());
 
     deviceManager.initialiseWithDefaultDevices(0, 2);
     deviceManager.addAudioCallback(this);

@@ -39,6 +39,22 @@ int main() {
     std::cout << "Booting JUCE Synthesiser..." << std::endl;
 
     GlobalState state;
+    
+    // only for testing, will be replaced by ui
+    char midiChoice = 'n';
+    std::cout << "Enable MIDI output? (y/n): ";
+    std::cin >> midiChoice;
+
+    if (std::cin.fail()) {
+        std::cin.clear();
+        std::cin.ignore(10000, '\n');
+        midiChoice = 'n';
+    }
+    //
+
+
+    state.routeToMidiOut.store(midiChoice == 'y' || midiChoice == 'Y');
+
     HeadlessAudioEngine audio(&state); // Soundcard turns on here!
 
     std::cout << "Simulating right hand moving left-to-right (Pitch Up)" << std::endl;
