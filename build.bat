@@ -7,6 +7,9 @@ if "%1"=="configure" (
     cd vcpkg
     /bootstrap-vcpkg.bat
     cd ..
+    vcpkg/vcpkg.exe install opencv4:x64-windows
+    vcpkg/vcpkg.exe add port opencv4
+
     cmake -B %BUILD_DIR% -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
 )
 if "%1"=="build" cmake --build %BUILD_DIR%
