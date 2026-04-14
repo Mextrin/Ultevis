@@ -109,11 +109,16 @@ void SineWaveVoice::renderNextBlock (juce::AudioBuffer<float>& outputBuffer, int
 // ==============================================================================
 HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr) : globalState(statePtr) 
 {
+
     bool midiOutSwitch = globalState->routeToMidiOut.load(); //load from globalstate
     auto midiOutputs = juce::MidiOutput::getAvailableDevices(); //gets all midi devices
-    midiOut = juce::MidiOutput::openDevice(midiOutputs[0].identifier); //takes 1st device identifier
-    if (!midiOutSwitch) {
-        midiOut = nullptr; //if midiroute switch off, set to null
+    if (midiOutSwitch && midiOutputs.size() > 0) {
+        midiOut = juce::MidiOutput::openDevice(midiOutputs[0].identifier); //takes 1st device identifier
+    } else if (midiOutSwitch && midiOutputs.size() == 0) {
+        midiOut = nullptr; //if midiroute switch off or no MIDI device is available, set to null
+        //link to UI or print no device
+    } else {
+        midiOut = nullptr;
     }
 
     synth.addVoice (new SineWaveVoice()); // Add 1 voice (Monophonic Theremin)
@@ -147,14 +152,15 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
     // 2. Trigger Logic (Start/Stop the ADSR)
     if (isRightVisible && !wasRightVisible) {
         synth.noteOn(1, 60, 1.0f); // Base note just to wake up the Voice
-        if (midiOut != nullptr) { //only send midi message if switch is on
+        if (midiOut != nullptr) {
+        //only send midi message if switch is on and a MIDI device was opened
             midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, 60, 1.0f));
         }
     } else if (!isRightVisible && wasRightVisible) {
         synth.noteOff(1, 60, 1.0f, true); 
         if (midiOut != nullptr) {
             midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, 60, 0.0f));
-        } 
+        }
     }
     wasRightVisible = isRightVisible;
 
