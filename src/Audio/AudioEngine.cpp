@@ -109,8 +109,12 @@ void SineWaveVoice::renderNextBlock (juce::AudioBuffer<float>& outputBuffer, int
 // ==============================================================================
 HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr) : globalState(statePtr) 
 {
-    auto midiOutputs = juce::MidiOutput::getAvailableDevices();
-    midiOut = juce::MidiOutput::openDevice(midiOutputs[0].identifier);
+    bool midiOutSwitch = globalState->routeToMidiOut.load(); //load from globalstate
+    auto midiOutputs = juce::MidiOutput::getAvailableDevices(); //gets all midi devices
+    midiOut = juce::MidiOutput::openDevice(midiOutputs[0].identifier); //takes 1st device identifier
+    if (!midiOutSwitch) {
+        midiOut = nullptr; //if midiroute switch off, set to null
+    }
 
     synth.addVoice (new SineWaveVoice()); // Add 1 voice (Monophonic Theremin)
     synth.addSound (new SineWaveSound());
@@ -143,10 +147,14 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
     // 2. Trigger Logic (Start/Stop the ADSR)
     if (isRightVisible && !wasRightVisible) {
         synth.noteOn(1, 60, 1.0f); // Base note just to wake up the Voice
-        midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, 60, 1.0f));
+        if (midiOut != nullptr) { //only send midi message if switch is on
+            midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, 60, 1.0f));
+        }
     } else if (!isRightVisible && wasRightVisible) {
         synth.noteOff(1, 60, 1.0f, true); 
-        midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, 60, 0.0f));
+        if (midiOut != nullptr) {
+            midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, 60, 0.0f));
+        } 
     }
     wasRightVisible = isRightVisible;
 
@@ -168,7 +176,7 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
             myVoice->updateThereminMath(targetFreq, targetVol);
         }
 
-        if (isRightVisible && midiOut != nullptr) 
+        if (midiOut != nullptr) 
         {
             // Convert 0.0-1.0 floats to 0-127 MIDI values
             int midiPitchBend = static_cast<int>(x * 16383.0f);
