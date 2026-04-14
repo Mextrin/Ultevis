@@ -4,6 +4,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+extern void startCameraFeed();
 
 int main() {
     std::cout << "Booting JUCE Synthesiser..." << std::endl;
@@ -29,6 +30,8 @@ int main() {
     // 3. Hide the hands (triggers Note Off)
     state.rightHandVisible.store(false);
     std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Let the ADSR fade out
+
+    startCameraFeed();
 
     return 0;
 }
