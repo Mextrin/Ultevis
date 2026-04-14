@@ -111,13 +111,13 @@ void SineWaveVoice::renderNextBlock (juce::AudioBuffer<float>& outputBuffer, int
 HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr) : globalState(statePtr) 
 {
 
-    bool midiOutSwitch = globalState->routeToMidiOut.load(); //load from globalstate
-    auto midiOutputs = juce::MidiOutput::getAvailableDevices(); //gets all midi devices
+    bool midiOutSwitch = globalState->routeToMidiOut.load(); // load from globalstate
+    auto midiOutputs = juce::MidiOutput::getAvailableDevices(); // gets all midi devices
     if (midiOutSwitch && midiOutputs.size() > 0) {
-        midiOut = juce::MidiOutput::openDevice(midiOutputs[0].identifier); //takes 1st device identifier
+        midiOut = juce::MidiOutput::openDevice(midiOutputs[0].identifier); // takes 1st device identifier
         std::cout << "\nSUCCESS: Connected to MIDI Port -> " << midiOutputs[0].name.toStdString() << "\n\n";
     } else if (midiOutSwitch && (midiOutputs.size() == 0)) {
-        midiOut = nullptr; //if midiroute switch off or no MIDI device is available, set to null
+        midiOut = nullptr; // if midi route switch off, or there is no MIDI device is available, set to null
         std::cout << "\nUNSUCCESSFUL: No Midi Port" << std::endl;
     } else {
         midiOut = nullptr;
@@ -148,17 +148,18 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
     juce::AudioBuffer<float> buffer (const_cast<float**> (outputChannelData), numOutputChannels, numSamples);
     buffer.clear();
 
-    // 1. Read Lock-Free State from Pod 4 (Bridge)
+    // READ HAND VISIBILITY
     bool isRightVisible = globalState->rightHandVisible.load();
     bool isLeftVisible = globalState->leftHandVisible.load();
     
-    // 2. Trigger Logic (Start/Stop the ADSR)
+    // if right visible and was not previously visible, turn note on
     if (isRightVisible && !wasRightVisible) {
-        synth.noteOn(1, 60, 1.0f); // Base note just to wake up the Voice
+        synth.noteOn(1, 60, 1.0f); //base note to wake voice up
         if (midiOut != nullptr) {
-        //only send midi message if switch is on and a MIDI device was opened
+        // only send midi message if switch is on and a MIDI device was opened
             midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, 60, 1.0f));
         }
+    // if right is not visible and was previously visible, turn note off
     } else if (!isRightVisible && wasRightVisible) {
         synth.noteOff(1, 60, 1.0f, true); 
         if (midiOut != nullptr) {
