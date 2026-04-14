@@ -2,4 +2,4 @@
 .vscode/*
 /.vs/*
 /out/*
-
+/vcpkg/*
