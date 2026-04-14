@@ -74,6 +74,9 @@ void SineWaveVoice::renderNextBlock (juce::AudioBuffer<float>& outputBuffer, int
 // ==============================================================================
 HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr) : globalState(statePtr) 
 {
+    auto midiOutputs = juce::MidiOutput::getAvailableDevices();
+    midiOut = juce::MidiOutput::openDevice(midiOutputs[0].identifier);
+
     synth.addVoice (new SineWaveVoice()); // Add 1 voice (Monophonic Theremin)
     synth.addSound (new SineWaveSound());
 
@@ -105,8 +108,10 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
     // 2. Trigger Logic (Start/Stop the ADSR)
     if (isRightVisible && !wasRightVisible) {
         synth.noteOn(1, 60, 1.0f); // Base note just to wake up the Voice
+        midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, 60, 1.0f));
     } else if (!isRightVisible && wasRightVisible) {
         synth.noteOff(1, 60, 1.0f, true); 
+        midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, 60, 0.0f));
     }
     wasRightVisible = isRightVisible;
 
@@ -126,6 +131,19 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
         // 4. Cast the Voice and push the math directly into it
         if (auto* myVoice = dynamic_cast<SineWaveVoice*>(synth.getVoice(0))) {
             myVoice->updateThereminMath(targetFreq, targetVol);
+        }
+
+        if (isRightVisible && midiOut != nullptr) 
+        {
+            // Convert 0.0-1.0 floats to 0-127 MIDI values
+            int midiPitch = static_cast<int>(x * 127.0f);
+            int midiVolume = static_cast<int>(targetVol * 127.0f);
+
+            // Send X to MIDI CC 1 (Modulation Wheel)
+            midiOut->sendMessageNow(juce::MidiMessage::controllerEvent(1, 1, midiPitch));
+            
+            // Send Y to MIDI CC 11 (Expression/Volume)
+            midiOut->sendMessageNow(juce::MidiMessage::controllerEvent(1, 11, midiVolume));
         }
     }
 

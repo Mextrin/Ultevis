@@ -4,7 +4,7 @@
 class GlobalState {
 public:
     // ==============================================================================
-    // 1. CONTINUOUS SPATIAL DATA (The Math)
+    // 1. SPATIAL DATA
     // ==============================================================================
 
     // Right hand controls Pitch (X-axis: 0.0 is far left, 1.0 is far right)
@@ -16,7 +16,7 @@ public:
 
 
     // ==============================================================================
-    // 2. VISIBILITY STATE (The Triggers)
+    // 2. TRIGGERS
     // ==============================================================================
 
     // Tells the Audio Engine to trigger the Note On/Off (ADSR envelope)
@@ -27,7 +27,7 @@ public:
 
 
     // ==============================================================================
-    // 3. ROUTING STATE (For Pod 3 UI Toggles)
+    // 3. ROUTING STATE (For UI Toggles)
     // ==============================================================================
 
     // Determines if the JUCE Synthesiser actually makes sound
