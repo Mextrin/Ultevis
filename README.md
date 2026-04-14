@@ -1,6 +1,6 @@
 ## Build Instructions
 
-### Prerequisites
+### Prerequisites 
 **macOS (Homebrew):**
 ```bash
 brew install opencv
@@ -10,16 +10,15 @@ brew install opencv
 ```bash
 vcpkg install opencv:x64-windows
 ```
-
-**Linux:**
-```bash
-sudo apt-get install libopencv-dev
-```
-
 #### Then configure: 
 
 ```bash
 cmake .. -DCMAKE_TOOLCHAIN_FILE=path/to/vcpkg/scripts/buildsystems/vcpkg.cmake
+```
+
+**Linux:**
+```bash
+sudo apt-get install libopencv-dev
 ```
 
 ### Build
