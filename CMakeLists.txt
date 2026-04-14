@@ -8,7 +8,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(OpenCV REQUIRED)
 add_subdirectory(JUCE)
 
-juce_add_console_app(Airchestra)
+juce_add_gui_app(Airchestra
+    PRODUCT_NAME "Airchestra"
+    BUNDLE_ID "com.mextrin.airchestra"
+    CAMERA_PERMISSION_ENABLED TRUE
+    CAMERA_PERMISSION_TEXT "Ultevis needs camera access to read the MacBook camera feed."
+)
 
 target_sources(Airchestra PRIVATE 
     src/main.cpp
