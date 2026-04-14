@@ -34,6 +34,7 @@ to continuous sound generation and output.
 */
 
 #include "AudioEngine.h"
+#include <iostream>
 
 // ==============================================================================
 // SINE WAVE VOICE IMPLEMENTATION
@@ -114,11 +115,13 @@ HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr) : globalState(st
     auto midiOutputs = juce::MidiOutput::getAvailableDevices(); //gets all midi devices
     if (midiOutSwitch && midiOutputs.size() > 0) {
         midiOut = juce::MidiOutput::openDevice(midiOutputs[0].identifier); //takes 1st device identifier
-    } else if (midiOutSwitch && midiOutputs.size() == 0) {
+        std::cout << "\nSUCCESS: Connected to MIDI Port -> " << midiOutputs[0].name.toStdString() << "\n\n";
+    } else if (midiOutSwitch && (midiOutputs.size() == 0)) {
         midiOut = nullptr; //if midiroute switch off or no MIDI device is available, set to null
-        //link to UI or print no device
+        std::cout << "\nUNSUCCESSFUL: No Midi Port" << std::endl;
     } else {
         midiOut = nullptr;
+        std::cout << "\nMIDI Switch Off" << std::endl;
     }
 
     synth.addVoice (new SineWaveVoice()); // Add 1 voice (Monophonic Theremin)
@@ -170,8 +173,13 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
         float x = globalState->rightHandX.load();
         float y = globalState->leftHandY.load();
 
-        // Right Hand Pitch: Scale 0.0-1.0 to 200Hz-1000Hz
-        float targetFreq = 200.0f + (x * 800.0f);
+        // 1. Map your X hand (0.0 to 1.0) to represent -24 to +24 semitones.
+        //    Center (0.5) = 0 bend. Left (0.0) = -24. Right (1.0) = +24.
+        float semitonesFromCenter = (x * 48.0f) - 24.0f;
+        
+        // 2. Calculate the exact Hz using the musical pitch formula.
+        //    (Base Note = Middle C = 261.625 Hz)
+        double targetFreq = 261.625565 * std::pow(2.0, semitonesFromCenter / 12.0);
 
         // Left Hand Volume: Invert Y so up is loud, down is quiet.
         // If left hand isn't visible, volume forces to 0.0f.
@@ -184,7 +192,7 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
 
         if (midiOut != nullptr) 
         {
-            // Convert 0.0-1.0 floats to 0-127 MIDI values
+            // Convert 0.0-1.0 floats to 0-127 MIDI values and pitch bend value
             int midiPitchBend = static_cast<int>(x * 16383.0f);
             int midiVolume = static_cast<int>(targetVol * 127.0f);
 

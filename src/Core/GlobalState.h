@@ -72,7 +72,7 @@ public:
     std::atomic<bool> routeToInternalAudio { true };
 
     // Determines if the UI Thread should broadcast MIDI to Ableton
-    std::atomic<bool> routeToMidiOut { false };
+    std::atomic<bool> routeToMidiOut { true };
 };
 
  
