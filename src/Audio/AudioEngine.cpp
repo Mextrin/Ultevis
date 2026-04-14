@@ -136,11 +136,11 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
         if (isRightVisible && midiOut != nullptr) 
         {
             // Convert 0.0-1.0 floats to 0-127 MIDI values
-            int midiPitch = static_cast<int>(x * 127.0f);
+            int midiPitchBend = static_cast<int>(x * 16383.0f);
             int midiVolume = static_cast<int>(targetVol * 127.0f);
 
             // Send X to MIDI CC 1 (Modulation Wheel)
-            midiOut->sendMessageNow(juce::MidiMessage::controllerEvent(1, 1, midiPitch));
+            midiOut->sendMessageNow(juce::MidiMessage::pitchWheel(1, midiPitchBend));
             
             // Send Y to MIDI CC 11 (Expression/Volume)
             midiOut->sendMessageNow(juce::MidiMessage::controllerEvent(1, 11, midiVolume));
