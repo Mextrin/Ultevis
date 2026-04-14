@@ -8,6 +8,11 @@ Item {
     signal back()
     signal instrumentSelected(string name)
 
+    FontLoader {
+        id: figTreeVariable
+        source: "../assets/fonts/Figtree-VariableFont_wght.ttf"
+    }
+
     Rectangle {
         anchors.fill: parent
         color: "#101218"
@@ -139,11 +144,12 @@ Item {
             columnSpacing: 16
 
             InstrumentCard {
-                instrumentName: "Piano"
+                instrumentName: "Keyboard"
                 iconSource: "qrc:/assets/icons/piano.svg"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                onClicked: root.instrumentSelected("piano")
+                font.family: figTreeVariable.name
+                onClicked: root.instrumentSelected("keyboard")
             }
 
             InstrumentCard {
@@ -151,6 +157,7 @@ Item {
                 iconSource: "qrc:/assets/icons/theremin.svg"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                font.family: figTreeVariable.name
                 onClicked: root.instrumentSelected("theremin")
             }
 
@@ -159,6 +166,7 @@ Item {
                 iconSource: "qrc:/assets/icons/drums.svg"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                font.family: figTreeVariable.name
                 onClicked: root.instrumentSelected("drums")
             }
 
@@ -167,6 +175,7 @@ Item {
                 iconSource: "qrc:/assets/icons/guitar.svg"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                font.family: figTreeVariable.name
                 onClicked: root.instrumentSelected("guitar")
             }
         }

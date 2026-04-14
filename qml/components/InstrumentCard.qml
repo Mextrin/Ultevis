@@ -5,6 +5,7 @@ Item {
 
     property string instrumentName: ""
     property string iconSource: ""
+    property alias font: nameText.font
     signal clicked()
 
     // Hover state
@@ -39,10 +40,10 @@ Item {
             // Instrument icon
             Image {
                 source: card.iconSource
-                width: 72
-                height: 72
-                sourceSize.width: 72
-                sourceSize.height: 72
+                width: 168
+                height: 168
+                sourceSize.width: 168
+                sourceSize.height: 168
                 anchors.horizontalCenter: parent.horizontalCenter
                 opacity: card.hovered ? 1.0 : 0.7
                 Behavior on opacity { NumberAnimation { duration: 250 } }
@@ -50,6 +51,7 @@ Item {
 
             // Instrument name
             Text {
+                id: nameText
                 text: card.instrumentName
                 font.pixelSize: 22
                 font.weight: Font.Normal
