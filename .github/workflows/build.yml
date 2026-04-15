@@ -32,15 +32,13 @@ jobs:
         shell: pwsh
         run: |
           git clone https://github.com/microsoft/vcpkg ./vcpkg
-          cd vcpkg
-          ./bootstrap-vcpkg.bat
-          cd ..
-          vcpkg/vcpkg.exe add port opencv4
+          ./vcpkg/bootstrap-vcpkg.bat
 
       - name: Configure CMake
         shell: pwsh
         run: >
-          cmake -B %BUILD_DIR% -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
+          cmake -S . -B build
+          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
     
       - name: Build
         shell: pwsh
