@@ -17,16 +17,12 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Clone vcpkg
-        shell: pwsh
-        run: git clone https://github.com/microsoft/vcpkg ./vcpkg
-
       - name: Set up vcpkg
         shell: pwsh
         run: |
           git clone https://github.com/microsoft/vcpkg ./vcpkg
           cd vcpkg
-          /bootstrap-vcpkg.bat
+          ./bootstrap-vcpkg.bat
           cd ..
           vcpkg/vcpkg.exe add port opencv4
 
