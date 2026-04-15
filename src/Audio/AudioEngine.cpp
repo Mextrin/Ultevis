@@ -104,7 +104,6 @@ void SineWaveVoice::renderNextBlock (juce::AudioBuffer<float>& outputBuffer, int
     if (!adsr.isActive()) clearCurrentNote();
 }
 
-
 // ==============================================================================
 // HEADLESS AUDIO ENGINE IMPLEMENTATION
 // ==============================================================================
@@ -139,6 +138,10 @@ HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr) : globalState(st
         std::cout << "\nMIDI Switch Off" << std::endl;
     }
 
+    //sfizz load into ram
+    loadDrumSound("Airchestra_Instruments/SMDrums_Sforzando_1.2/Programs/SM_Drums_kit.sfz");
+    //reserved load for keyboard
+
     synth.addVoice(new SineWaveVoice());
     synth.addSound(new SineWaveSound());
 
@@ -156,6 +159,10 @@ void HeadlessAudioEngine::audioDeviceAboutToStart(juce::AudioIODevice* device) {
 
 void HeadlessAudioEngine::audioDeviceStopped() {}
 
+void HeadlessAudioEngine::loadDrumSound(const juce::String& sfzPath) {
+    drumSynth.loadSfzFile(sfzPath.toStdString());
+}
+
 void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
     const float* const*, int, float* const* outputChannelData, int numOutputChannels,
     int numSamples, const juce::AudioIODeviceCallbackContext&) 
@@ -163,60 +170,65 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
     juce::AudioBuffer<float> buffer (const_cast<float**> (outputChannelData), numOutputChannels, numSamples);
     buffer.clear();
 
-    // READ HAND VISIBILITY
-    bool isRightVisible = globalState->rightHandVisible.load();
-    bool isLeftVisible = globalState->leftHandVisible.load();
-    
-    // if right visible and was not previously visible, turn note on
-    if (isRightVisible && !wasRightVisible) {
-        synth.noteOn(1, 60, 1.0f); //base note to wake voice up
-        if (midiOut != nullptr) {
-        // only send midi message if switch is on and a MIDI device was opened
-            midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, 60, 1.0f));
-        }
-    // if right is not visible and was previously visible, turn note off
-    } else if (!isRightVisible && wasRightVisible) {
-        synth.noteOff(1, 60, 1.0f, true); 
-        if (midiOut != nullptr) {
-            midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, 60, 0.0f));
-        }
-    }
-    wasRightVisible = isRightVisible;
+    //current instrument picked
+    auto activeInst = globalState->currentInstrument.load();
 
-    // 3. Continuous Theremin Math
-    if (isRightVisible) 
-    {
-        float x = globalState->rightHandX.load();
-        float y = globalState->leftHandY.load();
-
-        // 1. Map your X hand (0.0 to 1.0) to represent -24 to +24 semitones.
-        //    Center (0.5) = 0 bend. Left (0.0) = -24. Right (1.0) = +24.
-        float semitonesFromCenter = (x * 48.0f) - 24.0f;
+    if (activeInst == ActiveInstrument::Theremin) {
+        // READ HAND VISIBILITY
+        bool isRightVisible = globalState->rightHandVisible.load();
+        bool isLeftVisible = globalState->leftHandVisible.load();
         
-        // 2. Calculate the exact Hz using the musical pitch formula.
-        //    (Base Note = Middle C = 261.625 Hz)
-        double targetFreq = 261.625565 * std::pow(2.0, semitonesFromCenter / 12.0);
-
-        // Left Hand Volume: Invert Y so up is loud, down is quiet.
-        // If left hand isn't visible, volume forces to 0.0f.
-        float targetVol = isLeftVisible ? (1.0f - y) : 0.0f; 
-
-        // 4. Cast the Voice and push the math directly into it
-        if (auto* myVoice = dynamic_cast<SineWaveVoice*>(synth.getVoice(0))) {
-            myVoice->updateThereminMath(targetFreq, targetVol);
+        // if right visible and was not previously visible, turn note on
+        if (isRightVisible && !wasRightVisible) {
+            synth.noteOn(1, 60, 1.0f); //base note to wake voice up
+            if (midiOut != nullptr) {
+            // only send midi message if switch is on and a MIDI device was opened
+                midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, 60, 1.0f));
+            }
+        // if right is not visible and was previously visible, turn note off
+        } else if (!isRightVisible && wasRightVisible) {
+            synth.noteOff(1, 60, 1.0f, true); 
+            if (midiOut != nullptr) {
+                midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, 60, 0.0f));
+            }
         }
+        wasRightVisible = isRightVisible;
 
-        if (midiOut != nullptr) 
+        // 3. Continuous Theremin Math
+        if (isRightVisible) 
         {
-            // Convert 0.0-1.0 floats to 0-127 MIDI values and pitch bend value
-            int midiPitchBend = static_cast<int>(x * 16383.0f);
-            int midiVolume = static_cast<int>(targetVol * 127.0f);
+            float x = globalState->rightHandX.load();
+            float y = globalState->leftHandY.load();
 
-            // Send X to MIDI CC 1 (Modulation Wheel)
-            midiOut->sendMessageNow(juce::MidiMessage::pitchWheel(1, midiPitchBend));
+            // 1. Map your X hand (0.0 to 1.0) to represent -24 to +24 semitones.
+            //    Center (0.5) = 0 bend. Left (0.0) = -24. Right (1.0) = +24.
+            float semitonesFromCenter = (x * 48.0f) - 24.0f;
             
-            // Send Y to MIDI CC 11 (Expression/Volume)
-            midiOut->sendMessageNow(juce::MidiMessage::controllerEvent(1, 11, midiVolume));
+            // 2. Calculate the exact Hz using the musical pitch formula.
+            //    (Base Note = Middle C = 261.625 Hz)
+            double targetFreq = 261.625565 * std::pow(2.0, semitonesFromCenter / 12.0);
+
+            // Left Hand Volume: Invert Y so up is loud, down is quiet.
+            // If left hand isn't visible, volume forces to 0.0f.
+            float targetVol = isLeftVisible ? (1.0f - y) : 0.0f; 
+
+            // 4. Cast the Voice and push the math directly into it
+            if (auto* myVoice = dynamic_cast<SineWaveVoice*>(synth.getVoice(0))) {
+                myVoice->updateThereminMath(targetFreq, targetVol);
+            }
+
+            if (midiOut != nullptr) 
+            {
+                // Convert 0.0-1.0 floats to 0-127 MIDI values and pitch bend value
+                int midiPitchBend = static_cast<int>(x * 16383.0f);
+                int midiVolume = static_cast<int>(targetVol * 127.0f);
+
+                // Send X to MIDI CC 1 (Modulation Wheel)
+                midiOut->sendMessageNow(juce::MidiMessage::pitchWheel(1, midiPitchBend));
+                
+                // Send Y to MIDI CC 11 (Expression/Volume)
+                midiOut->sendMessageNow(juce::MidiMessage::controllerEvent(1, 11, midiVolume));
+            }
         }
     }
 
