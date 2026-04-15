@@ -1,0 +1,44 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build-windows:
+    name: Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up vcpkg
+        shell: pwsh
+        run: |
+          ./build.bat build-all
+
+  build-macos-arm:
+    name: macOS ARM64
+    runs-on: macos-15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install OpenCV
+        run: brew install opencv
+
+      - name: Configure CMake
+        run: >
+          cmake -S . -B build
+          -DOpenCV_DIR="$(brew --prefix opencv)/lib/cmake/opencv4"
+
+      - name: Build
+        run: cmake --build build --config Debug
