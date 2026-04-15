@@ -53,9 +53,15 @@ bool SineWaveVoice::canPlaySound (juce::SynthesiserSound* sound) {
 
 void SineWaveVoice::startNote (int /*midiNoteNumber*/, float /*velocity*/, juce::SynthesiserSound*, int) 
 {
+   #ifdef _WIN32
+    // Keep a shorter smoothing window on Windows so pitch and volume react faster.
+    smoothedFrequency.reset(getSampleRate(), 0.01);
+    smoothedVolume.reset(getSampleRate(), 0.01);
+   #else
     // Setup the smoothers to interpolate over 20 milliseconds (glitch prevention)
     smoothedFrequency.reset(getSampleRate(), 0.02);
     smoothedVolume.reset(getSampleRate(), 0.02);
+   #endif
     
     adsr.setParameters(adsrParams);
     adsr.noteOn(); 
