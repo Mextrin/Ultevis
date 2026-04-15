@@ -69,7 +69,8 @@ Item {
             id: logoRow
             anchors.horizontalCenter: parent.horizontalCenter
             height: 77
-            spacing: 0
+            // Negative spacing to close the native SVG boundary gap
+            spacing: -28
 
             // "Air" container
             Item {
