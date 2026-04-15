@@ -39,40 +39,28 @@ No logic should be placed here—this is strictly a data container.
 #pragma once
 #include <atomic>
 
+enum class ActiveInstrument {
+   Theremin = 0,
+   Drums = 1
+};
+
 class GlobalState {
 public:
-    // ==============================================================================
-    // 1. SPATIAL DATA
-    // ==============================================================================
+   // --Theremin controls--
+   std::atomic<float> rightHandX { 0.5f }; // 0-1
+   std::atomic<float> leftHandY  { 1.0f }; // 0-1
+   std::atomic<bool> rightHandVisible { false };
+   std::atomic<bool> leftHandVisible  { false };
 
-    // Right hand controls Pitch (X-axis: 0.0 is far left, 1.0 is far right)
-    std::atomic<float> rightHandX { 0.5f }; 
+   // --Drum controls--
+   std::atomic<bool> isDrumHit { false };
+   std::atomic<int>   drumType     { 36 };   // 36, 38
+   std::atomic<float> drumVelocity { 1.0f }; // 0-1
 
-    // Left hand controls Volume (Y-axis: 0.0 is top, 1.0 is bottom)
-    // Defaults to 1.0f so the volume starts at zero (1.0 - 1.0 = 0.0)
-    std::atomic<float> leftHandY { 1.0f }; 
-
-
-    // ==============================================================================
-    // 2. TRIGGERS
-    // ==============================================================================
-
-    // Tells the Audio Engine to trigger the Note On/Off (ADSR envelope)
-    std::atomic<bool> rightHandVisible { false };
-
-    // Tells the Audio Engine to dynamically mute the volume if the hand drops out of frame
-    std::atomic<bool> leftHandVisible { false };
-
-
-    // ==============================================================================
-    // 3. ROUTING STATE (For UI Toggles)
-    // ==============================================================================
-
-    // Determines if the JUCE Synthesiser actually makes sound
-    std::atomic<bool> routeToInternalAudio { true };
-
-    // Determines if the UI Thread should broadcast MIDI to Ableton
-    std::atomic<bool> routeToMidiOut { true };
+   // --Routing and instrument selection--
+   std::atomic<bool> routeToInternalAudio { true };
+   std::atomic<bool> routeToMidiOut       { true };
+   std::atomic<ActiveInstrument> currentInstrument {ActiveInstrument::Theremin};
 };
 
  

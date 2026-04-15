@@ -35,6 +35,7 @@ declarations from implementation, which is provided in the corresponding
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "../Core/GlobalState.h"
+#include <sfizz.hpp>
 
 // ==============================================================================
 // 1. THE SOUND (The Rulebook)
@@ -90,11 +91,15 @@ public:
         float* const* outputChannelData, int numOutputChannels,
         int numSamples, const juce::AudioIODeviceCallbackContext& context) override;
 
+    void loadDrumSound(const juce::String& sfzPath);
+
 private:
     juce::AudioDeviceManager deviceManager;
     GlobalState* globalState; 
     juce::Synthesiser synth;
+    sfz::Sfizz drumSynth;
     std::unique_ptr<juce::MidiOutput> midiOut;
 
     bool wasRightVisible = false; // Prevents triggering the note 340 times a second
+    bool wasDrumHit = false; // Info for drum rolls 
 };
