@@ -33,7 +33,7 @@ acts as the top-level coordinator of system components.
 #include <iostream>
 #include <thread>
 #include <chrono>
-extern void startCameraFeed();
+extern void startCameraFeed(GlobalState* state);
 
 int main() {
     std::cout << "Booting JUCE Synthesiser..." << std::endl;
@@ -76,7 +76,7 @@ int main() {
     state.rightHandVisible.store(false);
     std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Let the ADSR fade out
 
-    startCameraFeed();
+    startCameraFeed(&state);
 
     return 0;
 }

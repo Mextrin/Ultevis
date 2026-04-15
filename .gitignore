@@ -3,3 +3,5 @@
 /.vs/*
 /out/*
 /vcpkg/*
+/mediapipe/__pycache__/*
+/mediapipe/hand_landmarker.task
