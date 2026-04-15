@@ -176,15 +176,9 @@ Run this exact block from the repository root:
 
 ```bash
 export VCPKG_ROOT="${VCPKG_ROOT:-$HOME/dev/vcpkg}"
-ARCH="$(uname -m)"
-
-if [ "$ARCH" = "arm64" ]; then
-  cmake --preset macos-vcpkg-debug
-  cmake --build --preset macos-vcpkg-debug
-else
-  cmake --preset macos-vcpkg-debug-x64
-  cmake --build --preset macos-vcpkg-debug-x64
-fi
+cmake --preset macos-qt-debug
+cmake --build --preset macos-qt-debug
+open build/macos-qt-debug/Airchestra.app/
 ```
 
 Build output locations:
