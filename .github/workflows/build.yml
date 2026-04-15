@@ -38,17 +38,17 @@ jobs:
           cd ..
           vcpkg/vcpkg.exe add port opencv4
 
-      #- name: Configure CMake
-      #  shell: pwsh
-      #  run: >
-      #    cmake -B %BUILD_DIR% -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
+      - name: Configure CMake
+        shell: pwsh
+        run: >
+          cmake -B %BUILD_DIR% -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
     
       #- name: Build
       #  shell: pwsh
       #  run: cmake --build build --config Debug
 
   build-macos-arm:
-    name: macOS ARM64
+    name: MacOS
     runs-on: macos-15
 
     steps:
