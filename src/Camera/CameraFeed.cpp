@@ -1,8 +1,16 @@
 #include <iostream>
 #include <string>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <unistd.h>
+
+#ifdef _WIN32
+    #include <winsock2.h>
+    #pragma comment(lib, "ws2_32.lib")
+    typedef int socklen_t;
+#else
+    #include <sys/socket.h>
+    #include <arpa/inet.h>
+    #include <unistd.h>
+#endif
+
 #include "Core/GlobalState.h"
 
 // Minimal JSON field parser — no library needed for this simple payload
@@ -22,6 +30,11 @@ static bool parseBool(const std::string& json, const std::string& key) {
 }
 
 void startCameraFeed(GlobalState* state) {
+#ifdef _WIN32
+    WSADATA wsa_data;
+    WSAStartup(MAKEWORD(2, 2), &wsa_data);
+#endif
+
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
     if (sock < 0) { std::cerr << "Socket creation failed\n"; return; }
 
@@ -32,7 +45,12 @@ void startCameraFeed(GlobalState* state) {
 
     if (bind(sock, (sockaddr*)&addr, sizeof(addr)) < 0) {
         std::cerr << "Bind failed\n";
-        close(sock);
+        #ifdef _WIN32
+            closesocket(sock);
+            WSACleanup();
+        #else
+            close(sock);
+        #endif
         return;
     }
 
@@ -40,7 +58,7 @@ void startCameraFeed(GlobalState* state) {
 
     char buf[1024];
     while (true) {
-        ssize_t len = recv(sock, buf, sizeof(buf) - 1, 0);
+        ssize_t len = recvfrom(sock, buf, sizeof(buf) - 1, 0, nullptr, nullptr);
         if (len < 0) break;
         buf[len] = '\0';
 
@@ -56,5 +74,10 @@ void startCameraFeed(GlobalState* state) {
                   << "  y=" << state->leftHandY.load() << "\n";
     }
 
-    close(sock);
+    #ifdef _WIN32
+        closesocket(sock);
+        WSACleanup();
+    #else
+        close(sock);
+    #endif
 }
