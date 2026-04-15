@@ -7,9 +7,8 @@ if "%1"=="build-all" (
     cd vcpkg
     /bootstrap-vcpkg.bat
     cd ..
-    vcpkg/vcpkg.exe add port opencv4
 
-    cmake -B %BUILD_DIR% -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
+    cmake -B %BUILD_DIR%
     cmake --build %BUILD_DIR%
 )
 if "%1"=="compile" cmake --build %BUILD_DIR%
