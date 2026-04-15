@@ -17,21 +17,19 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Clone vcpkg
+        shell: pwsh
+        run: git clone https://github.com/microsoft/vcpkg ./vcpkg
+
       - name: Set up vcpkg
         shell: pwsh
         run: |
+          git clone https://github.com/microsoft/vcpkg ./vcpkg
           cd vcpkg
           /bootstrap-vcpkg.bat
           cd ..
           vcpkg/vcpkg.exe add port opencv4
 
-      - name: Set up mediapipe
-        shell: pwsh
-        run: |
-          cd src/mediapipe
-          curl -o hand_landmarker.task https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
-          
-    
       #- name: Configure CMake
       #  shell: pwsh
       #  run: >
