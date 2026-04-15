@@ -4,4 +4,3 @@
 /out/*
 /vcpkg/*
 /src/mediapipe/__pycache__/*
-/src/mediapipe/hand_landmarker.task
