@@ -64,14 +64,91 @@ Item {
         anchors.centerIn: parent
         spacing: 0
 
-        // Title logo (SVG-sourced image — swap back to Text if needed)
-        Image {
-            source: "qrc:/assets/icons/airchestra-logo@2x.png"
-            width: 420
-            fillMode: Image.PreserveAspectFit
-            smooth: true
-            mipmap: true
+        // Title logo (animated left-to-right wipe)
+        Row {
+            id: logoRow
             anchors.horizontalCenter: parent.horizontalCenter
+            height: 77
+            spacing: 0
+
+            // "Air" container
+            Item {
+                id: airContainer
+                width: 159.6
+                height: 77
+
+                Item {
+                    id: wipeClipper
+                    width: 0
+                    height: 110
+                    y: -17.7
+                    clip: true
+
+                    Image {
+                        id: airImg
+                        source: "qrc:/assets/icons/Air.svg"
+                        width: 159.6
+                        height: 109.4
+                        fillMode: Image.Stretch
+                        smooth: true
+                        mipmap: true
+                        sourceSize: Qt.size(159.6 * 2, 109.4 * 2)
+                    }
+                }
+                
+                // "Written in" animation
+                SequentialAnimation {
+                    running: true
+                    PauseAnimation { duration: 400 }
+                    ParallelAnimation {
+                        NumberAnimation {
+                            target: wipeClipper
+                            property: "width"
+                            from: 0
+                            to: 159.6
+                            duration: 1500
+                            easing.type: Easing.InOutSine
+                        }
+                        NumberAnimation {
+                            target: wipeClipper
+                            property: "opacity"
+                            from: 0.0
+                            to: 1.0
+                            duration: 1000
+                            easing.type: Easing.OutQuad
+                        }
+                    }
+                }
+            }
+
+            // "Chestra" container
+            Item {
+                id: chestraContainer
+                width: 273.3
+                height: 77
+
+                Image {
+                    id: chestraImg
+                    source: "qrc:/assets/icons/Chestra.svg"
+                    width: 273.3
+                    height: 77
+                    fillMode: Image.Stretch
+                    smooth: true
+                    mipmap: true
+                    opacity: 0
+                    sourceSize: Qt.size(273.3 * 2, 77 * 2)
+
+                    SequentialAnimation on opacity {
+                        PauseAnimation { duration: 400 + 1500 }
+                        NumberAnimation {
+                            from: 0.0
+                            to: 1.0
+                            duration: 1000
+                            easing.type: Easing.OutQuad
+                        }
+                    }
+                }
+            }
         }
 
         Item { width: 1; height: 12 }

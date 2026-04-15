@@ -4,12 +4,19 @@
         <file>qml/LandingPage.qml</file>
         <file>qml/InstrumentSelectPage.qml</file>
         <file>qml/ThereminPage.qml</file>
+        <file>qml/GuitarPage.qml</file>
+        <file>qml/KeyboardPage.qml</file>
+        <file>qml/DrumsPage.qml</file>
         <file>qml/components/FloatingNote.qml</file>
         <file>qml/components/SineWaveCanvas.qml</file>
         <file>qml/components/InstrumentCard.qml</file>
         <file>qml/components/SettingsPane.qml</file>
         <file>qml/components/WaveShapeDropdown.qml</file>
         <file>qml/components/WaveIcon.qml</file>
+        <file>qml/components/SettingsPanel.qml</file>
+        <file>qml/components/SettingsSlider.qml</file>
+        <file>qml/components/SettingsToggle.qml</file>
+        <file>qml/components/TypeSelector.qml</file>
         <file>assets/icons/piano.svg</file>
         <file>assets/icons/theremin.svg</file>
         <file>assets/icons/drums.svg</file>
@@ -18,5 +25,7 @@
         <file>assets/fonts/Figtree-VariableFont_wght.ttf</file>
         <file>assets/icons/airchestra-logo.png</file>
         <file>assets/icons/airchestra-logo@2x.png</file>
+        <file>assets/icons/Air.svg</file>
+        <file>assets/icons/Chestra.svg</file>
     </qresource>
 </RCC>

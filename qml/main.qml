@@ -55,6 +55,14 @@ ApplicationWindow {
                 if (name === "theremin") {
                     navigation.push(thereminComponent)
                 }
+                else if (name === "guitar") {
+                    navigation.push(guitarPageComponent)
+                }
+                else if (name === "keyboard") {
+                    navigation.push(keyboardPageComponent)
+                } else if (name === "drums") {
+                    navigation.push(drumsPageComponent)
+                }
             }
         }
     }
@@ -66,6 +74,27 @@ ApplicationWindow {
                 appEngine.goBack()
                 navigation.pop()
             }
+        }
+    }
+
+    Component {
+        id: guitarPageComponent
+        GuitarPage {
+            onBack: navigation.pop()
+        }
+    }
+
+    Component {
+        id: keyboardPageComponent
+        KeyboardPage {
+            onBack: navigation.pop()
+        }
+    }
+
+    Component {
+        id: drumsPageComponent
+        DrumsPage {
+            onBack: navigation.pop()
         }
     }
 }
