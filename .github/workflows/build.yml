@@ -10,12 +10,23 @@ jobs:
   build-windows:
     name: Windows
     runs-on: windows-latest
+    env:
+      # Tell vcpkg to store compiled package archives in a folder inside the workspace.
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}\.vcpkg-cache
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-${{ runner.os }}-x64-windows-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-x64-windows-
 
       - name: Set up vcpkg
         shell: pwsh
