@@ -51,7 +51,20 @@ ApplicationWindow {
                 navigation.pop()
             }
             onInstrumentSelected: function(name) {
-                console.log("Selected instrument:", name)
+                appEngine.selectInstrument(name)
+                if (name === "theremin") {
+                    navigation.push(thereminComponent)
+                }
+            }
+        }
+    }
+
+    Component {
+        id: thereminComponent
+        ThereminPage {
+            onBack: {
+                appEngine.goBack()
+                navigation.pop()
             }
         }
     }

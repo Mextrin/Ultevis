@@ -8,7 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 Multimedia)
 
 qt_add_executable(Airchestra
     src/airchestra/main.cpp
@@ -23,6 +23,7 @@ target_link_libraries(Airchestra PRIVATE
     Qt6::Gui
     Qt6::Quick
     Qt6::QuickControls2
+    Qt6::Multimedia
 )
 
 if(APPLE)
@@ -31,5 +32,14 @@ if(APPLE)
         MACOSX_BUNDLE_GUI_IDENTIFIER "se.kth.ii1305.airchestra"
         MACOSX_BUNDLE_BUNDLE_NAME "Airchestra"
         MACOSX_BUNDLE_COPYRIGHT "KTH II1305 Airchestra"
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/resources/Info.plist.in"
+    )
+
+    # Re-sign the bundle so the Info.plist (containing NSCameraUsageDescription,
+    # etc.) is bound into the signature. Without this, macOS silently denies
+    # camera access because it can't trust the usage description.
+    add_custom_command(TARGET Airchestra POST_BUILD
+        COMMAND codesign --deep --force --sign - "$<TARGET_BUNDLE_DIR:Airchestra>"
+        COMMENT "Re-signing Airchestra.app (binds Info.plist into signature)"
     )
 endif()

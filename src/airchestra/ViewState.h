@@ -10,6 +10,7 @@ enum class AppScreen
 {
     Landing,
     Session,
+    Theremin,
     Settings,
     About
 };
