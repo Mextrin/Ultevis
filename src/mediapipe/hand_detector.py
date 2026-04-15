@@ -53,11 +53,13 @@ while cap.isOpened():
 
     sock.sendto(json.dumps(payload).encode(), (UDP_IP, UDP_PORT))
 
-    cv2.putText(frame,
+    display_frame = cv2.flip(frame, 1)
+
+    cv2.putText(display_frame,
         f"R: {payload['rightHandVisible']}  L: {payload['leftHandVisible']}",
         (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2
     )
-    cv2.imshow("MediaPipe Hand Tracker", frame)
+    cv2.imshow("MediaPipe Hand Tracker", display_frame)
 
     if cv2.waitKey(1) == ord('q'):
         break
