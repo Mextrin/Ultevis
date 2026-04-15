@@ -41,7 +41,7 @@ jobs:
       - name: Configure CMake
         shell: pwsh
         run: >
-          cmake -B %BUILD_DIR% -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
+          cmake -B %BUILD_DIR% -DCMAKE_TOOLCHAIN_FILE={{ github.workspace }}vcpkg/scripts/buildsystems/vcpkg.cmake
     
       #- name: Build
       #  shell: pwsh
