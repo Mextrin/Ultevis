@@ -53,20 +53,38 @@ int main() {
 
     HeadlessAudioEngine audio(&state); // Soundcard turns on here!
 
-    state.currentInstrument.store(ActiveInstrument::Drums);
+    std::cout << "\nBooted! Defaulting to Theremin.\n" << std::endl;
 
-    std::cout << "Testing Drum Hits..." << std::endl;
-    state.drumType.store(36);      // 36 is usually Kick Drum
-    state.drumVelocity.store(80); 
-    state.isDrumHit.store(true);    // The Audio thread will 'exchange' this to false
+    // INSTRUMENT SELECTION
+    char instChoice = '0';
+    std::cout << "Select Instrument [0] Theremin, [1] Drums: ";
+    std::cin >> instChoice;
 
-    //snare? or hihat?
-    // state.drumType.store(38);     
-    // state.drumVelocity.store(80); 
-    // state.isDrumHit.store(true);    // The Audio thread will 'exchange' this to false
-        
-    std::cout << "Kick! " << std::endl;
+    if (std::cin.fail()) {
+        std::cin.clear();
+        std::cin.ignore(10000, '\n');
+        instChoice = '0';
+    }
 
+    if (instChoice == '1') {
+        state.currentInstrument.store(ActiveInstrument::Drums);
+        std::cout << "\n>>> DRUMS ACTIVE <<<" << std::endl;
+        std::cout << "Testing Drum Kick..." << std::endl;
+        state.drumType.store(36);      // 36 is usually Kick Drum
+        state.drumVelocity.store(80); 
+        state.isDrumHit.store(true);    // The Audio thread will 'exchange' this to false
+
+        //snare? or hihat?
+        // state.drumType.store(38);     
+        // state.drumVelocity.store(80); 
+        // state.isDrumHit.store(true);    // The Audio thread will 'exchange' this to false
+    } 
+    else {
+        state.currentInstrument.store(ActiveInstrument::Theremin);
+        std::cout << "\n>>> THEREMIN ACTIVE <<<\n" << std::endl;
+    }
+
+    std::cout << "\nWaiting For Python Script To Start Camera\n" << std::endl;
     startCameraFeed(&state);
 
     return 0;
