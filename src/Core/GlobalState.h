@@ -55,7 +55,7 @@ public:
    // --Drum controls--
    std::atomic<bool> isDrumHit { false };
    std::atomic<int>   drumType     { 36 };   // 36, 38
-   std::atomic<float> drumVelocity { 1.0f }; // 0-1
+   std::atomic<int> drumVelocity { 100 }; // 0-127
 
    // --Routing and instrument selection--
    std::atomic<bool> routeToInternalAudio { true };

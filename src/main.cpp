@@ -36,8 +36,6 @@ acts as the top-level coordinator of system components.
 extern void startCameraFeed(GlobalState* state);
 
 int main() {
-    std::cout << "Booting JUCE Synthesiser..." << std::endl;
-
     GlobalState state;
     
     // only for testing, will be replaced by ui
@@ -54,6 +52,20 @@ int main() {
     state.routeToMidiOut.store(midiChoice == 'y' || midiChoice == 'Y');
 
     HeadlessAudioEngine audio(&state); // Soundcard turns on here!
+
+    state.currentInstrument.store(ActiveInstrument::Drums);
+
+    std::cout << "Testing Drum Hits..." << std::endl;
+    state.drumType.store(36);      // 36 is usually Kick Drum
+    state.drumVelocity.store(80); 
+    state.isDrumHit.store(true);    // The Audio thread will 'exchange' this to false
+
+    //snare? or hihat?
+    // state.drumType.store(38);     
+    // state.drumVelocity.store(80); 
+    // state.isDrumHit.store(true);    // The Audio thread will 'exchange' this to false
+        
+    std::cout << "Kick! " << std::endl;
 
     startCameraFeed(&state);
 

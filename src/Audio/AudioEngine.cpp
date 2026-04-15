@@ -76,8 +76,7 @@ void SineWaveVoice::updateThereminMath(double targetFreq, float targetVol)
 
 void SineWaveVoice::renderNextBlock (juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) 
 {
-    for (int i = 0; i < numSamples; ++i)
-    {
+    for (int i = 0; i < numSamples; ++i) {
         // 1. Advance the smoothers
         double currentFreq = smoothedFrequency.getNextValue();
         float currentVol = smoothedVolume.getNextValue();
@@ -139,7 +138,7 @@ HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr) : globalState(st
     }
 
     //sfizz load into ram
-    loadDrumSound("Airchestra_Instruments/SMDrums_Sforzando_1.2/Programs/SM_Drums_kit.sfz");
+    loadDrumSound("Instruments/SMDrums_Sforzando_1.2/Programs/SM_Drums_kit.sfz");
     //reserved load for keyboard
 
     synth.addVoice(new SineWaveVoice());
@@ -149,28 +148,39 @@ HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr) : globalState(st
     deviceManager.addAudioCallback(this);
 }
 
-HeadlessAudioEngine::~HeadlessAudioEngine() {
+HeadlessAudioEngine::~HeadlessAudioEngine() 
+{
     deviceManager.removeAudioCallback(this);
 }
 
-void HeadlessAudioEngine::audioDeviceAboutToStart(juce::AudioIODevice* device) {
+void HeadlessAudioEngine::audioDeviceAboutToStart(juce::AudioIODevice* device) 
+{
     synth.setCurrentPlaybackSampleRate (device->getCurrentSampleRate());
+
+    drumSynth.setSampleRate(device->getCurrentSampleRate());
+    drumSynth.setSamplesPerBlock(device->getCurrentBufferSizeSamples());
 }
 
 void HeadlessAudioEngine::audioDeviceStopped() {}
 
-void HeadlessAudioEngine::loadDrumSound(const juce::String& sfzPath) {
-    drumSynth.loadSfzFile(sfzPath.toStdString());
+void HeadlessAudioEngine::loadDrumSound(const juce::String& sfzPath) 
+{
+    bool loaded = drumSynth.loadSfzFile(sfzPath.toStdString());
+    if (!loaded) {
+        std::cerr << "ERROR: Failed to load SFZ: " << sfzPath << std::endl;
+        // set a flag so you can skip drumSynth.renderBlock entirely
+    }
 }
 
 void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
     const float* const*, int, float* const* outputChannelData, int numOutputChannels,
     int numSamples, const juce::AudioIODeviceCallbackContext&) 
-{
+    {
     juce::AudioBuffer<float> buffer (const_cast<float**> (outputChannelData), numOutputChannels, numSamples);
+
     buffer.clear();
 
-    //current instrument picked
+    // Current instrument picked
     auto activeInst = globalState->currentInstrument.load();
 
     if (activeInst == ActiveInstrument::Theremin) {
@@ -195,8 +205,7 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
         wasRightVisible = isRightVisible;
 
         // 3. Continuous Theremin Math
-        if (isRightVisible) 
-        {
+        if (isRightVisible) {
             float x = globalState->rightHandX.load();
             float y = globalState->leftHandY.load();
 
@@ -217,8 +226,7 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
                 myVoice->updateThereminMath(targetFreq, targetVol);
             }
 
-            if (midiOut != nullptr) 
-            {
+            if (midiOut != nullptr) {
                 // Convert 0.0-1.0 floats to 0-127 MIDI values and pitch bend value
                 int midiPitchBend = static_cast<int>(x * 16383.0f);
                 int midiVolume = static_cast<int>(targetVol * 127.0f);
@@ -230,8 +238,26 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
                 midiOut->sendMessageNow(juce::MidiMessage::controllerEvent(1, 11, midiVolume));
             }
         }
+        synth.renderNextBlock(buffer, juce::MidiBuffer(), 0, numSamples);
     }
+    else if (activeInst == ActiveInstrument::Drums) {
+        bool currentHit = globalState->isDrumHit.load();
+        if (currentHit && !wasDrumHit) {
+            int noteToPlay = globalState->drumType.load();
+            int velocity = globalState->drumVelocity.load();
 
-    // 5. Render
-    synth.renderNextBlock(buffer, juce::MidiBuffer(), 0, numSamples);
+            // 2. Internal Audio Trigger
+            drumSynth.noteOn(0, noteToPlay, velocity);
+
+            // 3. MIDI Out Trigger
+            if (midiOut != nullptr) {
+                midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, noteToPlay, (juce::uint8)velocity));
+            }
+        }
+        wasDrumHit = currentHit;
+
+        //render drumhit
+        float* outChannels[] = { buffer.getWritePointer(0), buffer.getWritePointer(1) };
+        drumSynth.renderBlock(outChannels, numSamples);
+    }
 }
