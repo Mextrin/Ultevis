@@ -30,7 +30,7 @@ jobs:
         run: |
           cd src/mediapipe
           curl -o hand_landmarker.task https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
-          cd ../..
+          
     
       - name: Configure CMake
         shell: pwsh

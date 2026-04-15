@@ -11,7 +11,6 @@ if "%1"=="build-all" (
 
     cd src/mediapipe
     curl -o hand_landmarker.task https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
-    cd ../..
 
     cmake -B %BUILD_DIR% -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
     cmake --build %BUILD_DIR%
