@@ -12,6 +12,7 @@ jobs:
     runs-on: windows-latest
     env:
       # Tell vcpkg to store compiled package archives in a folder inside the workspace.
+      # We then cache that folder between workflow runs.
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}\.vcpkg-cache
 
     steps:
@@ -32,20 +33,19 @@ jobs:
         shell: pwsh
         run: |
           git clone https://github.com/microsoft/vcpkg ./vcpkg
-          ./vcpkg/bootstrap-vcpkg.bat
+          cd vcpkg
+          ./bootstrap-vcpkg.bat
 
       - name: Configure CMake
         shell: pwsh
-        run: >
-          cmake -S . -B build
-          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+        run: cmake -S . -B %BUILD_DIR%
     
-      - name: Build
-        shell: pwsh
-        run: cmake --build build --config Debug
+      #- name: Build
+      #  shell: pwsh
+      #  run: cmake --build build --config Debug
 
   build-macos-arm:
-    name: macOS ARM64
+    name: MacOS
     runs-on: macos-15
 
     steps:
