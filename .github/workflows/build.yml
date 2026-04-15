@@ -20,7 +20,26 @@ jobs:
       - name: Set up vcpkg
         shell: pwsh
         run: |
-          ./build.bat build-all
+          cd vcpkg
+          /bootstrap-vcpkg.bat
+          cd ..
+          vcpkg/vcpkg.exe add port opencv4
+
+      - name: Set up mediapipe
+        shell: pwsh
+        run: |
+          cd src/mediapipe
+          curl -o hand_landmarker.task https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
+          cd ../..
+    
+      - name: Configure CMake
+        shell: pwsh
+        run: >
+          cmake -B %BUILD_DIR% -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
+    
+      - name: Build
+        shell: pwsh
+        run: cmake --build build --config Debug
 
   build-macos-arm:
     name: macOS ARM64
