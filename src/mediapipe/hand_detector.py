@@ -42,9 +42,15 @@ while cap.isOpened():
             label = handedness[0].category_name  # "Left" or "Right"
             wrist = hand_landmarks[0]  # Wrist is first landmark
 
+            X_RIGHT_MIN = 0.0 ### X right hand limit
+            X_RIGHT_MAX = 0.67 ###
+
             if label == "Right":
+                # Constrain the value between X_MIN and X_MAX
+                constrained_x_right = max(X_RIGHT_MIN, min(wrist.x, X_RIGHT_MAX)) ###
+
                 payload["rightHandVisible"] = True
-                payload["rightHandX"] = wrist.x
+                payload["rightHandX"] = constrained_x_right
                 payload["rightHandY"] = wrist.y
             else:
                 payload["leftHandVisible"] = True
@@ -54,11 +60,16 @@ while cap.isOpened():
     sock.sendto(json.dumps(payload).encode(), (UDP_IP, UDP_PORT))
 
     display_frame = cv2.flip(frame, 1)
-
+    
     cv2.putText(display_frame,
-        f"R: {payload['rightHandVisible']}  L: {payload['leftHandVisible']}",
+        f"L: {payload['leftHandVisible']}, LeftX: {payload['leftHandX']:.2f}, LeftY: {payload['leftHandY']:.2f}",
         (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2
     )
+    cv2.putText(display_frame,
+        f"R: {payload['rightHandVisible']}, RightX: {payload['rightHandX']:.2f}, RightY: {payload['rightHandY']:.2f}",
+        (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2
+    )
+    
     cv2.imshow("MediaPipe Hand Tracker", display_frame)
 
     if cv2.waitKey(1) == ord('q'):
