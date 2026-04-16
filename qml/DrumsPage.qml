@@ -116,14 +116,7 @@ Item {
         }
 
         // Type selector (top-right)
-        TypeSelector {
-            id: drumsTypeSelector
-            anchors.right: parent.right
-            anchors.rightMargin: 20
-            anchors.verticalCenter: parent.verticalCenter
-            model: ["Acoustic Kit", "Electronic Kit", "Jazz Kit", "Rock Kit"]
-            currentIndex: 0
-        }
+        
     }
 
     // --- Drum kit overlay (zone indicators) ----------------------------------
@@ -183,7 +176,7 @@ Item {
         // Tom 1 — left-of-centre
         DrumPad {
             id: tom1Pad
-            name: "Tom"
+            name: "High-Tom"
             x: parent.width * 0.30
             y: parent.height * 0.06
             width: parent.width * 0.17
@@ -193,7 +186,7 @@ Item {
         // Tom 2 — right-of-centre
         DrumPad {
             id: tom2Pad
-            name: "Tom"
+            name: "Low-Tom"
             x: parent.width * 0.53
             y: parent.height * 0.06
             width: parent.width * 0.17
@@ -229,7 +222,7 @@ Item {
             id: floorTomPad
             name: "Floor Tom"
             x: parent.width - width
-            y: parent.height * 0.34
+            y: parent.height * 0.44
             width: parent.width * 0.22
             height: parent.height * 0.26
         }
