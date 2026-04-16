@@ -241,20 +241,21 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
         synth.renderNextBlock(buffer, juce::MidiBuffer(), 0, numSamples);
     }
     else if (activeInst == ActiveInstrument::Drums) {
-        bool currentHit = globalState->isDrumHit.load();
-        if (currentHit && !wasDrumHit) {
-            int noteToPlay = globalState->drumType.load();
-            int velocity = globalState->drumVelocity.load();
+        if (globalState->leftDrumHit.exchange(false)) {
+            int leftNote = globalState->leftDrumType.load();
+            int leftVelocity = globalState->leftDrumVelocity.load();
 
-            // 2. Internal Audio Trigger
-            drumSynth.noteOn(0, noteToPlay, velocity);
-
-            // 3. MIDI Out Trigger
-            if (midiOut != nullptr) {
-                midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, noteToPlay, (juce::uint8)velocity));
-            }
+            drumSynth.noteOn(0, leftNote, leftVelocity);
+            if (midiOut != nullptr) midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, leftNote, (juce::uint8)leftVelocity));
         }
-        wasDrumHit = currentHit;
+
+        if (globalState->rightDrumHit.exchange(false)) {
+            int rightNote = globalState->rightDrumType.load();
+            int rightVelocity = globalState->rightDrumVelocity.load();
+
+            drumSynth.noteOn(0, rightNote, rightVelocity);
+            if (midiOut != nullptr) midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, rightNote, (juce::uint8)rightVelocity));
+        }
 
         //render drumhit
         float* outChannels[] = { buffer.getWritePointer(0), buffer.getWritePointer(1) };

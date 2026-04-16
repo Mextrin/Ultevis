@@ -52,10 +52,15 @@ public:
    std::atomic<bool> rightHandVisible { false };
    std::atomic<bool> leftHandVisible  { false };
 
-   // --Drum controls--
-   std::atomic<bool> isDrumHit { false };
-   std::atomic<int>   drumType     { 36 };   // 36, 38
-   std::atomic<int> drumVelocity { 100 }; // 0-127
+   // --LEFT HAND DRUM--
+   std::atomic<bool> leftDrumHit { false }; 
+    std::atomic<int> leftDrumType { 36 }; 
+    std::atomic<int> leftDrumVelocity { 100 }; 
+
+    // --RIGHT HAND DRUM--
+    std::atomic<bool> rightDrumHit { false }; 
+    std::atomic<int> rightDrumType { 38 }; 
+    std::atomic<int> rightDrumVelocity { 100 };
 
    // --Routing and instrument selection--
    std::atomic<bool> routeToInternalAudio { true };

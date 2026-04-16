@@ -68,16 +68,17 @@ int main() {
 
     if (instChoice == '1') {
         state.currentInstrument.store(ActiveInstrument::Drums);
-        std::cout << "\n>>> DRUMS ACTIVE <<<" << std::endl;
-        std::cout << "Testing Drum Kick..." << std::endl;
-        state.drumType.store(36);      // 36 is usually Kick Drum
-        state.drumVelocity.store(80); 
-        state.isDrumHit.store(true);    // The Audio thread will 'exchange' this to false
-
-        //snare? or hihat?
-        // state.drumType.store(38);     
-        // state.drumVelocity.store(80); 
-        // state.isDrumHit.store(true);    // The Audio thread will 'exchange' this to false
+        for (int i = 0; i < 4; ++i) 
+        {
+            // KICK AND HIHAT SAME TIME
+            state.leftDrumType.store(36);
+            state.leftDrumVelocity.store(100);
+            state.leftDrumHit.store(true);
+            state.rightDrumType.store(42);
+            state.rightDrumVelocity.store(100);
+            state.rightDrumHit.store(true);
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        }
     } 
     else {
         state.currentInstrument.store(ActiveInstrument::Theremin);
