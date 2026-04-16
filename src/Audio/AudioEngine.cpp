@@ -234,8 +234,8 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
                 // Send X to MIDI CC 1 (Modulation Wheel)
                 midiOut->sendMessageNow(juce::MidiMessage::pitchWheel(1, midiPitchBend));
                 
-                // Send Y to MIDI CC 11 (Expression/Volume)
-                midiOut->sendMessageNow(juce::MidiMessage::controllerEvent(1, 11, midiVolume));
+                // Send Y to MIDI CC 7 (Volume)
+                midiOut->sendMessageNow(juce::MidiMessage::controllerEvent(1, 7, midiVolume));
             }
         }
         synth.renderNextBlock(buffer, juce::MidiBuffer(), 0, numSamples);

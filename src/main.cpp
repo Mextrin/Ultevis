@@ -70,14 +70,45 @@ int main() {
         state.currentInstrument.store(ActiveInstrument::Drums);
         for (int i = 0; i < 4; ++i) 
         {
-            // KICK AND HIHAT SAME TIME
+            // 8th note hihat beat
             state.leftDrumType.store(36);
             state.leftDrumVelocity.store(100);
             state.leftDrumHit.store(true);
             state.rightDrumType.store(42);
             state.rightDrumVelocity.store(100);
             state.rightDrumHit.store(true);
-            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+            std::this_thread::sleep_for(std::chrono::milliseconds(150));
+            state.rightDrumType.store(42);
+            state.rightDrumVelocity.store(100);
+            state.rightDrumHit.store(true);
+            std::this_thread::sleep_for(std::chrono::milliseconds(150));
+            state.rightDrumType.store(42);
+            state.rightDrumVelocity.store(100);
+            state.rightDrumHit.store(true);
+            std::this_thread::sleep_for(std::chrono::milliseconds(150));
+            state.rightDrumType.store(42);
+            state.rightDrumVelocity.store(100);
+            state.rightDrumHit.store(true);
+            std::this_thread::sleep_for(std::chrono::milliseconds(150));
+            state.rightDrumType.store(42);
+            state.rightDrumVelocity.store(100);
+            state.rightDrumHit.store(true); 
+            state.leftDrumType.store(38);
+            state.leftDrumVelocity.store(100);
+            state.leftDrumHit.store(true);
+            std::this_thread::sleep_for(std::chrono::milliseconds(150));
+            state.rightDrumType.store(42);
+            state.rightDrumVelocity.store(100);
+            state.rightDrumHit.store(true);
+            std::this_thread::sleep_for(std::chrono::milliseconds(150));
+            state.rightDrumType.store(42);
+            state.rightDrumVelocity.store(100);
+            state.rightDrumHit.store(true);
+            std::this_thread::sleep_for(std::chrono::milliseconds(150));
+            state.rightDrumType.store(42);
+            state.rightDrumVelocity.store(100);
+            state.rightDrumHit.store(true);
+            std::this_thread::sleep_for(std::chrono::milliseconds(150));
         }
     } 
     else {
