@@ -57,57 +57,32 @@ Item {
             color: "#EBEDF0"
         }
 
-        // MIDI toggle
+        // MIDI Selector
         Row {
             anchors.right: parent.right
             anchors.rightMargin: 24
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 10
+            spacing: 12
 
             Text {
-                text: "MIDI"
+                text: "MIDI Output"
                 font.pixelSize: 13
                 font.weight: Font.Medium
                 font.letterSpacing: 1
-                color: midiToggle.checked ? "#E07A26" : "#949AA5"
+                color: "#949AA5"
                 anchors.verticalCenter: parent.verticalCenter
-                Behavior on color { ColorAnimation { duration: 200 } }
             }
 
-            // Custom toggle switch
-            Rectangle {
-                id: midiToggle
-                property bool checked: false
-                width: 44
-                height: 24
-                radius: 12
-                color: checked ? Qt.rgba(0.878, 0.478, 0.149, 0.3) : Qt.rgba(1, 1, 1, 0.08)
-                border.width: 1
-                border.color: checked ? "#E07A26" : Qt.rgba(1, 1, 1, 0.12)
+            TypeSelector {
+                id: midiSelector
+                width: 160
+                model: ["None", "IAC Driver Bus 1", "Virtual MIDI Cable"]
                 anchors.verticalCenter: parent.verticalCenter
-
-                Behavior on color { ColorAnimation { duration: 200 } }
-                Behavior on border.color { ColorAnimation { duration: 200 } }
-
-                Rectangle {
-                    id: knob
-                    width: 18
-                    height: 18
-                    radius: 9
-                    color: midiToggle.checked ? "#E07A26" : "#949AA5"
-                    anchors.verticalCenter: parent.verticalCenter
-                    x: midiToggle.checked ? midiToggle.width - width - 3 : 3
-
-                    Behavior on x { NumberAnimation { duration: 200; easing.type: Easing.InOutQuad } }
-                    Behavior on color { ColorAnimation { duration: 200 } }
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        midiToggle.checked = !midiToggle.checked
-                        appEngine.setMidiEnabled(midiToggle.checked)
+                onCurrentTextChanged: {
+                    if (currentText !== "None") {
+                        appEngine.setMidiEnabled(true)
+                    } else {
+                        appEngine.setMidiEnabled(false)
                     }
                 }
             }
