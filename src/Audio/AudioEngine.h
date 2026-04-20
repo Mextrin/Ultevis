@@ -96,12 +96,14 @@ public:
         int numSamples, const juce::AudioIODeviceCallbackContext& context) override;
 
     void loadDrumSound(const juce::String& sfzPath);
+    void loadGrandPianoSound(const juce::String& sfzPath);
 
 private:
     juce::AudioDeviceManager deviceManager;
     GlobalState* globalState; 
     juce::Synthesiser synth;
     sfz::Sfizz drumSynth;
+    sfz::Sfizz grandPianoSynth;
     std::unique_ptr<juce::MidiOutput> midiOut;
 
     bool wasRightVisible = false; // Prevents triggering the note 340 times a second

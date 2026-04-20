@@ -192,7 +192,14 @@ void HeadlessAudioEngine::loadDrumSound(const juce::String& sfzPath)
     bool loaded = drumSynth.loadSfzFile(sfzPath.toStdString());
     if (!loaded) {
         std::cerr << "ERROR: Failed to load SFZ: " << sfzPath << std::endl;
-        // set a flag so you can skip drumSynth.renderBlock entirely
+    }
+}
+
+void HeadlessAudioEngine::loadGrandPianoSound(const juce::String& sfzPath)
+{
+    bool loaded = grandPianoSynth.loadSfzFile(sfzPath.toStdString());
+    if (!loaded) {
+        std::cerr << "ERROR: Failed to load SFZ: " << sfzPath << std::endl;
     }
 }
 
@@ -208,18 +215,18 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
     auto activeInst = globalState->currentInstrument.load();
 
     if (activeInst == ActiveInstrument::Theremin) {
-        // READ HAND VISIBILITY
+        // Read hand visibility
         bool isRightVisible = globalState->rightHandVisible.load();
         bool isLeftVisible = globalState->leftHandVisible.load();
         
-        // if right visible and was not previously visible, turn note on
+        // If right visible and was not previously visible, turn note on
         if (isRightVisible && !wasRightVisible) {
-            synth.noteOn(1, 60, 1.0f); //base note to wake voice up
+            synth.noteOn(1, 60, 1.0f); // Base note to wake voice up
             if (midiOut != nullptr) {
-            // only send midi message if switch is on and a MIDI device was opened
+            // Only send midi message if switch is on and a MIDI device was opened
                 midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, 60, 1.0f));
             }
-        // if right is not visible and was previously visible, turn note off
+        // If right is not visible and was previously visible, turn note off
         } else if (!isRightVisible && wasRightVisible) {
             synth.noteOff(1, 60, 1.0f, true); 
             if (midiOut != nullptr) {
@@ -228,25 +235,22 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
         }
         wasRightVisible = isRightVisible;
 
-        // 3. Continuous Theremin Math
+        // Continuous theremin math
         if (isRightVisible) {
             float x = globalState->rightHandX.load();
             float y = globalState->leftHandY.load();
 
-            // 1. Map your X hand (0.0 to 1.0) to represent -24 to +24 semitones.
-            //    Center (0.5) = 0 bend. Left (0.0) = -24. Right (1.0) = +24.
+            // right hand x (0.0 to 1.0) to represent -24 to +24 semitones.
             float semitonesFromCenter = (x * 48.0f) - 24.0f;
             
-            // 2. Calculate the exact Hz using the musical pitch formula.
-            //    (Base Note = Middle C = 261.625 Hz)
+            // Base Note = Middle C = 261.625 Hz, calculate from formula
             double targetFreq = 261.625565 * std::pow(2.0, semitonesFromCenter / 12.0);
 
-            // Left Hand Volume: Invert Y so up is loud, down is quiet.
-            // If left hand isn't visible, volume forces to 0.0f.
+
+            // Up is loud, down is quiet, if left hand isn't visible, volume forces to 0.0f.
             float safeY = juce::jlimit(0.0f, 1.0f, y); //mediapipe goes past 1 as an estimate
             float targetVol = isLeftVisible ? (1.0f - safeY) : 0.0f; 
 
-            // 4. Cast the Voice and push the math directly into it
             if (auto* myVoice = dynamic_cast<SineWaveVoice*>(synth.getVoice(0))) {
                 myVoice->setWaveform(globalState->currentWaveform.load());
                 myVoice->updateThereminMath(targetFreq, targetVol);
