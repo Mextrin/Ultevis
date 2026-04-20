@@ -40,26 +40,51 @@ while cap.isOpened():
             detection_result.hand_landmarks, detection_result.handedness
         )):
             label = handedness[0].category_name  # "Left" or "Right"
-            wrist = hand_landmarks[0]  # Wrist is first landmark
+            thumb_tip = hand_landmarks[4]  # Thumb tip is landmark 4
+            index_tip = hand_landmarks[8]  # Index finger tip is landmark 8
 
-            X_RIGHT_MIN = 0.0 ### X right hand limit
-            X_RIGHT_MAX = 0.67 ###
+            # Calculate distance between thumb and index tips
+            distance = ((thumb_tip.x - index_tip.x)**2 + (thumb_tip.y - index_tip.y)**2)**0.5
+            PINCH_THRESHOLD = 0.05  # Adjust this value to tune sensitivity
 
-            if label == "Right":
-                # Constrain the value between X_MIN and X_MAX
-                constrained_x_right = max(X_RIGHT_MIN, min(wrist.x, X_RIGHT_MAX)) ###
+            # Only record position if thumb and index are touching (pinching)
+            if distance < PINCH_THRESHOLD:
+                X_RIGHT_MIN = 0.0 ### X right hand limit
+                X_RIGHT_MAX = 0.67 ###
 
-                payload["rightHandVisible"] = True
-                payload["rightHandX"] = constrained_x_right
-                payload["rightHandY"] = wrist.y
-            else:
-                payload["leftHandVisible"] = True
-                payload["leftHandX"] = wrist.x
-                payload["leftHandY"] = wrist.y
+                if label == "Right":
+                    # Constrain the value between X_MIN and X_MAX
+                    constrained_x_right = max(X_RIGHT_MIN, min(index_tip.x, X_RIGHT_MAX))
+
+                    payload["rightHandVisible"] = True
+                    payload["rightHandX"] = constrained_x_right
+                    payload["rightHandY"] = index_tip.y
+                else:
+                    payload["leftHandVisible"] = True
+                    payload["leftHandX"] = index_tip.x
+                    payload["leftHandY"] = index_tip.y
 
     sock.sendto(json.dumps(payload).encode(), (UDP_IP, UDP_PORT))
 
     display_frame = cv2.flip(frame, 1)
+    frame_height, frame_width = display_frame.shape[:2]
+    
+    # Draw circles after display_frame is created
+    if detection_result.handedness:
+        for i, (hand_landmarks, handedness) in enumerate(zip(
+            detection_result.hand_landmarks, detection_result.handedness
+        )):
+            label = handedness[0].category_name
+            thumb_tip = hand_landmarks[4]
+            index_tip = hand_landmarks[8]
+
+            distance = ((thumb_tip.x - index_tip.x)**2 + (thumb_tip.y - index_tip.y)**2)**0.5
+            PINCH_THRESHOLD = 0.05
+
+            if distance < PINCH_THRESHOLD:
+                center_x = int((1 - index_tip.x) * frame_width)  # Flip x coordinate
+                center_y = int(index_tip.y * frame_height)
+                cv2.circle(display_frame, center=(center_x, center_y), radius=20, color=(0, 255, 0), thickness=-1)
     
     cv2.putText(display_frame,
         f"L: {payload['leftHandVisible']}, LeftX: {payload['leftHandX']:.2f}, LeftY: {payload['leftHandY']:.2f}",
