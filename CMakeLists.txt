@@ -23,6 +23,7 @@ juce_add_console_app(Airchestra)
 target_sources(Airchestra PRIVATE 
     src/main.cpp
     src/Audio/AudioEngine.cpp
+    src/Audio/OscillatorVoice.cpp
     src/Camera/CameraFeed.cpp
 )
 
