@@ -20,15 +20,17 @@ public:
         int numSamples, const juce::AudioIODeviceCallbackContext& context) override;
 
     void loadDrumSound(const juce::String& sfzPath);
-    void loadGrandPianoSound(const juce::String& sfzPath);
+    void loadKeyboardSound(int keyboardInstrumentID);
 
 private:
     juce::AudioDeviceManager deviceManager;
     GlobalState* globalState;
     juce::Synthesiser synth;
     sfz::Sfizz drumSynth;
-    sfz::Sfizz grandPianoSynth;
+    sfz::Sfizz keyboardSynth;
     std::unique_ptr<juce::MidiOutput> midiOut;
 
     bool wasRightVisible = false;
+    bool wasKeyPressed = false;
+    int lastPlayedKey = -1; // -1 means no key is playing
 };

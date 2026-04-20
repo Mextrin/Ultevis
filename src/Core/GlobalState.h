@@ -35,7 +35,8 @@ Design:
 
 enum class ActiveInstrument {
    Theremin = 0,
-   Drums = 1
+   Drums = 1,
+   Keyboard = 2
 };
 
 enum class Waveform {
@@ -45,6 +46,13 @@ enum class Waveform {
    Triangle = 3
 };
 
+enum class KeyboardSound {
+   GrandPiano = 0,
+   Organ = 1,
+   Harp = 3,
+   Violin = 4
+};
+
 class GlobalState {
 public:
    // --Theremin controls--
@@ -52,8 +60,6 @@ public:
    std::atomic<float> leftHandY  { 1.0f }; // 0-1
    std::atomic<bool> rightHandVisible { false };
    std::atomic<bool> leftHandVisible  { false };
-
-   // --Synth parameters--
    std::atomic<Waveform> currentWaveform { Waveform::Sine };
 
    // --LEFT HAND DRUM--
@@ -66,10 +72,17 @@ public:
    std::atomic<int> rightDrumType { 38 }; 
    std::atomic<int> rightDrumVelocity { 100 };
 
+   // --- KEYBOARD STATE ---
+   std::atomic<bool> isKeyPressed { false }; 
+   std::atomic<int> keyboardNote { 60 };    
+   std::atomic<int> keyboardVelocity { 100 }; 
+   std::atomic<KeyboardSound> currentKeyboardInstrument { KeyboardSound::GrandPiano };
+
    // --Routing and instrument selection--
    std::atomic<bool> routeToInternalAudio { true };
    std::atomic<bool> routeToMidiOut       { true };
    std::atomic<ActiveInstrument> currentInstrument {ActiveInstrument::Theremin};
+
 };
 
  

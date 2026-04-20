@@ -93,8 +93,8 @@ void HeadlessAudioEngine::audioDeviceAboutToStart(juce::AudioIODevice* device)
     drumSynth.setSampleRate(device->getCurrentSampleRate());
     drumSynth.setSamplesPerBlock(device->getCurrentBufferSizeSamples());
 
-    grandPianoSynth.setSampleRate(device->getCurrentSampleRate());
-    grandPianoSynth.setSamplesPerBlock(device->getCurrentBufferSizeSamples());
+    keyboardSynth.setSampleRate(device->getCurrentSampleRate());
+    keyboardSynth.setSamplesPerBlock(device->getCurrentBufferSizeSamples());
 }
 
 void HeadlessAudioEngine::audioDeviceStopped() {}
@@ -107,11 +107,34 @@ void HeadlessAudioEngine::loadDrumSound(const juce::String& sfzPath)
     }
 }
 
-void HeadlessAudioEngine::loadGrandPianoSound(const juce::String& sfzPath)
+void HeadlessAudioEngine::loadKeyboardSound(int keyboardInstrumentID)
 {
-    bool loaded = grandPianoSynth.loadSfzFile(sfzPath.toStdString());
+    juce::String baseOrchestraPath = "Instruments/VSCO-2-CE/";
+    juce::String baseGrandPianoPath = "Instruments/AccurateSalamanderGrandPianoV6.2beta2_48khz24bit/sfz_live/Accurate-SalamanderGrandPiano_flat.Recommended.sfz";
+    juce::String newOrchestraPath;
+    bool loaded;
+
+    if (keyboardInstrumentID == 0) { // Grand Piano
+        loaded = keyboardSynth.loadSfzFile(baseGrandPianoPath.toStdString());
+        if (!loaded) {
+            std::cerr << "ERROR: Failed to load SFZ: " << baseGrandPianoPath << std::endl;
+        }
+    }
+    else if (keyboardInstrumentID == 1) { //Organ
+        newOrchestraPath = baseOrchestraPath + "OrganLoud.sfz";
+    }
+    else if (keyboardInstrumentID == 2) { //Glockenspiel
+        newOrchestraPath = baseOrchestraPath + "Glockenspiel.sfz";
+    }
+    else if (keyboardInstrumentID == 3) { //Harp
+        newOrchestraPath = baseOrchestraPath + "Harp.sfz";
+    }
+    else if (keyboardInstrumentID == 4) { //Violin Ensemble
+        newOrchestraPath = baseOrchestraPath + "ViolinEnsSusVib.sfz";
+    }
+    loaded = keyboardSynth.loadSfzFile(newOrchestraPath.toStdString());
     if (!loaded) {
-        std::cerr << "ERROR: Failed to load SFZ: " << sfzPath << std::endl;
+        std::cerr << "ERROR: Failed to load SFZ: " << newOrchestraPath << std::endl;
     }
 }
 
@@ -190,5 +213,53 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
 
         float* outChannels[] = { buffer.getWritePointer(0), buffer.getWritePointer(1) };
         drumSynth.renderBlock(outChannels, numSamples);
+    }
+    else if (activeInst == ActiveInstrument::Keyboard) {
+        
+        bool isPressed = globalState->isKeyPressed.load();
+        int currentNote = globalState->keyboardNote.load();
+        int velocity = globalState->keyboardVelocity.load();
+
+        // Strike, hand down
+        if (isPressed && !wasKeyPressed) {
+            keyboardSynth.noteOn(0, currentNote, velocity);
+            
+            if (midiOut != nullptr) {
+                midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, currentNote, (juce::uint8)velocity));
+            }
+            lastPlayedKey = currentNote; // Remember what we just played
+        }
+        // Release, hand just lifted up 
+        else if (!isPressed && wasKeyPressed) {
+            keyboardSynth.noteOff(0, lastPlayedKey, 0); // Turn off the exact key we remembered
+            
+            if (midiOut != nullptr) {
+                midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, lastPlayedKey, (juce::uint8)0));
+            }
+            lastPlayedKey = -1; // Clear the memory
+        }
+        // Glissando
+        else if (isPressed && wasKeyPressed && currentNote != lastPlayedKey) {
+            
+            // Turn off old key immediately 
+            keyboardSynth.noteOff(0, lastPlayedKey, 0);
+            if (midiOut != nullptr) {
+                midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, lastPlayedKey, (juce::uint8)0));
+            }
+
+            // Turn on new key
+            keyboardSynth.noteOn(0, currentNote, velocity);
+            if (midiOut != nullptr) {
+                midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, currentNote, (juce::uint8)velocity));
+            }
+            
+            // Update memory to new key
+            lastPlayedKey = currentNote;
+        }
+
+        wasKeyPressed = isPressed;
+
+        float* outChannels[] = { buffer.getWritePointer(0), buffer.getWritePointer(1) };
+        keyboardSynth.renderBlock(outChannels, numSamples);
     }
 }
