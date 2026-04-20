@@ -67,6 +67,24 @@ while cap.isOpened():
     sock.sendto(json.dumps(payload).encode(), (UDP_IP, UDP_PORT))
 
     display_frame = cv2.flip(frame, 1)
+    frame_height, frame_width = display_frame.shape[:2]
+    
+    # Draw circles after display_frame is created
+    if detection_result.handedness:
+        for i, (hand_landmarks, handedness) in enumerate(zip(
+            detection_result.hand_landmarks, detection_result.handedness
+        )):
+            label = handedness[0].category_name
+            thumb_tip = hand_landmarks[4]
+            index_tip = hand_landmarks[8]
+
+            distance = ((thumb_tip.x - index_tip.x)**2 + (thumb_tip.y - index_tip.y)**2)**0.5
+            PINCH_THRESHOLD = 0.05
+
+            if distance < PINCH_THRESHOLD:
+                center_x = int((1 - index_tip.x) * frame_width)  # Flip x coordinate
+                center_y = int(index_tip.y * frame_height)
+                cv2.circle(display_frame, center=(center_x, center_y), radius=20, color=(0, 255, 0), thickness=-1)
     
     cv2.putText(display_frame,
         f"L: {payload['leftHandVisible']}, LeftX: {payload['leftHandX']:.2f}, LeftY: {payload['leftHandY']:.2f}",
