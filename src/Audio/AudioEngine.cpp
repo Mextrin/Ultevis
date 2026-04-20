@@ -219,7 +219,8 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
 
             // Left Hand Volume: Invert Y so up is loud, down is quiet.
             // If left hand isn't visible, volume forces to 0.0f.
-            float targetVol = isLeftVisible ? (1.0f - y) : 0.0f; 
+            float safeY = juce::jlimit(0.0f, 1.0f, y); //mediapipe goes past 1 as an estimate
+            float targetVol = isLeftVisible ? (1.0f - safeY) : 0.0f; 
 
             // 4. Cast the Voice and push the math directly into it
             if (auto* myVoice = dynamic_cast<SineWaveVoice*>(synth.getVoice(0))) {
