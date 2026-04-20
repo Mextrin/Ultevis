@@ -3,10 +3,14 @@ set BUILD_DIR=build
 set EXE_DIR=build/Airchestra_artefacts/Debug/Airchestra.exe
 
 if "%1"=="build-all" (
-    git clone https://github.com/microsoft/vcpkg ./vcpkg
-    cd vcpkg
-    /bootstrap-vcpkg.bat
-    cd ..
+    git submodule update --init --recursive
+
+    if not exist ./vcpkg (
+        git clone https://github.com/microsoft/vcpkg ./vcpkg
+        cd vcpkg
+        /bootstrap-vcpkg.bat
+        cd ..
+    )
 
     cmake -B %BUILD_DIR%
     cmake --build %BUILD_DIR%
