@@ -4,3 +4,4 @@
 /out/*
 /vcpkg/*
 /src/mediapipe/__pycache__/*
+/Instruments/*
