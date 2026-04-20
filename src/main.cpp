@@ -114,6 +114,19 @@ int main() {
     else {
         state.currentInstrument.store(ActiveInstrument::Theremin);
         std::cout << "\n>>> THEREMIN ACTIVE <<<\n" << std::endl;
+
+        char waveChoice = '0';
+        std::cout << "Select Waveform [0] Sine, [1] Square, [2] Saw, [3] Triangle: ";
+        std::cin >> waveChoice;
+
+        if (waveChoice == '1')
+            state.currentWaveform.store(Waveform::Square);
+        else if (waveChoice == '2')
+            state.currentWaveform.store(Waveform::Saw);
+        else if (waveChoice == '3')
+            state.currentWaveform.store(Waveform::Triangle);
+        else
+            state.currentWaveform.store(Waveform::Sine);
     }
 
     std::cout << "\nWaiting For Python Script To Start Camera\n" << std::endl;

@@ -35,6 +35,7 @@ to continuous sound generation and output.
 
 #include "AudioEngine.h"
 #include <iostream>
+#include <cmath>
 
 // ==============================================================================
 // SINE WAVE VOICE IMPLEMENTATION
@@ -74,6 +75,11 @@ void SineWaveVoice::updateThereminMath(double targetFreq, float targetVol)
     smoothedVolume.setTargetValue(targetVol);
 }
 
+void SineWaveVoice::setWaveform(Waveform newWaveform)
+{
+    currentWaveform = newWaveform;
+}
+
 void SineWaveVoice::renderNextBlock (juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) 
 {
     for (int i = 0; i < numSamples; ++i) {
@@ -82,7 +88,7 @@ void SineWaveVoice::renderNextBlock (juce::AudioBuffer<float>& outputBuffer, int
         float currentVol = smoothedVolume.getNextValue();
         float currentAdsr = adsr.getNextSample();
 
-        // 2. Calculate the sine wave phase
+        // 2. Calculate the oscillator phase
         auto cyclesPerSample = currentFreq / getSampleRate();
         auto angleDelta = cyclesPerSample * juce::MathConstants<double>::twoPi;
         
@@ -90,9 +96,27 @@ void SineWaveVoice::renderNextBlock (juce::AudioBuffer<float>& outputBuffer, int
         if (currentAngle > juce::MathConstants<double>::twoPi)
             currentAngle -= juce::MathConstants<double>::twoPi;
 
-        // 3. Generate the final sound (Sine * ADSR * Left Hand Volume)
+        // 3. Generate the selected waveform sound
         // Multiply by 0.2f as a master safety volume so you don't blow the speakers
-        float currentSample = (float) std::sin(currentAngle) * currentAdsr * currentVol * 0.2f;
+        float waveSample = 0.0f;
+        double phase = currentAngle / juce::MathConstants<double>::twoPi;
+
+        switch (currentWaveform) {
+            case Waveform::Sine:
+                waveSample = (float) std::sin(currentAngle);
+                break;
+            case Waveform::Square:
+                waveSample = (std::sin(currentAngle) >= 0.0) ? 1.0f : -1.0f;
+                break;
+            case Waveform::Saw:
+                waveSample = (float)(2.0 * phase - 1.0);
+                break;
+            case Waveform::Triangle:
+                waveSample = (float)(2.0 * std::abs(2.0 * phase - 1.0) - 1.0);
+                break;
+        }
+
+        float currentSample = waveSample * currentAdsr * currentVol * 0.2f;
 
         // 4. Write to speakers
         for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel) {
@@ -224,6 +248,7 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
 
             // 4. Cast the Voice and push the math directly into it
             if (auto* myVoice = dynamic_cast<SineWaveVoice*>(synth.getVoice(0))) {
+                myVoice->setWaveform(globalState->currentWaveform.load());
                 myVoice->updateThereminMath(targetFreq, targetVol);
             }
 
