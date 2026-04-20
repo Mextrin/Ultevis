@@ -2,37 +2,31 @@
 ==============================================================================
 GLOBAL STATE (Thread-Safe Shared Control Data)
 
-This file defines a lightweight, lock-free data structure used to communicate
-between the independent subsystems (camera/vision thread, audio engine,
-and potentially UI). It uses std::atomic variables to ensure safe concurrent
-access without introducing blocking or synchronization overhead.
+Lightweight lock-free container for communication between vision input,
+audio engine, and UI. All members are std::atomic for safe concurrent access.
 
-The state is divided into three conceptual groups:
+State groups:
 
-1. Spatial Data:
-   Continuous normalized values representing hand positions.
-   - rightHandX: controls pitch (horizontal axis)
-   - leftHandY: controls volume (vertical axis)
+1. Continuous Control (Theremin):
+   - rightHandX → pitch
+   - leftHandY  → volume
+   - hand visibility → note gating
 
-2. Trigger Flags:
-   Boolean signals that control note lifecycle and muting behavior.
-   - rightHandVisible: drives note on/off events
-   - leftHandVisible: allows dynamic muting when volume hand is lost
+2. Trigger Events (Drums):
+   - left/right drum hit flags
+   - drum type (MIDI note) and velocity
 
-3. Routing State:
-   Toggles that determine where output is sent.
-   - routeToInternalAudio: enables/disables internal synthesis
-   - routeToMidiOut: enables MIDI output to external software
+3. Instrument & Routing:
+   - currentInstrument (Theremin / Drums)
+   - routeToInternalAudio / routeToMidiOut
 
-Design purpose:
-- Decouple input (camera), processing (audio), and output (sound/MIDI)
-- Provide a minimal, real-time-safe communication layer
-- Avoid locks, queues, or complex synchronization mechanisms
+4. Synthesis Parameters:
+   - currentWaveform (oscillator shape)
 
-This object is shared across threads, with writers typically being the vision
-system and readers being the audio engine.
-
-No logic should be placed here—this is strictly a data container.
+Design:
+- No locks, no blocking, no dynamic allocation
+- Written by input thread, read by audio thread
+- Strictly a data container (no logic)
 ==============================================================================
 */
 
@@ -44,6 +38,13 @@ enum class ActiveInstrument {
    Drums = 1
 };
 
+enum class Waveform {
+   Sine = 0,
+   Square = 1,
+   Saw = 2,
+   Triangle = 3
+};
+
 class GlobalState {
 public:
    // --Theremin controls--
@@ -52,15 +53,18 @@ public:
    std::atomic<bool> rightHandVisible { false };
    std::atomic<bool> leftHandVisible  { false };
 
+   // --Synth parameters--
+   std::atomic<Waveform> currentWaveform { Waveform::Sine };
+
    // --LEFT HAND DRUM--
    std::atomic<bool> leftDrumHit { false }; 
-    std::atomic<int> leftDrumType { 36 }; 
-    std::atomic<int> leftDrumVelocity { 100 }; 
+   std::atomic<int> leftDrumType { 36 }; 
+   std::atomic<int> leftDrumVelocity { 100 }; 
 
-    // --RIGHT HAND DRUM--
-    std::atomic<bool> rightDrumHit { false }; 
-    std::atomic<int> rightDrumType { 38 }; 
-    std::atomic<int> rightDrumVelocity { 100 };
+   // --RIGHT HAND DRUM--
+   std::atomic<bool> rightDrumHit { false }; 
+   std::atomic<int> rightDrumType { 38 }; 
+   std::atomic<int> rightDrumVelocity { 100 };
 
    // --Routing and instrument selection--
    std::atomic<bool> routeToInternalAudio { true };

@@ -63,6 +63,8 @@ public:
     // Custom Theremin Function: Called by the Audio Thread to update math instantly
     void updateThereminMath(double targetFrequencyHz, float targetVolume);
 
+    void setWaveform(Waveform newWaveform);
+
     void renderNextBlock (juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override;
 
 private:
@@ -73,6 +75,8 @@ private:
     // Smoothed values prevent audio "glitches" between 30FPS camera frames
     juce::SmoothedValue<double> smoothedFrequency;
     juce::SmoothedValue<float> smoothedVolume;
+
+    Waveform currentWaveform = Waveform::Sine;
 };
 
 // ==============================================================================
