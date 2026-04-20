@@ -1,54 +1,18 @@
 ## Build Instructions
 
-### Prerequisites 
-**macOS (Homebrew):**
-```bash
-brew install opencv
-```
-**Windows (vcpkg):**
+### Install on Windows
 
-```bash
-vcpkg install opencv:x64-windows
-```
-#### Then configure: 
+`winget install -e --id Kitware.CMake`
 
-```bash
-cmake .. -DCMAKE_TOOLCHAIN_FILE=path/to/vcpkg/scripts/buildsystems/vcpkg.cmake
-```
+### Build Commands
 
-**Linux:**
-```bash
-sudo apt-get install libopencv-dev
-```
-
-### Build
-
-```bash
-mkdir build
-cd build
-cmake ..
-cmake --build .
-```
-
-### Run
-```bash
-./Airchestra_artefacts/Airchestra
-```
-
-# Install all these on Windows
-winget install -e --id Kitware.CMake
-
-# Build instructions with build.bat
-- Full setup and build:
-`./build.bat build-all`
-- Compile existing build:
-`./build.bat compile`
-- Run compiled exe:
-`./build.bat run`
-- Compile and run:
-`./build.bat compile-and-run`
-- Remove the build folder:
-`./build.bat clean`
+| Description | Windows | macOS |
+| --- | --- | --- |
+| Full setup and build | `./build.bat build-all` | `./build.sh build-all` |
+| Compile existing build | `./build.bat compile` | `./build.sh compile` |
+| Run compiled executable | `./build.bat run` | `./build.sh run` |
+| Compile and run | `./build.bat compile-and-run` | `./build.sh compile-and-run` |
+| Remove the build folder | `./build.bat clean` | `./build.sh clean` |
 
 # Ultevis
 ICT Project for course II1305 at KTH. 
