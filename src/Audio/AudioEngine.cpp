@@ -168,7 +168,20 @@ HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr) : globalState(st
     synth.addVoice(new SineWaveVoice());
     synth.addSound(new SineWaveSound());
 
-    deviceManager.initialiseWithDefaultDevices(0, 2);
+    deviceManager.initialise(0, 2, nullptr, true);
+
+    juce::AudioDeviceManager::AudioDeviceSetup setup;
+    deviceManager.getAudioDeviceSetup(setup);
+
+    setup.bufferSize = 256;   // or 512 if 256 is unstable
+    setup.sampleRate = 44100.0;
+    setup.useDefaultInputChannels = false;
+    setup.useDefaultOutputChannels = true;
+
+    juce::String error = deviceManager.setAudioDeviceSetup(setup, true);
+    if (error.isNotEmpty())
+        std::cerr << "Audio device setup error: " << error.toStdString() << std::endl;
+
     deviceManager.addAudioCallback(this);
 }
 
