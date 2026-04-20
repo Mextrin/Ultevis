@@ -57,7 +57,7 @@ int main() {
 
     // INSTRUMENT SELECTION
     char instChoice = '0';
-    std::cout << "Select Instrument [0] Theremin, [1] Drums: ";
+    std::cout << "Select Instrument [0] Theremin, [1] Drums, [2] Keyboard: ";
     std::cin >> instChoice;
 
     if (std::cin.fail()) {
@@ -68,6 +68,7 @@ int main() {
 
     if (instChoice == '1') {
         state.currentInstrument.store(ActiveInstrument::Drums);
+        audio.loadDrumSound("Instruments/SMDrums_Sforzando_1.2/Programs/SM_Drums_kit.sfz");
         for (int i = 0; i < 4; ++i) 
         {
             // 8th note hihat beat
@@ -110,8 +111,56 @@ int main() {
             state.rightDrumHit.store(true);
             std::this_thread::sleep_for(std::chrono::milliseconds(150));
         }
-    } 
-    else {
+    } else if (instChoice == '2') {
+        state.currentInstrument.store(ActiveInstrument::Keyboard);
+        char keyboardSoundChoice = '0';
+        std::cout << "Select Waveform [0] Grand Piano, [1] Organ, [2] Glockenspiel, [3] Harp, [4] Violin: ";
+        std::cin >> keyboardSoundChoice;
+        int keyboardSoundID;
+
+        if (keyboardSoundChoice == '0') {
+            state.currentKeyboardInstrument.store(KeyboardSound::GrandPiano);
+            keyboardSoundID = 0;
+        }
+        else if (keyboardSoundChoice == '1') {
+            state.currentKeyboardInstrument.store(KeyboardSound::Organ);
+            keyboardSoundID = 1;
+        }
+        else if (keyboardSoundChoice == '2') {
+            state.currentKeyboardInstrument.store(KeyboardSound::Glockenspiel);
+            keyboardSoundID = 2;
+        }
+        else if (keyboardSoundChoice == '3') {
+            state.currentKeyboardInstrument.store(KeyboardSound::Harp);
+            keyboardSoundID = 3;
+        }
+        else if (keyboardSoundChoice == '4') {
+            state.currentKeyboardInstrument.store(KeyboardSound::Violin);
+            keyboardSoundID = 4;
+        }
+
+        audio.loadKeyboardSound(keyboardSoundID);
+        int melodyNotes[] = { 60, 64, 67, 72 };
+        for (int i = 0; i < 4; ++i) 
+        {
+            // 1. PRESS THE KEY DOWN
+            state.keyboardNote.store(melodyNotes[i]);
+            state.keyboardVelocity.store(100);
+            state.isKeyPressed.store(true);
+            
+            // Hold the note for 400ms
+            std::this_thread::sleep_for(std::chrono::milliseconds(400));
+
+            // 2. LIFT THE FINGER UP
+            state.isKeyPressed.store(false);
+            
+            // Wait 100ms in silence before hitting the next key
+            std::this_thread::sleep_for(std::chrono::milliseconds(100)); 
+        }
+        
+        std::cout << "Keyboard test finished!" << std::endl;
+
+    } else {
         state.currentInstrument.store(ActiveInstrument::Theremin);
         std::cout << "\n>>> THEREMIN ACTIVE <<<\n" << std::endl;
 

@@ -51,9 +51,6 @@ HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr) : globalState(st
         std::cout << "\nMIDI Switch Off" << std::endl;
     }
 
-    loadDrumSound("Instruments/SMDrums_Sforzando_1.2/Programs/SM_Drums_kit.sfz");
-    // loadGrandPianoSound("..."); // use later when piano is ready
-
     synth.addVoice(new SineWaveVoice());
     synth.addSound(new SineWaveSound());
 
@@ -110,31 +107,30 @@ void HeadlessAudioEngine::loadDrumSound(const juce::String& sfzPath)
 void HeadlessAudioEngine::loadKeyboardSound(int keyboardInstrumentID)
 {
     juce::String baseOrchestraPath = "Instruments/VSCO-2-CE/";
-    juce::String baseGrandPianoPath = "Instruments/AccurateSalamanderGrandPianoV6.2beta2_48khz24bit/sfz_live/Accurate-SalamanderGrandPiano_flat.Recommended.sfz";
-    juce::String newOrchestraPath;
-    bool loaded;
+    juce::String sfzToLoad = "";
 
-    if (keyboardInstrumentID == 0) { // Grand Piano
-        loaded = keyboardSynth.loadSfzFile(baseGrandPianoPath.toStdString());
+    if (keyboardInstrumentID == 0) { 
+        // Grand Piano
+        sfzToLoad = "Instruments/AccurateSalamanderGrandPianoV6.2beta2_48khz24bit/sfz_live/Accurate-SalamanderGrandPiano_flat.Recommended.sfz";
+    }
+    else if (keyboardInstrumentID == 1) { 
+        sfzToLoad = baseOrchestraPath + "OrganLoud.sfz";
+    }
+    else if (keyboardInstrumentID == 2) { 
+        sfzToLoad = baseOrchestraPath + "Glockenspiel.sfz";
+    }
+    else if (keyboardInstrumentID == 3) { 
+        sfzToLoad = baseOrchestraPath + "Harp.sfz";
+    }
+    else if (keyboardInstrumentID == 4) { 
+        sfzToLoad = baseOrchestraPath + "ViolinEnsSusVib.sfz";
+    }
+
+    if (sfzToLoad.isNotEmpty()) {
+        bool loaded = keyboardSynth.loadSfzFile(sfzToLoad.toStdString());
         if (!loaded) {
-            std::cerr << "ERROR: Failed to load SFZ: " << baseGrandPianoPath << std::endl;
+            std::cerr << "ERROR: Failed to load SFZ: " << sfzToLoad << std::endl;
         }
-    }
-    else if (keyboardInstrumentID == 1) { //Organ
-        newOrchestraPath = baseOrchestraPath + "OrganLoud.sfz";
-    }
-    else if (keyboardInstrumentID == 2) { //Glockenspiel
-        newOrchestraPath = baseOrchestraPath + "Glockenspiel.sfz";
-    }
-    else if (keyboardInstrumentID == 3) { //Harp
-        newOrchestraPath = baseOrchestraPath + "Harp.sfz";
-    }
-    else if (keyboardInstrumentID == 4) { //Violin Ensemble
-        newOrchestraPath = baseOrchestraPath + "ViolinEnsSusVib.sfz";
-    }
-    loaded = keyboardSynth.loadSfzFile(newOrchestraPath.toStdString());
-    if (!loaded) {
-        std::cerr << "ERROR: Failed to load SFZ: " << newOrchestraPath << std::endl;
     }
 }
 
@@ -215,7 +211,6 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
         drumSynth.renderBlock(outChannels, numSamples);
     }
     else if (activeInst == ActiveInstrument::Keyboard) {
-        
         bool isPressed = globalState->isKeyPressed.load();
         int currentNote = globalState->keyboardNote.load();
         int velocity = globalState->keyboardVelocity.load();
