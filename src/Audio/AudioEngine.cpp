@@ -215,6 +215,24 @@ void HeadlessAudioEngine::processDrums(juce::AudioBuffer<float>& buffer, int num
 // Processes the keyboard
 void HeadlessAudioEngine::processKeyboard(juce::AudioBuffer<float>& buffer, int numSamples)
 {
+    // Sustain Pedal
+    const bool isPedalPressed = globalState->sustainPedal.load();
+
+    if (isPedalPressed != wasSustainPedalPressed) {
+        int midiPedalValue = isPedalPressed ? 127 : 0;
+
+        // Send CC 64 to the internal sfizz engine (0 is the delay argument)
+        keyboardSynth.cc(0, 64, midiPedalValue);
+
+        // Send CC 64 to Ableton/DAW
+        if (midiOut != nullptr) {
+            midiOut->sendMessageNow(juce::MidiMessage::controllerEvent(1, 64, midiPedalValue));
+        }
+
+        wasSustainPedalPressed = isPedalPressed;
+    }
+
+    //Handle notes
     const bool isPressed = globalState->isKeyPressed.load();
     const int currentNote = globalState->keyboardNote.load();
     const int velocity = globalState->keyboardVelocity.load();
