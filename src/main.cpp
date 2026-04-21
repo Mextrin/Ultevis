@@ -41,6 +41,12 @@ int main() {
     GlobalState state;
     
     // only for testing, will be replaced by ui
+
+    float volumeChoice = 1.0f;
+    std::cout << "Set master volume (0.0 to 1.0): ";
+    std::cin >> volumeChoice;
+    state.masterVolume.store(volumeChoice);
+
     char midiChoice = 'n';
     std::cout << "Enable MIDI output? (y/n): ";
     std::cin >> midiChoice;
@@ -197,6 +203,3 @@ int main() {
 
     return 0;
 }
- 
- 
- 

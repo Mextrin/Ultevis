@@ -83,6 +83,7 @@ public:
    // --Routing and instrument selection--
    std::atomic<bool> routeToInternalAudio { true };
    std::atomic<bool> routeToMidiOut       { true };
+   std::atomic<float> masterVolume        { 1.0f }; // 0-1
    std::atomic<ActiveInstrument> currentInstrument {ActiveInstrument::Theremin};
 
 };

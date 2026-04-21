@@ -280,4 +280,7 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
             processKeyboard(buffer, numSamples);
             break;
     }
+
+    const float masterGain = juce::jlimit(0.0f, 1.0f, globalState->masterVolume.load());
+    buffer.applyGain(masterGain);
 }
