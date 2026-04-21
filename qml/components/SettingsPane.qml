@@ -2,14 +2,13 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// Floating settings card. Mock-only values — not yet wired to C++.
 Rectangle {
     id: root
 
-    // Bindable values exposed to the parent page.
-    property real volumeFloor: 0.2          // 0.0 – 1.0
-    property real freqMin: 220              // Hz
-    property real freqMax: 880              // Hz
+    property real masterVolume: 1.0          // 0.0 – 1.0  (global output gain)
+    property real volumeFloor:  0.2          // 0.0 – 1.0  (theremin minimum volume)
+    property real freqMin: 220               // Hz
+    property real freqMax: 880               // Hz
     property alias font: titleLabel.font
 
     signal close()
@@ -22,14 +21,12 @@ Rectangle {
     border.width: 1
     border.color: Qt.rgba(1, 1, 1, 0.08)
 
-    // Soft drop shadow approximation (an offset dimmer layer behind the card).
+    // Drop shadow
     Rectangle {
         z: -1
         anchors.fill: parent
-        anchors.leftMargin: -2
-        anchors.rightMargin: -2
-        anchors.topMargin: -2
-        anchors.bottomMargin: -6
+        anchors.leftMargin: -2; anchors.rightMargin: -2
+        anchors.topMargin: -2;  anchors.bottomMargin: -6
         radius: parent.radius + 2
         color: Qt.rgba(0, 0, 0, 0.35)
     }
@@ -40,7 +37,7 @@ Rectangle {
         anchors.margins: 16
         spacing: 14
 
-        // Header with title + close
+        // ── Header ──────────────────────────────────────────────────────────
         Item {
             Layout.fillWidth: true
             implicitHeight: 20
@@ -58,8 +55,7 @@ Rectangle {
 
             MouseArea {
                 id: closeBtn
-                width: 20
-                height: 20
+                width: 20; height: 20
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 hoverEnabled: true
@@ -76,7 +72,52 @@ Rectangle {
             }
         }
 
-        // Volume floor
+        // ── Master volume ────────────────────────────────────────────────────
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 6
+
+            RowLayout {
+                Layout.fillWidth: true
+                Text {
+                    text: "Master volume"
+                    color: "#949AA5"; font.pixelSize: 12; font.letterSpacing: 1
+                    Layout.fillWidth: true
+                }
+                Text {
+                    text: (root.masterVolume * 100).toFixed(0) + "%"
+                    color: "#EBEDF0"; font.pixelSize: 12; font.weight: Font.Medium
+                }
+            }
+
+            Slider {
+                id: masterSlider
+                Layout.fillWidth: true
+                from: 0; to: 1; stepSize: 0.01
+                value: root.masterVolume
+                onValueChanged: root.masterVolume = value
+
+                background: Rectangle {
+                    x: masterSlider.leftPadding
+                    y: masterSlider.topPadding + masterSlider.availableHeight / 2 - height / 2
+                    width: masterSlider.availableWidth; height: 4; radius: 2
+                    color: Qt.rgba(1, 1, 1, 0.08)
+                    Rectangle {
+                        width: masterSlider.visualPosition * parent.width
+                        height: parent.height; color: "#E07A26"; radius: 2
+                    }
+                }
+                handle: Rectangle {
+                    x: masterSlider.leftPadding + masterSlider.visualPosition * (masterSlider.availableWidth - width)
+                    y: masterSlider.topPadding + masterSlider.availableHeight / 2 - height / 2
+                    width: 14; height: 14; radius: 7
+                    color: masterSlider.pressed ? "#E07A26" : "#EBEDF0"
+                    border.color: "#E07A26"; border.width: 1
+                }
+            }
+        }
+
+        // ── Volume floor ─────────────────────────────────────────────────────
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 6
@@ -85,105 +126,78 @@ Rectangle {
                 Layout.fillWidth: true
                 Text {
                     text: "Volume floor"
-                    color: "#949AA5"
-                    font.pixelSize: 12
-                    font.letterSpacing: 1
+                    color: "#949AA5"; font.pixelSize: 12; font.letterSpacing: 1
                     Layout.fillWidth: true
                 }
                 Text {
                     text: (root.volumeFloor * 100).toFixed(0) + "%"
-                    color: "#EBEDF0"
-                    font.pixelSize: 12
-                    font.weight: Font.Medium
+                    color: "#EBEDF0"; font.pixelSize: 12; font.weight: Font.Medium
                 }
             }
 
             Slider {
-                id: volumeSlider
+                id: floorSlider
                 Layout.fillWidth: true
-                from: 0
-                to: 1
-                stepSize: 0.01
+                from: 0; to: 1; stepSize: 0.01
                 value: root.volumeFloor
                 onValueChanged: root.volumeFloor = value
 
                 background: Rectangle {
-                    x: volumeSlider.leftPadding
-                    y: volumeSlider.topPadding + volumeSlider.availableHeight / 2 - height / 2
-                    width: volumeSlider.availableWidth
-                    height: 4
-                    radius: 2
+                    x: floorSlider.leftPadding
+                    y: floorSlider.topPadding + floorSlider.availableHeight / 2 - height / 2
+                    width: floorSlider.availableWidth; height: 4; radius: 2
                     color: Qt.rgba(1, 1, 1, 0.08)
-
                     Rectangle {
-                        width: volumeSlider.visualPosition * parent.width
-                        height: parent.height
-                        color: "#E07A26"
-                        radius: 2
+                        width: floorSlider.visualPosition * parent.width
+                        height: parent.height; color: "#E07A26"; radius: 2
                     }
                 }
-
                 handle: Rectangle {
-                    x: volumeSlider.leftPadding + volumeSlider.visualPosition * (volumeSlider.availableWidth - width)
-                    y: volumeSlider.topPadding + volumeSlider.availableHeight / 2 - height / 2
-                    width: 14
-                    height: 14
-                    radius: 7
-                    color: volumeSlider.pressed ? "#E07A26" : "#EBEDF0"
-                    border.color: "#E07A26"
-                    border.width: 1
+                    x: floorSlider.leftPadding + floorSlider.visualPosition * (floorSlider.availableWidth - width)
+                    y: floorSlider.topPadding + floorSlider.availableHeight / 2 - height / 2
+                    width: 14; height: 14; radius: 7
+                    color: floorSlider.pressed ? "#E07A26" : "#EBEDF0"
+                    border.color: "#E07A26"; border.width: 1
                 }
             }
         }
 
-        // Frequency range
+        // ── Frequency range ───────────────────────────────────────────────────
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 6
 
             Text {
                 text: "Frequency range (Hz)"
-                color: "#949AA5"
-                font.pixelSize: 12
-                font.letterSpacing: 1
+                color: "#949AA5"; font.pixelSize: 12; font.letterSpacing: 1
             }
 
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 10
 
-                // Min
                 Rectangle {
-                    Layout.fillWidth: true
-                    height: 32
-                    radius: 6
+                    Layout.fillWidth: true; height: 32; radius: 6
                     color: Qt.rgba(1, 1, 1, 0.04)
                     border.width: 1
                     border.color: minField.activeFocus ? "#E07A26" : Qt.rgba(1, 1, 1, 0.10)
                     Behavior on border.color { ColorAnimation { duration: 150 } }
 
                     Text {
-                        text: "Min"
-                        color: "#949AA5"
-                        font.pixelSize: 11
-                        anchors.left: parent.left
-                        anchors.leftMargin: 10
+                        text: "Min"; color: "#949AA5"; font.pixelSize: 11
+                        anchors.left: parent.left; anchors.leftMargin: 10
                         anchors.verticalCenter: parent.verticalCenter
                     }
-
                     TextInput {
                         id: minField
-                        anchors.right: parent.right
-                        anchors.rightMargin: 10
+                        anchors.right: parent.right; anchors.rightMargin: 10
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - 50
                         horizontalAlignment: TextInput.AlignRight
                         text: Math.round(root.freqMin).toString()
                         inputMethodHints: Qt.ImhDigitsOnly
                         validator: IntValidator { bottom: 20; top: 4000 }
-                        color: "#EBEDF0"
-                        selectByMouse: true
-                        font.pixelSize: 13
+                        color: "#EBEDF0"; selectByMouse: true; font.pixelSize: 13
                         onEditingFinished: {
                             const v = parseInt(text)
                             if (!isNaN(v)) {
@@ -194,38 +208,28 @@ Rectangle {
                     }
                 }
 
-                // Max
                 Rectangle {
-                    Layout.fillWidth: true
-                    height: 32
-                    radius: 6
+                    Layout.fillWidth: true; height: 32; radius: 6
                     color: Qt.rgba(1, 1, 1, 0.04)
                     border.width: 1
                     border.color: maxField.activeFocus ? "#E07A26" : Qt.rgba(1, 1, 1, 0.10)
                     Behavior on border.color { ColorAnimation { duration: 150 } }
 
                     Text {
-                        text: "Max"
-                        color: "#949AA5"
-                        font.pixelSize: 11
-                        anchors.left: parent.left
-                        anchors.leftMargin: 10
+                        text: "Max"; color: "#949AA5"; font.pixelSize: 11
+                        anchors.left: parent.left; anchors.leftMargin: 10
                         anchors.verticalCenter: parent.verticalCenter
                     }
-
                     TextInput {
                         id: maxField
-                        anchors.right: parent.right
-                        anchors.rightMargin: 10
+                        anchors.right: parent.right; anchors.rightMargin: 10
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - 50
                         horizontalAlignment: TextInput.AlignRight
                         text: Math.round(root.freqMax).toString()
                         inputMethodHints: Qt.ImhDigitsOnly
                         validator: IntValidator { bottom: 20; top: 4000 }
-                        color: "#EBEDF0"
-                        selectByMouse: true
-                        font.pixelSize: 13
+                        color: "#EBEDF0"; selectByMouse: true; font.pixelSize: 13
                         onEditingFinished: {
                             const v = parseInt(text)
                             if (!isNaN(v)) {
@@ -236,16 +240,6 @@ Rectangle {
                     }
                 }
             }
-        }
-
-        // Hint
-        Text {
-            text: "Mock settings \u2014 values are UI-only for now."
-            color: "#5B6170"
-            font.pixelSize: 10
-            font.italic: true
-            Layout.fillWidth: true
-            wrapMode: Text.WordWrap
         }
     }
 }

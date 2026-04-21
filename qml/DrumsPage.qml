@@ -249,8 +249,47 @@ Item {
             color: "#E07826"
         }
 
-        // Type selector (top-right)
-        
+        // Master volume slider (top-right)
+        Row {
+            anchors.right: parent.right
+            anchors.rightMargin: 20
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 8
+
+            Text {
+                text: "\uD83D\uDD0A"
+                font.pixelSize: 16
+                color: "#949AA5"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Slider {
+                id: drumsVolumeSlider
+                width: 90
+                anchors.verticalCenter: parent.verticalCenter
+                from: 0; to: 1; stepSize: 0.01
+                value: appEngine.viewState.masterVolume
+                onValueChanged: appEngine.setMasterVolume(value)
+
+                background: Rectangle {
+                    x: drumsVolumeSlider.leftPadding
+                    y: drumsVolumeSlider.topPadding + drumsVolumeSlider.availableHeight / 2 - height / 2
+                    width: drumsVolumeSlider.availableWidth; height: 3; radius: 2
+                    color: Qt.rgba(1,1,1,0.08)
+                    Rectangle {
+                        width: drumsVolumeSlider.visualPosition * parent.width
+                        height: parent.height; color: "#E07A26"; radius: 2
+                    }
+                }
+                handle: Rectangle {
+                    x: drumsVolumeSlider.leftPadding + drumsVolumeSlider.visualPosition * (drumsVolumeSlider.availableWidth - width)
+                    y: drumsVolumeSlider.topPadding + drumsVolumeSlider.availableHeight / 2 - height / 2
+                    width: 12; height: 12; radius: 6
+                    color: drumsVolumeSlider.pressed ? "#E07A26" : "#EBEDF0"
+                    border.color: "#E07A26"; border.width: 1
+                }
+            }
+        }
     }
 
     // --- Drum kit overlay (zone indicators) ----------------------------------

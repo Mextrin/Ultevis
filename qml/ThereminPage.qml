@@ -7,11 +7,12 @@ Item {
     id: root
     signal back()
 
-    // UI state (mock — not yet wired to audio synthesis)
-    property string waveShape: "sine"
-    property real volumeFloor: 0.2
-    property real freqMin: 220
-    property real freqMax: 880
+    // UI state — initialised from persisted ViewState and kept in sync with backend
+    property string waveShape:   appEngine.viewState.thereminWaveform
+    property real   masterVolume: appEngine.viewState.masterVolume
+    property real   volumeFloor: appEngine.viewState.thereminVolumeFloor
+    property real   freqMin:     appEngine.viewState.thereminFreqMin
+    property real   freqMax:     appEngine.viewState.thereminFreqMax
 
     FontLoader {
         id: figTreeVariable
@@ -301,6 +302,50 @@ Item {
             color: "#E07826"
         }
 
+        // Master volume slider
+        Row {
+            anchors.right: waveDropdown.left
+            anchors.rightMargin: 16
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 8
+
+            Text {
+                text: "\uD83D\uDD0A"   // 🔊
+                font.pixelSize: 16
+                color: "#949AA5"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Slider {
+                id: volumeSlider
+                width: 90
+                anchors.verticalCenter: parent.verticalCenter
+                from: 0; to: 1; stepSize: 0.01
+                value: root.masterVolume
+                onValueChanged: {
+                    root.masterVolume = value
+                    appEngine.setMasterVolume(value)
+                }
+                background: Rectangle {
+                    x: volumeSlider.leftPadding
+                    y: volumeSlider.topPadding + volumeSlider.availableHeight / 2 - height / 2
+                    width: volumeSlider.availableWidth; height: 3; radius: 2
+                    color: Qt.rgba(1,1,1,0.08)
+                    Rectangle {
+                        width: volumeSlider.visualPosition * parent.width
+                        height: parent.height; color: "#E07A26"; radius: 2
+                    }
+                }
+                handle: Rectangle {
+                    x: volumeSlider.leftPadding + volumeSlider.visualPosition * (volumeSlider.availableWidth - width)
+                    y: volumeSlider.topPadding + volumeSlider.availableHeight / 2 - height / 2
+                    width: 12; height: 12; radius: 6
+                    color: volumeSlider.pressed ? "#E07A26" : "#EBEDF0"
+                    border.color: "#E07A26"; border.width: 1
+                }
+            }
+        }
+
         // Wave dropdown (far right)
         WaveShapeDropdown {
             id: waveDropdown
@@ -309,7 +354,10 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             value: root.waveShape
             font.family: figTreeVariable.name
-            onChanged: function(v) { root.waveShape = v }
+            onChanged: function(v) {
+                root.waveShape = v
+                appEngine.setThereminWaveform(v)
+            }
         }
     }
 
@@ -337,13 +385,27 @@ Item {
         z: 30
 
         font.family: figTreeVariable.name
+        masterVolume: root.masterVolume
         volumeFloor: root.volumeFloor
         freqMin: root.freqMin
         freqMax: root.freqMax
 
-        onVolumeFloorChanged: root.volumeFloor = volumeFloor
-        onFreqMinChanged: root.freqMin = freqMin
-        onFreqMaxChanged: root.freqMax = freqMax
+        onMasterVolumeChanged: {
+            root.masterVolume = masterVolume
+            appEngine.setMasterVolume(masterVolume)
+        }
+        onVolumeFloorChanged: {
+            root.volumeFloor = volumeFloor
+            appEngine.setThereminVolumeFloor(volumeFloor)
+        }
+        onFreqMinChanged: {
+            root.freqMin = freqMin
+            appEngine.setThereminFreqMin(freqMin)
+        }
+        onFreqMaxChanged: {
+            root.freqMax = freqMax
+            appEngine.setThereminFreqMax(freqMax)
+        }
         onClose: open = false
 
         visible: open

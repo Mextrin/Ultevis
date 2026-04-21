@@ -75,16 +75,11 @@ Item {
 
             TypeSelector {
                 id: midiSelector
-                width: 160
-                model: ["None", "IAC Driver Bus 1", "Virtual MIDI Cable"]
+                width: 200
+                // Auto-detected MIDI outputs from JUCE (starts with "None")
+                model: appEngine.midiDevices
                 anchors.verticalCenter: parent.verticalCenter
-                onCurrentTextChanged: {
-                    if (currentText !== "None") {
-                        appEngine.setMidiEnabled(true)
-                    } else {
-                        appEngine.setMidiEnabled(false)
-                    }
-                }
+                onCurrentTextChanged: appEngine.selectMidiDevice(currentText)
             }
         }
     }
