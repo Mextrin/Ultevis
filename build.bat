@@ -16,9 +16,15 @@ if "%1"=="build-all" (
     cmake --build %BUILD_DIR%
 )
 if "%1"=="compile" cmake --build %BUILD_DIR%
-if "%1"=="run" "./%EXE_DIR%"
+if "%1"=="run" (
+    set "ULTEVIS_LAUNCH_HAND_DETECTOR=1"
+    set "ULTEVIS_HAND_DETECTOR_SCRIPT=%~dp0src\mediapipe\hand_detector.py"
+    "./%EXE_DIR%"
+)
 if "%1"=="compile-and-run" (
     cmake --build %BUILD_DIR%
+    set "ULTEVIS_LAUNCH_HAND_DETECTOR=1"
+    set "ULTEVIS_HAND_DETECTOR_SCRIPT=%~dp0src\mediapipe\hand_detector.py"
     "./%EXE_DIR%"
 )
 if "%1"=="clean" (

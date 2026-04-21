@@ -30,7 +30,9 @@ acts as the top-level coordinator of system components.
 
 #include "Core/GlobalState.h"
 #include "Audio/AudioEngine.h"
+#include <cstdlib>
 #include <iostream>
+#include <string>
 #include <thread>
 #include <chrono>
 extern void startCameraFeed(GlobalState* state);
@@ -179,6 +181,18 @@ int main() {
     }
 
     std::cout << "\nWaiting For Python Script To Start Camera\n" << std::endl;
+    if (std::getenv("ULTEVIS_LAUNCH_HAND_DETECTOR") != nullptr) {
+        const char* detectorScript = std::getenv("ULTEVIS_HAND_DETECTOR_SCRIPT");
+        const std::string scriptPath = detectorScript != nullptr
+            ? detectorScript
+            : "src\\mediapipe\\hand_detector.py";
+#ifdef _WIN32
+        const std::string command = "start \"Ultevis Hand Detector\" python \"" + scriptPath + "\"";
+#else
+        const std::string command = "python3 \"" + scriptPath + "\" &";
+#endif
+        std::system(command.c_str());
+    }
     startCameraFeed(&state);
 
     return 0;

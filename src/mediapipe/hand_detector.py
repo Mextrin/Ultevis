@@ -4,6 +4,7 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import socket
 import json
+from pathlib import Path
 
 UDP_IP = "127.0.0.1"
 UDP_PORT = 5005
@@ -11,11 +12,17 @@ UDP_PORT = 5005
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # Create hand detector with new API
-base_options = python.BaseOptions(model_asset_path='hand_landmarker.task')
+MODEL_PATH = Path(__file__).with_name("hand_landmarker.task")
+if not MODEL_PATH.exists():
+    raise FileNotFoundError(f"MediaPipe hand landmarker model not found: {MODEL_PATH}")
+
+base_options = python.BaseOptions(model_asset_path=str(MODEL_PATH))
 options = vision.HandLandmarkerOptions(base_options=base_options, num_hands=2)
 detector = vision.HandLandmarker.create_from_options(options)
 
 cap = cv2.VideoCapture(0)
+if not cap.isOpened():
+    raise RuntimeError("Unable to open webcam at index 0. Check camera permissions or try another camera index.")
 
 while cap.isOpened():
     ret, frame = cap.read()
