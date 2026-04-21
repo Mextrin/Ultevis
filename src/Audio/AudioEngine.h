@@ -5,6 +5,8 @@
 #include "../Core/GlobalState.h"
 #include "OscillatorVoice.h"
 #include <sfizz.hpp>
+#include <mutex>
+#include <memory>
 
 class HeadlessAudioEngine : public juce::AudioIODeviceCallback
 {
@@ -26,12 +28,22 @@ public:
     void processKeyboard(juce::AudioBuffer<float>& buffer, int numSamples);
 
 private:
+    void resetDrumPlaybackState();
+    void resetKeyboardPlaybackState();
+
+private:
     juce::AudioDeviceManager deviceManager;
-    GlobalState* globalState;
+    GlobalState* globalState = nullptr;
     juce::Synthesiser synth;
     sfz::Sfizz drumSynth;
     sfz::Sfizz keyboardSynth;
     std::unique_ptr<juce::MidiOutput> midiOut;
+
+    std::mutex drumSynthMutex;
+    std::mutex keyboardSynthMutex;
+
+    juce::String loadedDrumSfzPath;
+    int loadedKeyboardInstrumentID = -1;
 
     bool wasRightVisible = false;
     bool wasKeyPressed = false;
