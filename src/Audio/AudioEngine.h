@@ -21,6 +21,9 @@ public:
 
     void loadDrumSound(const juce::String& sfzPath);
     void loadKeyboardSound(int keyboardInstrumentID);
+    void processTheremin(juce::AudioBuffer<float>& buffer, int numSamples);
+    void processDrums(juce::AudioBuffer<float>& buffer, int numSamples);
+    void processKeyboard(juce::AudioBuffer<float>& buffer, int numSamples);
 
 private:
     juce::AudioDeviceManager deviceManager;

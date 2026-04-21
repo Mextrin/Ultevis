@@ -15,9 +15,8 @@ separate oscillator voice module.
 #include <iostream>
 #include <cmath>
 
-// =============================================================================
-// HEADLESS AUDIO ENGINE IMPLEMENTATION
-// =============================================================================
+// Initializes the audio engine
+// Configures MIDI output, creates synth voice, sets up audio device with low-latency buffer
 HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr) : globalState(statePtr)
 {
     bool midiOutSwitch = globalState->routeToMidiOut.load();
@@ -71,11 +70,14 @@ HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr) : globalState(st
     deviceManager.addAudioCallback(this);
 }
 
+// Cleans up audio resources by removing the audio callback
 HeadlessAudioEngine::~HeadlessAudioEngine()
 {
     deviceManager.removeAudioCallback(this);
 }
 
+// Called when audio device starts
+// Logs device configuration, propagates sample rate and buffer size to all synth engines
 void HeadlessAudioEngine::audioDeviceAboutToStart(juce::AudioIODevice* device)
 {
     std::cout << "Audio Device: " << device->getName() << std::endl;
@@ -94,8 +96,10 @@ void HeadlessAudioEngine::audioDeviceAboutToStart(juce::AudioIODevice* device)
     keyboardSynth.setSamplesPerBlock(device->getCurrentBufferSizeSamples());
 }
 
+// Called when audio device stops (not implemented)
 void HeadlessAudioEngine::audioDeviceStopped() {}
 
+// Loads drum SFZ instrument into drumSynth
 void HeadlessAudioEngine::loadDrumSound(const juce::String& sfzPath)
 {
     bool loaded = drumSynth.loadSfzFile(sfzPath.toStdString());
@@ -104,6 +108,7 @@ void HeadlessAudioEngine::loadDrumSound(const juce::String& sfzPath)
     }
 }
 
+// Loads selected keyboard instrument based on ID
 void HeadlessAudioEngine::loadKeyboardSound(int keyboardInstrumentID)
 {
     juce::String baseOrchestraPath = "Instruments/VSCO-2-CE/";
@@ -134,6 +139,126 @@ void HeadlessAudioEngine::loadKeyboardSound(int keyboardInstrumentID)
     }
 }
 
+// Processes the theremin
+void HeadlessAudioEngine::processTheremin(juce::AudioBuffer<float>& buffer, int numSamples)
+{
+    const bool isRightVisible = globalState->rightHandVisible.load();
+    const bool isLeftVisible = globalState->leftHandVisible.load();
+
+    if (isRightVisible && !wasRightVisible) {
+        synth.noteOn(1, 60, 1.0f);
+        if (midiOut != nullptr) {
+            midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, 60, 1.0f));
+        }
+    }
+    else if (!isRightVisible && wasRightVisible) {
+        synth.noteOff(1, 60, 1.0f, true);
+        if (midiOut != nullptr) {
+            midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, 60, 0.0f));
+        }
+    }
+
+    wasRightVisible = isRightVisible;
+
+    if (isRightVisible) {
+        const float x = globalState->rightHandX.load();
+        const float y = globalState->leftHandY.load();
+
+        const float semitonesFromCenter = (x * 48.0f) - 24.0f;
+        const double targetFreq = 261.625565 * std::pow(2.0, semitonesFromCenter / 12.0);
+
+        const float safeY = juce::jlimit(0.0f, 1.0f, y);
+        const float targetVol = isLeftVisible ? (1.0f - safeY) : 0.0f;
+
+        if (auto* myVoice = dynamic_cast<SineWaveVoice*>(synth.getVoice(0))) {
+            myVoice->setWaveform(globalState->currentWaveform.load());
+            myVoice->updateThereminMath(targetFreq, targetVol);
+        }
+
+        if (midiOut != nullptr) {
+            int midiPitchBend = static_cast<int>(x * 16383.0f);
+            int midiVolume = static_cast<int>(targetVol * 127.0f);
+
+            midiOut->sendMessageNow(juce::MidiMessage::pitchWheel(1, midiPitchBend));
+            midiOut->sendMessageNow(juce::MidiMessage::controllerEvent(1, 7, midiVolume));
+        }
+    }
+
+    synth.renderNextBlock(buffer, juce::MidiBuffer(), 0, numSamples);
+}
+
+// Processes the drums
+void HeadlessAudioEngine::processDrums(juce::AudioBuffer<float>& buffer, int numSamples)
+{
+    if (globalState->leftDrumHit.exchange(false)) {
+        const int leftNote = globalState->leftDrumType.load();
+        const int leftVelocity = globalState->leftDrumVelocity.load();
+
+        drumSynth.noteOn(0, leftNote, leftVelocity);
+        if (midiOut != nullptr)
+            midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, leftNote, (juce::uint8)leftVelocity));
+    }
+
+    if (globalState->rightDrumHit.exchange(false)) {
+        const int rightNote = globalState->rightDrumType.load();
+        const int rightVelocity = globalState->rightDrumVelocity.load();
+
+        drumSynth.noteOn(0, rightNote, rightVelocity);
+        if (midiOut != nullptr)
+            midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, rightNote, (juce::uint8)rightVelocity));
+    }
+
+    float* outChannels[] = { buffer.getWritePointer(0), buffer.getWritePointer(1) };
+    drumSynth.renderBlock(outChannels, numSamples);
+}
+
+// Processes the keyboard
+void HeadlessAudioEngine::processKeyboard(juce::AudioBuffer<float>& buffer, int numSamples)
+{
+    const bool isPressed = globalState->isKeyPressed.load();
+    const int currentNote = globalState->keyboardNote.load();
+    const int velocity = globalState->keyboardVelocity.load();
+
+    if (isPressed && !wasKeyPressed) {
+        keyboardSynth.noteOn(0, currentNote, velocity);
+
+        if (midiOut != nullptr) {
+            midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, currentNote, (juce::uint8)velocity));
+        }
+
+        lastPlayedKey = currentNote;
+    }
+    else if (!isPressed && wasKeyPressed) {
+        keyboardSynth.noteOff(0, lastPlayedKey, 0);
+
+        if (midiOut != nullptr) {
+            midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, lastPlayedKey, (juce::uint8)0));
+        }
+
+        lastPlayedKey = -1;
+    }
+    else if (isPressed && wasKeyPressed && currentNote != lastPlayedKey) {
+        keyboardSynth.noteOff(0, lastPlayedKey, 0);
+        if (midiOut != nullptr) {
+            midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, lastPlayedKey, (juce::uint8)0));
+        }
+
+        keyboardSynth.noteOn(0, currentNote, velocity);
+        if (midiOut != nullptr) {
+            midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, currentNote, (juce::uint8)velocity));
+        }
+
+        lastPlayedKey = currentNote;
+    }
+
+    wasKeyPressed = isPressed;
+
+    float* outChannels[] = { buffer.getWritePointer(0), buffer.getWritePointer(1) };
+    keyboardSynth.renderBlock(outChannels, numSamples);
+}
+
+// Main real-time audio callback
+// Clears output buffer, dispatches processing based on selected instrument
 void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
     const float* const*, int,
     float* const* outputChannelData, int numOutputChannels,
@@ -142,119 +267,17 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
     juce::AudioBuffer<float> buffer(const_cast<float**>(outputChannelData), numOutputChannels, numSamples);
     buffer.clear();
 
-    auto activeInst = globalState->currentInstrument.load();
+    switch (globalState->currentInstrument.load()) {
+        case ActiveInstrument::Theremin:
+            processTheremin(buffer, numSamples);
+            break;
 
-    if (activeInst == ActiveInstrument::Theremin) {
-        bool isRightVisible = globalState->rightHandVisible.load();
-        bool isLeftVisible = globalState->leftHandVisible.load();
+        case ActiveInstrument::Drums:
+            processDrums(buffer, numSamples);
+            break;
 
-        if (isRightVisible && !wasRightVisible) {
-            synth.noteOn(1, 60, 1.0f);
-            if (midiOut != nullptr) {
-                midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, 60, 1.0f));
-            }
-        }
-        else if (!isRightVisible && wasRightVisible) {
-            synth.noteOff(1, 60, 1.0f, true);
-            if (midiOut != nullptr) {
-                midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, 60, 0.0f));
-            }
-        }
-        wasRightVisible = isRightVisible;
-
-        if (isRightVisible) {
-            float x = globalState->rightHandX.load();
-            float y = globalState->leftHandY.load();
-
-            float semitonesFromCenter = (x * 48.0f) - 24.0f;
-            double targetFreq = 261.625565 * std::pow(2.0, semitonesFromCenter / 12.0);
-
-            float safeY = juce::jlimit(0.0f, 1.0f, y);
-            float targetVol = isLeftVisible ? (1.0f - safeY) : 0.0f;
-
-            if (auto* myVoice = dynamic_cast<SineWaveVoice*>(synth.getVoice(0))) {
-                myVoice->setWaveform(globalState->currentWaveform.load());
-                myVoice->updateThereminMath(targetFreq, targetVol);
-            }
-
-            if (midiOut != nullptr) {
-                int midiPitchBend = static_cast<int>(x * 16383.0f);
-                int midiVolume = static_cast<int>(targetVol * 127.0f);
-
-                midiOut->sendMessageNow(juce::MidiMessage::pitchWheel(1, midiPitchBend));
-                midiOut->sendMessageNow(juce::MidiMessage::controllerEvent(1, 7, midiVolume));
-            }
-        }
-
-        synth.renderNextBlock(buffer, juce::MidiBuffer(), 0, numSamples);
-    }
-    else if (activeInst == ActiveInstrument::Drums) {
-        if (globalState->leftDrumHit.exchange(false)) {
-            int leftNote = globalState->leftDrumType.load();
-            int leftVelocity = globalState->leftDrumVelocity.load();
-
-            drumSynth.noteOn(0, leftNote, leftVelocity);
-            if (midiOut != nullptr)
-                midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, leftNote, (juce::uint8)leftVelocity));
-        }
-
-        if (globalState->rightDrumHit.exchange(false)) {
-            int rightNote = globalState->rightDrumType.load();
-            int rightVelocity = globalState->rightDrumVelocity.load();
-
-            drumSynth.noteOn(0, rightNote, rightVelocity);
-            if (midiOut != nullptr)
-                midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, rightNote, (juce::uint8)rightVelocity));
-        }
-
-        float* outChannels[] = { buffer.getWritePointer(0), buffer.getWritePointer(1) };
-        drumSynth.renderBlock(outChannels, numSamples);
-    }
-    else if (activeInst == ActiveInstrument::Keyboard) {
-        bool isPressed = globalState->isKeyPressed.load();
-        int currentNote = globalState->keyboardNote.load();
-        int velocity = globalState->keyboardVelocity.load();
-
-        // Strike, hand down
-        if (isPressed && !wasKeyPressed) {
-            keyboardSynth.noteOn(0, currentNote, velocity);
-            
-            if (midiOut != nullptr) {
-                midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, currentNote, (juce::uint8)velocity));
-            }
-            lastPlayedKey = currentNote; // Remember what we just played
-        }
-        // Release, hand just lifted up 
-        else if (!isPressed && wasKeyPressed) {
-            keyboardSynth.noteOff(0, lastPlayedKey, 0); // Turn off the exact key we remembered
-            
-            if (midiOut != nullptr) {
-                midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, lastPlayedKey, (juce::uint8)0));
-            }
-            lastPlayedKey = -1; // Clear the memory
-        }
-        // Glissando
-        else if (isPressed && wasKeyPressed && currentNote != lastPlayedKey) {
-            
-            // Turn off old key immediately 
-            keyboardSynth.noteOff(0, lastPlayedKey, 0);
-            if (midiOut != nullptr) {
-                midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, lastPlayedKey, (juce::uint8)0));
-            }
-
-            // Turn on new key
-            keyboardSynth.noteOn(0, currentNote, velocity);
-            if (midiOut != nullptr) {
-                midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, currentNote, (juce::uint8)velocity));
-            }
-            
-            // Update memory to new key
-            lastPlayedKey = currentNote;
-        }
-
-        wasKeyPressed = isPressed;
-
-        float* outChannels[] = { buffer.getWritePointer(0), buffer.getWritePointer(1) };
-        keyboardSynth.renderBlock(outChannels, numSamples);
+        case ActiveInstrument::Keyboard:
+            processKeyboard(buffer, numSamples);
+            break;
     }
 }
