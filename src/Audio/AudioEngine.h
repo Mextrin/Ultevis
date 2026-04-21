@@ -36,4 +36,5 @@ private:
     bool wasRightVisible = false;
     bool wasKeyPressed = false;
     int lastPlayedKey = -1; // -1 means no key is playing
+    bool wasSustainPedalPressed = false;
 };

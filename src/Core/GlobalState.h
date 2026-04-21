@@ -78,6 +78,7 @@ public:
    std::atomic<int> keyboardNote { 60 };    
    std::atomic<int> keyboardVelocity { 100 }; 
    std::atomic<KeyboardSound> currentKeyboardInstrument { KeyboardSound::GrandPiano };
+   std::atomic<bool> sustainPedal { false };
 
    // --Routing and instrument selection--
    std::atomic<bool> routeToInternalAudio { true };
