@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtMultimedia
 import "components"
 
 Item {
@@ -16,22 +17,155 @@ Item {
         color: "#101218"
     }
 
-    // Webcam placeholder (behind drum overlay)
+    // Picks the first front-facing camera, falling back to the default video input.
+    MediaDevices {
+        id: mediaDevices
+        onVideoInputsChanged: {
+            console.log("DrumsPage: videoInputs changed, count =", videoInputs.length)
+            if (camera.active) return
+            if (appEngine.cameraPermission === "granted") {
+                root.startCamera()
+            }
+        }
+    }
+
+    readonly property int _posFrontFace: 2
+
+    function pickCameraDevice() {
+        const devices = mediaDevices.videoInputs
+        console.log("DrumsPage: pickCameraDevice; videoInputs.length =", devices ? devices.length : 0)
+        if (!devices || devices.length === 0) return null
+        for (let i = 0; i < devices.length; ++i) {
+            if (devices[i].position === _posFrontFace) return devices[i]
+        }
+        return devices[0]
+    }
+
+    property string cameraStatus: "initializing"
+    property string cameraErrorText: ""
+
+    Connections {
+        target: appEngine
+        function onCameraPermissionChanged() {
+            if (appEngine.cameraPermission === "granted") {
+                root.startCamera()
+            } else if (appEngine.cameraPermission === "denied") {
+                root.cameraStatus = "denied"
+            }
+        }
+    }
+
+    function startCamera() {
+        console.log("DrumsPage: startCamera(); permission =", appEngine.cameraPermission)
+        const device = pickCameraDevice()
+        if (device) {
+            camera.cameraDevice = device
+            camera.active = true
+        } else {
+            console.log("DrumsPage: no camera device yet; waiting for videoInputsChanged")
+        }
+    }
+
+    CaptureSession {
+        id: captureSession
+        videoOutput: videoOutput
+        camera: Camera {
+            id: camera
+            active: false
+            onErrorOccurred: function(error, errorString) {
+                root.cameraStatus = "error"
+                root.cameraErrorText = errorString
+                console.log("DrumsPage: camera error:", error, errorString)
+            }
+            onActiveChanged: {
+                console.log("DrumsPage: camera.active =", active)
+                if (active) root.cameraStatus = "running"
+            }
+        }
+    }
+
+    VideoOutput {
+        id: videoOutput
+        anchors.top: header.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        fillMode: VideoOutput.PreserveAspectCrop
+        transform: Scale { origin.x: videoOutput.width / 2; xScale: -1 }
+    }
+
+    // Fallback overlay when the camera isn't running.
     Rectangle {
         anchors.top: header.bottom
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        color: "#0A0C10"
+        color: "#101218"
+        visible: root.cameraStatus !== "running"
+        z: 1
 
-        Text {
+        Column {
             anchors.centerIn: parent
-            text: "Camera Feed"
-            font.pixelSize: 18
-            font.weight: Font.Light
-            font.letterSpacing: 2
-            color: Qt.rgba(1, 1, 1, 0.15)
+            spacing: 10
+            width: Math.min(parent.width - 80, 520)
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "\u25A1"
+                font.pixelSize: 44
+                color: "#949AA5"
+            }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: {
+                    switch (root.cameraStatus) {
+                        case "no-device": return "No camera detected"
+                        case "denied":    return "Camera access denied"
+                        case "error":     return "Camera unavailable"
+                        default:          return "Waiting for camera\u2026"
+                    }
+                }
+                font.family: figTreeVariable.name
+                font.pixelSize: 18
+                font.weight: Font.Medium
+                color: "#EBEDF0"
+            }
+            Text {
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+                text: {
+                    switch (root.cameraStatus) {
+                        case "error":
+                            return root.cameraErrorText + "\n\nOn macOS, check System Settings \u2192 Privacy & Security \u2192 Camera and grant Airchestra access."
+                        case "denied":
+                            return "Open System Settings \u2192 Privacy & Security \u2192 Camera and enable Airchestra, then restart the app."
+                        case "no-device":
+                            return "Connect a camera and reopen the Drums page."
+                        default:
+                            return "Grant camera access in the system prompt to see the live feed."
+                    }
+                }
+                font.family: figTreeVariable.name
+                font.pixelSize: 13
+                color: "#949AA5"
+                lineHeight: 1.3
+            }
         }
+    }
+
+    Component.onCompleted: {
+        if (appEngine.cameraPermission === "granted") {
+            root.startCamera()
+        } else if (appEngine.cameraPermission === "denied") {
+            root.cameraStatus = "denied"
+        } else {
+            appEngine.requestCameraPermission()
+        }
+    }
+
+    Component.onDestruction: {
+        camera.active = false
     }
 
     // --- Header --------------------------------------------------------------
@@ -155,6 +289,7 @@ Item {
         DrumPad {
             id: crashPad
             name: "Crash"
+            drumImage: "qrc:/assets/drums/crash.png"
             x: 0
             y: 0
             width: parent.width * 0.24
@@ -165,6 +300,7 @@ Item {
         DrumPad {
             id: ridePad
             name: "Ride"
+            drumImage: "qrc:/assets/drums/crash.png"
             x: parent.width - width
             y: 0
             width: parent.width * 0.24
@@ -177,6 +313,7 @@ Item {
         DrumPad {
             id: tom1Pad
             name: "High-Tom"
+            drumImage: "qrc:/assets/drums/drum.png"
             x: parent.width * 0.30
             y: parent.height * 0.06
             width: parent.width * 0.17
@@ -187,6 +324,7 @@ Item {
         DrumPad {
             id: tom2Pad
             name: "Low-Tom"
+            drumImage: "qrc:/assets/drums/drum.png"
             x: parent.width * 0.53
             y: parent.height * 0.06
             width: parent.width * 0.17
@@ -197,12 +335,23 @@ Item {
 
         // Hi-Hat — far left, mid-height
         DrumPad {
-            id: hiHatPad
-            name: "Hi-Hat"
+            id: closedhiHatPad
+            name: "Closed Hi-Hat"
+            drumImage: "qrc:/assets/drums/crash.png"
             x: 0
-            y: parent.height * 0.34
+            y: parent.height * 0.30
             width: parent.width * 0.22
-            height: parent.height * 0.22
+            height: parent.height * 0.15
+        }
+
+         DrumPad {
+            id: openhiHatPad
+            name: "Open Hi-Hat"
+            drumImage: "qrc:/assets/drums/crash.png"
+            x: 0
+            y: parent.height * 0.47
+            width: parent.width * 0.22
+            height: parent.height * 0.15
         }
 
         // Snare — on the diagonal between Hi-Hat and Kick
@@ -211,6 +360,7 @@ Item {
         DrumPad {
             id: snarePad
             name: "Snare"
+            drumImage: "qrc:/assets/drums/drum.png"
             x: parent.width * 0.28
             y: parent.height * 0.44
             width: parent.width * 0.20
@@ -221,6 +371,7 @@ Item {
         DrumPad {
             id: floorTomPad
             name: "Floor Tom"
+            drumImage: "qrc:/assets/drums/drum.png"
             x: parent.width - width
             y: parent.height * 0.44
             width: parent.width * 0.22
@@ -233,10 +384,11 @@ Item {
         DrumPad {
             id: kickPad
             name: "Kick"
-            x: parent.width * 0.30
-            y: parent.height * 0.73
-            width: parent.width * 0.40
-            height: parent.height * 0.24
+            drumImage: "qrc:/assets/drums/drum.png"
+            x: parent.width * 0.36
+            y: parent.height * 0.76
+            width: parent.width * 0.28
+            height: parent.height * 0.18
         }
     }
 
@@ -353,9 +505,11 @@ Item {
     component DrumPad: Rectangle {
         id: pad
         property string name: ""
+        property string drumImage: ""
         property bool padHovered: padMouse.containsMouse
 
         radius: 10
+        clip: true
         color: padHovered ? Qt.rgba(0.878, 0.478, 0.149, 0.14) : Qt.rgba(1, 1, 1, 0.04)
         border.width: 1
         border.color: padHovered ? Qt.rgba(0.878, 0.478, 0.149, 0.5) : Qt.rgba(1, 1, 1, 0.08)
@@ -372,15 +526,29 @@ Item {
             Behavior on yScale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
         }
 
+        // Drum image — fills the pad
+        Image {
+            anchors.fill: parent
+            source: pad.drumImage
+            fillMode: Image.PreserveAspectCrop
+            smooth: true
+            visible: pad.drumImage !== ""
+            opacity: pad.padHovered ? 1.0 : 0.85
+            Behavior on opacity { NumberAnimation { duration: 180 } }
+        }
+
+        // Small label at the bottom
         Text {
-            anchors.centerIn: parent
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 4
             text: pad.name
             font.family: figTreeVariable.name
-            font.pixelSize: 14
+            font.pixelSize: 10
             font.weight: Font.Medium
-            font.letterSpacing: 1
+            font.letterSpacing: 0.5
             color: pad.padHovered ? "#E07A26" : "#EBEDF0"
-            opacity: pad.padHovered ? 1.0 : 0.7
+            opacity: pad.padHovered ? 1.0 : 0.6
             Behavior on color { ColorAnimation { duration: 180 } }
             Behavior on opacity { NumberAnimation { duration: 180 } }
         }

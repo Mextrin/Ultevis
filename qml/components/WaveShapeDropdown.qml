@@ -14,7 +14,8 @@ Item {
     readonly property var options: [
         { key: "sine",     label: "Sine" },
         { key: "square",   label: "Square" },
-        { key: "triangle", label: "Triangle" }
+        { key: "triangle", label: "Triangle" },
+        { key: "sawtooth", label: "Sawtooth" }
     ]
 
     implicitWidth: 160

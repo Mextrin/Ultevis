@@ -27,5 +27,7 @@
         <file>assets/icons/airchestra-logo@2x.png</file>
         <file>assets/icons/Air.svg</file>
         <file>assets/icons/Chestra.svg</file>
+        <file>assets/drums/crash.png</file>
+        <file>assets/drums/drum.png</file>
     </qresource>
 </RCC>
