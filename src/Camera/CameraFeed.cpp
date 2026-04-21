@@ -15,31 +15,19 @@
 #include "Core/GlobalState.h"
 
 // Minimal JSON field parser — no library needed for this simple payload
-static std::string parseValue(const std::string& json, const std::string& key) {
-    auto pos = json.find("\"" + key + "\":");
-    if (pos == std::string::npos) return {};
-    pos = json.find(':', pos) + 1;
-    while (pos < json.size() && json[pos] == ' ') pos++;
-
-    const auto end = json.find_first_of(",}", pos);
-    return json.substr(pos, end - pos);
-}
-
 static float parseFloat(const std::string& json, const std::string& key) {
-    const auto value = parseValue(json, key);
-    if (value.empty()) return 0.0f;
-    return std::stof(value);
+    auto pos = json.find("\"" + key + "\":");
+    if (pos == std::string::npos) return 0.0f;
+    pos = json.find(':', pos) + 1;
+    return std::stof(json.substr(pos, 10));
 }
 
 static bool parseBool(const std::string& json, const std::string& key) {
-    const auto value = parseValue(json, key);
-    return value == "true";
-}
-
-static int parseInt(const std::string& json, const std::string& key, int fallback = 0) {
-    const auto value = parseValue(json, key);
-    if (value.empty()) return fallback;
-    return std::stoi(value);
+    auto pos = json.find("\"" + key + "\":");
+    if (pos == std::string::npos) return false;
+    pos = json.find(':', pos) + 1;
+    while (json[pos] == ' ') pos++;
+    return json.substr(pos, 4) == "true";
 }
 
 void startCameraFeed(GlobalState* state) {
@@ -81,12 +69,6 @@ void startCameraFeed(GlobalState* state) {
         state->leftHandVisible.store(parseBool(json,  "leftHandVisible"));
         state->rightHandX.store(parseFloat(json, "rightHandX"));
         state->leftHandY.store(parseFloat(json,  "leftHandY"));
-        state->leftDrumHit.store(parseBool(json, "leftDrumHit"));
-        state->rightDrumHit.store(parseBool(json, "rightDrumHit"));
-        state->leftDrumType.store(parseInt(json, "leftDrumType", state->leftDrumType.load()));
-        state->rightDrumType.store(parseInt(json, "rightDrumType", state->rightDrumType.load()));
-        state->leftDrumVelocity.store(parseInt(json, "leftDrumVelocity", state->leftDrumVelocity.load()));
-        state->rightDrumVelocity.store(parseInt(json, "rightDrumVelocity", state->rightDrumVelocity.load()));
 
         std::cout << "R: " << state->rightHandVisible.load()
                   << "  x=" << state->rightHandX.load()
