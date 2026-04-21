@@ -89,23 +89,77 @@ void HeadlessAudioEngine::audioDeviceAboutToStart(juce::AudioIODevice* device)
 
     synth.setCurrentPlaybackSampleRate(device->getCurrentSampleRate());
 
-    drumSynth.setSampleRate(device->getCurrentSampleRate());
-    drumSynth.setSamplesPerBlock(device->getCurrentBufferSizeSamples());
+    {
+        std::lock_guard<std::mutex> lock(drumSynthMutex);
+        drumSynth.setSampleRate(device->getCurrentSampleRate());
+        drumSynth.setSamplesPerBlock(device->getCurrentBufferSizeSamples());
+    }
 
-    keyboardSynth.setSampleRate(device->getCurrentSampleRate());
-    keyboardSynth.setSamplesPerBlock(device->getCurrentBufferSizeSamples());
+    {
+        std::lock_guard<std::mutex> lock(keyboardSynthMutex);
+        keyboardSynth.setSampleRate(device->getCurrentSampleRate());
+        keyboardSynth.setSamplesPerBlock(device->getCurrentBufferSizeSamples());
+    }
 }
 
 // Called when audio device stops (not implemented)
 void HeadlessAudioEngine::audioDeviceStopped() {}
 
+// Resets drum playback/trigger state so stale hits are not consumed
+void HeadlessAudioEngine::resetDrumPlaybackState()
+{
+    if (globalState == nullptr)
+        return;
+
+    globalState->leftDrumHit.store(false);
+    globalState->rightDrumHit.store(false);
+    globalState->leftDrumType.store(36);
+    globalState->rightDrumType.store(38);
+    globalState->leftDrumVelocity.store(100);
+    globalState->rightDrumVelocity.store(100);
+}
+
+// Resets keyboard playback state so stale notes/pedal are not reused
+void HeadlessAudioEngine::resetKeyboardPlaybackState()
+{
+    if (globalState == nullptr)
+        return;
+
+    globalState->isKeyPressed.store(false);
+    globalState->keyboardNote.store(60);
+    globalState->keyboardVelocity.store(100);
+    globalState->sustainPedal.store(false);
+
+    wasKeyPressed = false;
+    wasSustainPedalPressed = false;
+    lastPlayedKey = -1;
+}
+
 // Loads drum SFZ instrument into drumSynth
 void HeadlessAudioEngine::loadDrumSound(const juce::String& sfzPath)
 {
+    std::lock_guard<std::mutex> lock(drumSynthMutex);
+
+    // Avoid reloading the same drum kit repeatedly
+    if (loadedDrumSfzPath == sfzPath) {
+        std::cout << "Drum SFZ already loaded, skipping reload: "
+                  << sfzPath << std::endl;
+        resetDrumPlaybackState();
+        return;
+    }
+
+    // Clear stale trigger state before changing kit
+    resetDrumPlaybackState();
+
+    std::cout << "Loading drum SFZ: " << sfzPath << std::endl;
+
     bool loaded = drumSynth.loadSfzFile(sfzPath.toStdString());
     if (!loaded) {
         std::cerr << "ERROR: Failed to load SFZ: " << sfzPath << std::endl;
+        return;
     }
+
+    loadedDrumSfzPath = sfzPath;
 }
 
 // Loads selected keyboard instrument based on ID
@@ -114,29 +168,50 @@ void HeadlessAudioEngine::loadKeyboardSound(int keyboardInstrumentID)
     juce::String baseOrchestraPath = "Instruments/VSCO-2-CE/";
     juce::String sfzToLoad = "";
 
-    if (keyboardInstrumentID == 0) { 
+    if (keyboardInstrumentID == 0) {
         // Grand Piano
         sfzToLoad = "Instruments/AccurateSalamanderGrandPianoV6.2beta2_48khz24bit/sfz_live/Accurate-SalamanderGrandPiano_flat.Recommended.sfz";
     }
-    else if (keyboardInstrumentID == 1) { 
+    else if (keyboardInstrumentID == 1) {
         sfzToLoad = baseOrchestraPath + "OrganLoud.sfz";
     }
-    else if (keyboardInstrumentID == 2) { 
+    else if (keyboardInstrumentID == 2) {
         sfzToLoad = baseOrchestraPath + "FluteSusVib.sfz";
     }
-    else if (keyboardInstrumentID == 3) { 
+    else if (keyboardInstrumentID == 3) {
         sfzToLoad = baseOrchestraPath + "Harp.sfz";
     }
-    else if (keyboardInstrumentID == 4) { 
+    else if (keyboardInstrumentID == 4) {
         sfzToLoad = baseOrchestraPath + "ViolinEnsSusVib.sfz";
     }
-
-    if (sfzToLoad.isNotEmpty()) {
-        bool loaded = keyboardSynth.loadSfzFile(sfzToLoad.toStdString());
-        if (!loaded) {
-            std::cerr << "ERROR: Failed to load SFZ: " << sfzToLoad << std::endl;
-        }
+    else {
+        std::cerr << "ERROR: Invalid keyboard instrument ID: "
+                  << keyboardInstrumentID << std::endl;
+        return;
     }
+
+    std::lock_guard<std::mutex> lock(keyboardSynthMutex);
+
+    // Avoid reloading the same keyboard patch repeatedly
+    if (loadedKeyboardInstrumentID == keyboardInstrumentID) {
+        std::cout << "Keyboard SFZ already loaded, skipping reload: "
+                  << sfzToLoad << std::endl;
+        resetKeyboardPlaybackState();
+        return;
+    }
+
+    // Clear stale keyboard state before changing patch
+    resetKeyboardPlaybackState();
+
+    std::cout << "Loading keyboard SFZ: " << sfzToLoad << std::endl;
+
+    bool loaded = keyboardSynth.loadSfzFile(sfzToLoad.toStdString());
+    if (!loaded) {
+        std::cerr << "ERROR: Failed to load SFZ: " << sfzToLoad << std::endl;
+        return;
+    }
+
+    loadedKeyboardInstrumentID = keyboardInstrumentID;
 }
 
 // Processes the theremin
@@ -190,6 +265,11 @@ void HeadlessAudioEngine::processTheremin(juce::AudioBuffer<float>& buffer, int 
 // Processes the drums
 void HeadlessAudioEngine::processDrums(juce::AudioBuffer<float>& buffer, int numSamples)
 {
+    if (buffer.getNumChannels() < 2)
+        return;
+
+    std::lock_guard<std::mutex> lock(drumSynthMutex);
+
     if (globalState->leftDrumHit.exchange(false)) {
         const int leftNote = globalState->leftDrumType.load();
         const int leftVelocity = globalState->leftDrumVelocity.load();
@@ -215,6 +295,11 @@ void HeadlessAudioEngine::processDrums(juce::AudioBuffer<float>& buffer, int num
 // Processes the keyboard
 void HeadlessAudioEngine::processKeyboard(juce::AudioBuffer<float>& buffer, int numSamples)
 {
+    if (buffer.getNumChannels() < 2)
+        return;
+
+    std::lock_guard<std::mutex> lock(keyboardSynthMutex);
+
     // Sustain Pedal
     const bool isPedalPressed = globalState->sustainPedal.load();
 

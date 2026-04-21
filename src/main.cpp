@@ -297,14 +297,53 @@ int main()
 
     HeadlessAudioEngine audio(&state);
 
-    std::cout << "\nBooted! Defaulting to Theremin.\n" << std::endl;
+    std::cout << "\nBooted!\n" << std::endl;
 
-    const char instChoice = askInstrumentChoice();
-    setupInstrument(state, audio, instChoice);
+    while (true)
+    {
+        std::cout << "\nSelect Instrument [0] Theremin, [1] Drums, [2] Keyboard, [q] Quit: ";
 
-    std::cout << "\nWaiting For Python Script To Start Camera\n" << std::endl;
-    launchHandDetectorIfRequested(state);
-    startCameraFeed(&state);
+        char instChoice = '0';
+        std::cin >> instChoice;
+
+        if (std::cin.fail())
+        {
+            clearBadInput();
+            instChoice = '0';
+        }
+
+        if (instChoice == 'q' || instChoice == 'Q')
+        {
+            std::cout << "\nExiting.\n" << std::endl;
+            break;
+        }
+
+        if (instChoice == '1') // Drums
+        {
+            setupDrums(state, audio);
+
+            std::cout << "\nWaiting For Python Script To Start Camera\n" << std::endl;
+            launchHandDetectorIfRequested(state);
+            startCameraFeed(&state);
+
+            return 0; // does not return anyway, but explicit
+        }
+        else if (instChoice == '2') // Keyboard
+        {
+            setupKeyboard(state, audio);
+            std::cout << "\nKeyboard test complete. Returning to menu.\n" << std::endl;
+        }
+        else // Theremin
+        {
+            setupTheremin(state);
+
+            std::cout << "\nWaiting For Python Script To Start Camera\n" << std::endl;
+            launchHandDetectorIfRequested(state);
+            startCameraFeed(&state);
+
+            return 0;
+        }
+    }
 
     return 0;
 }
