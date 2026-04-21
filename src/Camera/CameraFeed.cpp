@@ -70,9 +70,9 @@ void startCameraFeed(GlobalState* state) {
         state->rightHandX.store(parseFloat(json, "rightHandX"));
         state->leftHandY.store(parseFloat(json,  "leftHandY"));
 
-        std::cout << "R: " << state->rightHandVisible.load()
-                  << "  x=" << state->rightHandX.load()
-                  << "  y=" << state->leftHandY.load() << "\n";
+        // std::cout << "R: " << state->rightHandVisible.load()
+        //           << "  x=" << state->rightHandX.load()
+        //           << "  y=" << state->leftHandY.load() << "\n";
     }
 
     #ifdef _WIN32

@@ -1,33 +1,3 @@
-// src/main.cpp
-
-/*
-==============================================================================
-MAIN ENTRY POINT (Application Bootstrap & High-Level Orchestration)
-
-This file is responsible for bootstrapping the entire application and wiring
-together the core subsystems. It initializes the shared GlobalState object,
-starts the audio engine (which opens the audio device and begins real-time
-processing), and optionally runs a simulation of hand movement for testing.
-
-The main function demonstrates how gesture input (normally coming from the
-camera thread) affects the system by directly manipulating GlobalState. This
-includes triggering note-on/note-off events via visibility flags and modifying
-pitch/volume via positional values.
-
-After the simulation phase, control is handed over to the real camera pipeline
-(startCameraFeed), which becomes the producer of hand-tracking data.
-
-Key responsibilities:
-- Construct and own the GlobalState (shared across threads)
-- Initialize and start the HeadlessAudioEngine (audio thread)
-- Optionally simulate gesture input for testing/debugging
-- Launch the camera/vision subsystem
-
-This file does NOT perform any audio processing or synthesis itself. It strictly
-acts as the top-level coordinator of system components.
-==============================================================================
-*/
-
 #include "Core/GlobalState.h"
 #include "Audio/AudioEngine.h"
 #include <cstdlib>
