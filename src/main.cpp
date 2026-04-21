@@ -218,7 +218,9 @@ namespace
     {
         state.currentInstrument.store(ActiveInstrument::Drums);
         audio.loadDrumSound("Instruments/SMDrums_Sforzando_1.2/Programs/SM_Drums_kit.sfz");
-        playDrumTest(state);
+        std::cout << "\n>>> DRUMS ACTIVE <<<\n"
+                  << "Move either hand into the on-screen drum zones to trigger hits.\n"
+                  << std::endl;
     }
 
     void setupKeyboard(GlobalState& state, HeadlessAudioEngine& audio)
@@ -257,7 +259,7 @@ namespace
         }
     }
 
-    void launchHandDetectorIfRequested()
+    void launchHandDetectorIfRequested(const GlobalState& state)
     {
         if (std::getenv("ULTEVIS_LAUNCH_HAND_DETECTOR") == nullptr)
             return;
@@ -266,13 +268,17 @@ namespace
         const std::string scriptPath = detectorScript != nullptr
             ? detectorScript
             : "src\\mediapipe\\hand_detector.py";
-
-    #ifdef _WIN32
-        const std::string command = "start \"Ultevis Hand Detector\" python \"" + scriptPath + "\"";
-    #else
-        const std::string command = "python3 \"" + scriptPath + "\" &";
-    #endif
-
+        const auto cameraMode = state.currentInstrument.load() == ActiveInstrument::Drums
+            ? std::string("drums")
+            : std::string("theremin");
+#ifdef _WIN32
+        const std::string command =
+            "set \"ULTEVIS_CAMERA_MODE=" + cameraMode +
+            "\" && start \"Ultevis Hand Detector\" python \"" + scriptPath + "\"";
+#else
+        const std::string command =
+            "ULTEVIS_CAMERA_MODE=" + cameraMode + " python3 \"" + scriptPath + "\" &";
+#endif
         std::system(command.c_str());
     }
 
@@ -326,13 +332,9 @@ int main()
         {
             setupTheremin(state);
 
-            std::cout << "\nWaiting For Python Script To Start Camera\n" << std::endl;
-            launchHandDetectorIfRequested();
-            startCameraFeed(&state);
-
-            // This line will never be reached if startCameraFeed() does not return.
-        }
-    }
+    std::cout << "\nWaiting For Python Script To Start Camera\n" << std::endl;
+    launchHandDetectorIfRequested(state);
+    startCameraFeed(&state);
 
     return 0;
 }
