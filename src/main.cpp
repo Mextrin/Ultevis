@@ -318,23 +318,32 @@ int main()
             break;
         }
 
-        if (instChoice == '1')
+        if (instChoice == '1') // Drums
         {
             setupDrums(state, audio);
-            std::cout << "\nDrum test complete. Returning to menu.\n" << std::endl;
+
+            std::cout << "\nWaiting For Python Script To Start Camera\n" << std::endl;
+            launchHandDetectorIfRequested(state);
+            startCameraFeed(&state);
+
+            return 0; // does not return anyway, but explicit
         }
-        else if (instChoice == '2')
+        else if (instChoice == '2') // Keyboard
         {
             setupKeyboard(state, audio);
             std::cout << "\nKeyboard test complete. Returning to menu.\n" << std::endl;
         }
-        else
+        else // Theremin
         {
             setupTheremin(state);
 
-    std::cout << "\nWaiting For Python Script To Start Camera\n" << std::endl;
-    launchHandDetectorIfRequested(state);
-    startCameraFeed(&state);
+            std::cout << "\nWaiting For Python Script To Start Camera\n" << std::endl;
+            launchHandDetectorIfRequested(state);
+            startCameraFeed(&state);
+
+            return 0;
+        }
+    }
 
     return 0;
 }
