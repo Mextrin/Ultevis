@@ -71,7 +71,7 @@ case "${1:-}" in
 
         echo "Launching Python camera feed in a new Terminal window..."
         # Tell macOS to pop open a new Terminal and run the Python script independently
-        osascript -e "tell application \"Terminal\" to do script \"cd \\\"${SCRIPT_DIR}\\\" && source venv/bin/activate && python src/mediapipe/hand_detector.py\""
+        #osascript -e "tell application \"Terminal\" to do script \"cd \\\"${SCRIPT_DIR}\\\" && source venv/bin/activate && python src/mediapipe/hand_detector.py\""
 
         # Tell the C++ app NOT to launch a second hidden instance
         export ULTEVIS_LAUNCH_HAND_DETECTOR=0
