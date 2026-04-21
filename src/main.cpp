@@ -116,7 +116,7 @@ int main() {
     } else if (instChoice == '2') {
         state.currentInstrument.store(ActiveInstrument::Keyboard);
         char keyboardSoundChoice = '0';
-        std::cout << "Select Waveform [0] Grand Piano, [1] Organ, [2] Glockenspiel, [3] Harp, [4] Violin: ";
+        std::cout << "Select Waveform [0] Grand Piano, [1] Organ, [2] Flute, [3] Harp, [4] Violin: ";
         std::cin >> keyboardSoundChoice;
         int keyboardSoundID;
 
@@ -129,7 +129,7 @@ int main() {
             keyboardSoundID = 1;
         }
         else if (keyboardSoundChoice == '2') {
-            state.currentKeyboardInstrument.store(KeyboardSound::Glockenspiel);
+            state.currentKeyboardInstrument.store(KeyboardSound::Flute);
             keyboardSoundID = 2;
         }
         else if (keyboardSoundChoice == '3') {

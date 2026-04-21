@@ -49,7 +49,7 @@ enum class Waveform {
 enum class KeyboardSound {
    GrandPiano = 0,
    Organ = 1,
-   Glockenspiel = 2,
+   Flute = 2,
    Harp = 3,
    Violin = 4
 };

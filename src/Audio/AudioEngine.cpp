@@ -122,7 +122,7 @@ void HeadlessAudioEngine::loadKeyboardSound(int keyboardInstrumentID)
         sfzToLoad = baseOrchestraPath + "OrganLoud.sfz";
     }
     else if (keyboardInstrumentID == 2) { 
-        sfzToLoad = baseOrchestraPath + "Glockenspiel.sfz";
+        sfzToLoad = baseOrchestraPath + "FluteSusVib.sfz";
     }
     else if (keyboardInstrumentID == 3) { 
         sfzToLoad = baseOrchestraPath + "Harp.sfz";
