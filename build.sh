@@ -16,7 +16,6 @@ case "$(uname -s)" in
 esac
 
 # --- NEW HELPER FUNCTION ---
-# This automatically handles the Python PEP 668 lock without manual intervention
 setup_and_activate_python() {
     if [ ! -d "${SCRIPT_DIR}/venv" ]; then
         echo "========================================================"
@@ -24,13 +23,12 @@ setup_and_activate_python() {
         echo "========================================================"
         python3 -m venv "${SCRIPT_DIR}/venv"
         
-        # Upgrade pip and install the required machine learning libraries
         "${SCRIPT_DIR}/venv/bin/pip" install --upgrade pip
         "${SCRIPT_DIR}/venv/bin/pip" install mediapipe opencv-python
         echo "Python environment ready!"
     fi
 
-    # Activate it so the C++ app inherits the correct Python path
+    # Activate it for the current bash session
     source "${SCRIPT_DIR}/venv/bin/activate"
 }
 
@@ -52,22 +50,34 @@ case "${1:-}" in
         ;;
 
     run)
-        # Automatically handle the Python environment before launching!
         setup_and_activate_python
 
-        export ULTEVIS_LAUNCH_HAND_DETECTOR=1
+        echo "Launching Python camera feed in a new Terminal window..."
+        # Tell macOS to pop open a new Terminal and run the Python script independently
+        osascript -e "tell application \"Terminal\" to do script \"cd \\\"${SCRIPT_DIR}\\\" && source venv/bin/activate && python src/mediapipe/hand_detector.py\""
+
+        # Tell the C++ app NOT to launch a second hidden instance
+        export ULTEVIS_LAUNCH_HAND_DETECTOR=0
         export ULTEVIS_HAND_DETECTOR_SCRIPT="${HAND_DETECTOR_SCRIPT}"
+        
+        # Run C++ app in the current terminal
         "./${EXE_PATH}"
         ;;
 
     compile-and-run)
         cmake --build "${BUILD_DIR}" --config "${BUILD_CONFIG}"
         
-        # Automatically handle the Python environment before launching!
         setup_and_activate_python
 
-        export ULTEVIS_LAUNCH_HAND_DETECTOR=1
+        echo "Launching Python camera feed in a new Terminal window..."
+        # Tell macOS to pop open a new Terminal and run the Python script independently
+        osascript -e "tell application \"Terminal\" to do script \"cd \\\"${SCRIPT_DIR}\\\" && source venv/bin/activate && python src/mediapipe/hand_detector.py\""
+
+        # Tell the C++ app NOT to launch a second hidden instance
+        export ULTEVIS_LAUNCH_HAND_DETECTOR=0
         export ULTEVIS_HAND_DETECTOR_SCRIPT="${HAND_DETECTOR_SCRIPT}"
+        
+        # Run C++ app in the current terminal
         "./${EXE_PATH}"
         ;;
 
