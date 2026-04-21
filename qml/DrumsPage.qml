@@ -280,115 +280,114 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.margins: 24
+        anchors.margins: 16
         z: 5
 
         // --- Row 1: Cymbals (top) -------------------------------------------
 
-        // Crash — top-left (large, easy target for dramatic gestures)
+        // Crash — top-left, wide flat cymbal shape
         DrumPad {
             id: crashPad
             name: "Crash"
             drumImage: "qrc:/assets/drums/crash.png"
             x: 0
-            y: 0
-            width: parent.width * 0.24
-            height: parent.height * 0.26
+            y: parent.height * 0.08
+            width: parent.width * 0.26
+            height: parent.height * 0.16
         }
 
-        // Ride — top-right (mirrors Crash on the opposite side)
+        // Ride — top-right, wide flat cymbal shape
         DrumPad {
             id: ridePad
             name: "Ride"
             drumImage: "qrc:/assets/drums/crash.png"
             x: parent.width - width
-            y: 0
-            width: parent.width * 0.24
-            height: parent.height * 0.26
+            y: parent.height * 0.08
+            width: parent.width * 0.26
+            height: parent.height * 0.16
         }
 
         // --- Row 2: Toms (upper-centre band) ---------------------------------
 
-        // Tom 1 — left-of-centre
+        // High-Tom — small circle, tucked between crash and centre
         DrumPad {
             id: tom1Pad
             name: "High-Tom"
             drumImage: "qrc:/assets/drums/drum.png"
             x: parent.width * 0.30
             y: parent.height * 0.06
-            width: parent.width * 0.17
-            height: parent.height * 0.22
+            width: parent.width * 0.14
+            height: parent.height * 0.17
         }
 
-        // Tom 2 — right-of-centre
+        // Low-Tom — small circle, tucked between centre and ride
         DrumPad {
             id: tom2Pad
             name: "Low-Tom"
             drumImage: "qrc:/assets/drums/drum.png"
-            x: parent.width * 0.53
+            x: parent.width * 0.56
             y: parent.height * 0.06
-            width: parent.width * 0.17
-            height: parent.height * 0.22
+            width: parent.width * 0.14
+            height: parent.height * 0.17
         }
 
         // --- Row 3: Hi-Hat, Snare, Floor Tom (mid band) ----------------------
 
-        // Hi-Hat — far left, mid-height
+        // Closed Hi-Hat — wide flat cymbal, left side mid-band
         DrumPad {
             id: closedhiHatPad
             name: "Closed Hi-Hat"
             drumImage: "qrc:/assets/drums/crash.png"
             x: 0
             y: parent.height * 0.30
-            width: parent.width * 0.22
-            height: parent.height * 0.15
+            width: parent.width * 0.23
+            height: parent.height * 0.12
         }
 
-         DrumPad {
+        // Open Hi-Hat — wide flat cymbal, stacked directly below closed
+        DrumPad {
             id: openhiHatPad
             name: "Open Hi-Hat"
             drumImage: "qrc:/assets/drums/crash.png"
             x: 0
-            y: parent.height * 0.47
-            width: parent.width * 0.22
-            height: parent.height * 0.15
+            y: parent.height * 0.44
+            width: parent.width * 0.23
+            height: parent.height * 0.12
         }
 
-        // Snare — on the diagonal between Hi-Hat and Kick
-        // Horizontally centred between Hi-Hat's right edge and screen centre,
-        // vertically halfway between Hi-Hat and Kick.
+        // Snare — medium circle, center-left (GarageBand: prominent hit zone)
         DrumPad {
             id: snarePad
             name: "Snare"
             drumImage: "qrc:/assets/drums/drum.png"
-            x: parent.width * 0.28
-            y: parent.height * 0.44
-            width: parent.width * 0.20
-            height: parent.height * 0.22
+            x: parent.width * 0.27
+            y: parent.height * 0.30
+            width: parent.width * 0.22
+            height: parent.height * 0.24
         }
 
-        // Floor Tom — right side, below Ride (real-kit position)
+        // Floor Tom — larger circle than rack toms, right side
         DrumPad {
             id: floorTomPad
             name: "Floor Tom"
             drumImage: "qrc:/assets/drums/drum.png"
             x: parent.width - width
-            y: parent.height * 0.44
-            width: parent.width * 0.22
-            height: parent.height * 0.26
+            y: parent.height * 0.28
+            width: parent.width * 0.27
+            height: parent.height * 0.28
         }
 
         // --- Row 4: Kick (bottom-centre) -------------------------------------
 
-        // Kick — very bottom, centred, wide target for downward punches
+        // Kick — widest element, bottom-centre (GarageBand: large bass drum)
         DrumPad {
             id: kickPad
             name: "Kick"
             drumImage: "qrc:/assets/drums/drum.png"
-            x: parent.width * 0.36
-            y: parent.height * 0.76
-            width: parent.width * 0.28
-            height: parent.height * 0.18
+            x: parent.width * 0.28
+            y: parent.height * 0.65
+            width: parent.width * 0.44
+            height: parent.height * 0.22
         }
     }
 
@@ -467,11 +466,6 @@ Item {
             value: 35
             from: 10
             to: 90
-        }
-
-        SettingsToggle {
-            label: "Double-Hit Detection"
-            checked: true
         }
 
         // Separator
