@@ -2,10 +2,11 @@
 
 class GlobalState;
 class HeadlessAudioEngine;
+struct AudioEngineConfig;
 
 namespace AppController
 {
-    void initializeAudioTestState(GlobalState& state);
+    AudioEngineConfig buildAudioEngineConfig(GlobalState& state);
     void run(GlobalState& state, HeadlessAudioEngine& audio);
 
     void setupDrums(GlobalState& state, HeadlessAudioEngine& audio);

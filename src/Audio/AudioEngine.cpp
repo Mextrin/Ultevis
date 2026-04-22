@@ -24,39 +24,26 @@ namespace
     }
 }
 
-// Initializes the audio engine
-// Configures MIDI output, creates synth voice, sets up audio device with low-latency buffer
-HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr) : globalState(statePtr)
+// Initializes the audio engine from precomputed startup configuration.
+HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr, const AudioEngineConfig& config)
+    : globalState(statePtr)
 {
-    bool midiOutSwitch = globalState->routeToMidiOut.load();
     auto midiOutputs = juce::MidiOutput::getAvailableDevices();
 
-    if (midiOutSwitch && midiOutputs.size() > 0) {
-        std::cout << "\nAvailable MIDI output devices:\n";
-        for (size_t i = 0; i < midiOutputs.size(); ++i) {
-            std::cout << "[" << i << "] " << midiOutputs[i].name.toStdString() << '\n';
+    if (config.enableMidiOut && !midiOutputs.isEmpty())
+    {
+        if (config.midiDeviceIndex >= 0 && config.midiDeviceIndex < static_cast<int>(midiOutputs.size()))
+        {
+            midiOut = juce::MidiOutput::openDevice(midiOutputs[config.midiDeviceIndex].identifier);
         }
-
-        std::cout << "\nSelect device number (-1 to disable): ";
-        int choice = -1;
-        std::cin >> choice;
-
-        if (choice >= 0 && choice < static_cast<int>(midiOutputs.size())) {
-            midiOut = juce::MidiOutput::openDevice(midiOutputs[choice].identifier);
-            std::cout << "\nSUCCESS: Connected to MIDI Port -> "
-                      << midiOutputs[choice].name.toStdString() << "\n\n";
-        } else {
+        else
+        {
             midiOut = nullptr;
-            std::cout << "\nMIDI Disabled" << std::endl;
         }
     }
-    else if (midiOutSwitch && midiOutputs.size() == 0) {
+    else
+    {
         midiOut = nullptr;
-        std::cout << "\nUNSUCCESSFUL: No Midi Port" << std::endl;
-    }
-    else {
-        midiOut = nullptr;
-        std::cout << "\nMIDI Switch Off" << std::endl;
     }
 
     synth.addVoice(new SineWaveVoice());
@@ -83,6 +70,12 @@ HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr) : globalState(st
 HeadlessAudioEngine::~HeadlessAudioEngine()
 {
     deviceManager.removeAudioCallback(this);
+}
+
+// Returns whether MIDI output is currently active.
+bool HeadlessAudioEngine::isMidiEnabled() const
+{
+    return midiOut != nullptr;
 }
 
 // Called when audio device starts

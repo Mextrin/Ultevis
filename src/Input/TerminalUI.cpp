@@ -91,6 +91,53 @@ namespace TerminalUI
         return midiChoice == 'y' || midiChoice == 'Y';
     }
 
+    int askMidiDeviceIndex(const std::vector<std::string>& deviceNames)
+    {
+        if (deviceNames.empty())
+        {
+            std::cout << "\nNo MIDI output devices found. MIDI will be disabled.\n" << std::endl;
+            return -1;
+        }
+
+        std::cout << "\nAvailable MIDI output devices:\n";
+        for (size_t i = 0; i < deviceNames.size(); ++i)
+        {
+            std::cout << "[" << i << "] " << deviceNames[i] << '\n';
+        }
+
+        std::cout << "\nSelect device number (-1 to disable): ";
+
+        int choice = -1;
+        std::cin >> choice;
+
+        if (std::cin.fail())
+        {
+            clearBadInput();
+            return -1;
+        }
+
+        if (choice < -1 || choice >= static_cast<int>(deviceNames.size()))
+            return -1;
+
+        return choice;
+    }
+
+    void printMidiStatus(bool requested, bool enabled)
+    {
+        if (!requested)
+        {
+            std::cout << "\nMIDI Switch Off\n" << std::endl;
+        }
+        else if (enabled)
+        {
+            std::cout << "\nSUCCESS: MIDI Output Enabled\n" << std::endl;
+        }
+        else
+        {
+            std::cout << "\nUNSUCCESSFUL: MIDI could not be initialized\n" << std::endl;
+        }
+    }
+
     char askInstrumentChoice()
     {
         char instChoice = '0';

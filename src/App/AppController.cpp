@@ -11,14 +11,49 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <vector>
 
 extern void startCameraFeed(GlobalState* state);
 
 namespace AppController
 {
+    // Builds the startup configuration for the audio engine.
+    AudioEngineConfig buildAudioEngineConfig(GlobalState& state)
+    {
+        AudioEngineConfig config;
+
+        state.masterVolume.store(TerminalUI::askMasterVolume());
+
+        config.enableMidiOut = TerminalUI::askEnableMidi();
+        state.routeToMidiOut.store(config.enableMidiOut);
+
+        if (config.enableMidiOut)
+        {
+            std::vector<std::string> midiDeviceNames;
+            auto midiOutputs = juce::MidiOutput::getAvailableDevices();
+
+            for (const auto& device : midiOutputs)
+            {
+                midiDeviceNames.push_back(device.name.toStdString());
+            }
+
+            config.midiDeviceIndex = TerminalUI::askMidiDeviceIndex(midiDeviceNames);
+
+            if (config.midiDeviceIndex < 0)
+            {
+                config.enableMidiOut = false;
+                state.routeToMidiOut.store(false);
+            }
+        }
+
+        return config;
+    }
+
     // Runs the current terminal-based application flow.
     void run(GlobalState& state, HeadlessAudioEngine& audio)
     {
+        TerminalUI::printMidiStatus(state.routeToMidiOut.load(), audio.isMidiEnabled());
+
         std::cout << "\nBooted!\n" << std::endl;
 
         while (true)
@@ -57,13 +92,6 @@ namespace AppController
                 return;
             }
         }
-    }
-
-    // Initializes the basic audio test state from terminal input.
-    void initializeAudioTestState(GlobalState& state)
-    {
-        state.masterVolume.store(TerminalUI::askMasterVolume());
-        state.routeToMidiOut.store(TerminalUI::askEnableMidi());
     }
 
     // Configures the system for drum mode and loads the drum sound.
