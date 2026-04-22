@@ -76,7 +76,8 @@ while cap.isOpened():
     if INSTRUMENT == 0:
         payload = detect_hands(recognition_result)
     else:
-        payload = drum_detect(recognition_result)
+        # Unpack the three return values from the updated function
+        payload, active_zones, hand_positions = drum_detect(recognition_result)
         
     # Draw frame so that text or circles are drawn on the displayed frame
     sock.sendto(json.dumps(payload).encode(), (UDP_IP, UDP_PORT))
@@ -87,7 +88,8 @@ while cap.isOpened():
         draw_circle(display_frame, frame_height, frame_width, recognition_result)
         add_theremin_text(display_frame, payload)
     else:
-        get_drum_hit_coordinates(display_frame, frame_height, frame_width)   
+        # Pass the visual state to the drawing function
+        get_drum_hit_coordinates(display_frame, frame_height, frame_width, active_zones, hand_positions)
 
     # Show the frame in the adaptive, resizable window
     cv2.imshow(window_title, display_frame)

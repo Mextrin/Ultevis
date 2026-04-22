@@ -55,24 +55,7 @@ DRUM_ZONES = (
 
 DEFAULT_DRUM_VELOCITY = 110
 
-drum_payload = {
-        "rightHandVisible": False,
-        "leftHandVisible": False,
-        "rightHandX": 0.0,
-        "rightHandY": 0.0,
-        "leftHandX": 0.0,
-        "leftHandY": 0.0,
-        "rightGesture": "None",
-        "leftGesture": "None",
-        "leftDrumHit": False,
-        "leftDrumType": 38,
-        "leftDrumVelocity": DEFAULT_DRUM_VELOCITY,
-        "rightDrumHit": False,
-        "rightDrumType": 42,
-        "rightDrumVelocity": DEFAULT_DRUM_VELOCITY,
-    }
 
-previous_zone_by_hand = {"Left": None, "Right": None}
 
 def compute_hand_center(hand_landmarks) -> tuple[float, float]:
     xs = [landmark.x for landmark in hand_landmarks]
@@ -125,13 +108,35 @@ base_options = python.BaseOptions(model_asset_path=str(MODEL_PATH))
 options = vision.GestureRecognizerOptions(base_options=base_options, num_hands=2)
 recognizer = vision.GestureRecognizer.create_from_options(options)
 
+# --- THIS IS THE FIX ---
+# This dictionary MUST be global to persist state between frames.
+previous_zone_by_hand = {"Left": None, "Right": None}
+# --- END OF FIX ---
 
-active_zone_names: set[str] = set()
-displayed_hand_positions: dict[str, tuple[float, float]] = {}
-detected_labels = set()
 
-   
-def drum_detect (recognition_result):   
+def drum_detect (recognition_result): 
+    # These are now local to the function, created fresh for each frame
+    active_zone_names: set[str] = set()
+    displayed_hand_positions: dict[str, tuple[float, float]] = {}
+    detected_labels = set()
+
+    drum_payload = {
+        "rightHandVisible": False,
+        "leftHandVisible": False,
+        "rightHandX": 0.0,
+        "rightHandY": 0.0,
+        "leftHandX": 0.0,
+        "leftHandY": 0.0,
+        "rightGesture": "None",
+        "leftGesture": "None",
+        "leftDrumHit": False,
+        "leftDrumType": 38,
+        "leftDrumVelocity": DEFAULT_DRUM_VELOCITY,
+        "rightDrumHit": False,
+        "rightDrumType": 42,
+        "rightDrumVelocity": DEFAULT_DRUM_VELOCITY,
+    }
+      
     if recognition_result.handedness:
         for i, (hand_landmarks, handedness, gestures) in enumerate(zip(
             recognition_result.hand_landmarks, 
@@ -178,33 +183,33 @@ def drum_detect (recognition_result):
         if label not in detected_labels:
             previous_zone_by_hand[label] = None
     
-    return drum_payload
+    return drum_payload, active_zone_names, displayed_hand_positions
 
 
 
-def get_drum_hit_coordinates(display_frame, frame_height, frame_width):
-        draw_drum_zones(display_frame, active_zone_names)
-        for label, position in displayed_hand_positions.items():
-            center_x = int(position[0] * frame_width)
-            center_y = int(position[1] * frame_height)
-            cv2.circle(display_frame, center=(center_x, center_y), radius=10, color=(0, 180, 255), thickness=-1)
-            cv2.putText(
-                display_frame,
-                label,
-                (center_x + 10, center_y - 10),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (0, 180, 255),
-                2,
-            )
+def get_drum_hit_coordinates(display_frame, frame_height, frame_width, active_zone_names, displayed_hand_positions):
+    draw_drum_zones(display_frame, active_zone_names)
+    for label, position in displayed_hand_positions.items():
+        center_x = int(position[0] * frame_width)
+        center_y = int(position[1] * frame_height)
+        cv2.circle(display_frame, center=(center_x, center_y), radius=10, color=(0, 180, 255), thickness=-1)
         cv2.putText(
             display_frame,
-            "Drum mode: move a hand into a zone to trigger a hit",
-            (10, frame_height - 18),
+            label,
+            (center_x + 10, center_y - 10),
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.65,
+            0.5,
             (0, 180, 255),
             2,
         )
+    cv2.putText(
+        display_frame,
+        "Drum mode: move a hand into a zone to trigger a hit",
+        (10, frame_height - 18),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.65,
+        (0, 180, 255),
+        2,
+    )
 
-   
+
