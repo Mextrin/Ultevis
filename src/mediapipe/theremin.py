@@ -12,7 +12,10 @@ hand_base_options = python.BaseOptions(model_asset_path='hand_landmarker.task')
 options = vision.HandLandmarkerOptions(base_options=hand_base_options,running_mode=RunningMode.VIDEO,num_hands=2)
 recognizer = vision.HandLandmarker.create_from_options(options)
 
-theremin_payload = {
+
+def detect_hands(detection_result): 
+    # 1. Create a fresh, default payload for every frame.
+    theremin_payload = {
         "rightHandVisible": False,
         "leftHandVisible": False,
         "rightHandX": 0.0,
@@ -21,13 +24,9 @@ theremin_payload = {
         "leftHandY": 0.0,
     }
 
-
-def detect_hands(detection_result): 
-
     if detection_result.handedness:
         for i, (hand_landmarks, handedness) in enumerate(zip(
-            detection_result.hand_landmarks, 
-            detection_result.handedness
+            detection_result.hand_landmarks, detection_result.handedness
         )):
             label = handedness[0].category_name  # "Left" or "Right"
             thumb_tip = hand_landmarks[4]  # Thumb tip is landmark 4
@@ -53,7 +52,7 @@ def detect_hands(detection_result):
                     theremin_payload["leftHandX"] = index_tip.x
                     theremin_payload["leftHandY"] = index_tip.y
 
-    # sock.sendto(json.dumps(theremin_payload).encode(), (UDP_IP, UDP_PORT))
+    # 2. Return the newly created payload, which is either updated or still in its default state.
     return theremin_payload
    
 
@@ -86,7 +85,7 @@ def add_theremin_text(display_frame, theremin_payload):
         f"R: {theremin_payload['rightHandVisible']}, RightX: {theremin_payload['rightHandX']:.2f}, RightY: {theremin_payload['rightHandY']:.2f}",
         (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2
     )
-    
-    
 
-    
+
+
+
