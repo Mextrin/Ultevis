@@ -11,14 +11,49 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <vector>
 
 extern void startCameraFeed(GlobalState* state);
 
 namespace AppController
 {
+    // Builds the startup configuration for the audio engine.
+    AudioEngineConfig buildAudioEngineConfig(GlobalState& state)
+    {
+        AudioEngineConfig config;
+
+        state.masterVolume.store(TerminalUI::askMasterVolume());
+
+        config.enableMidiOut = TerminalUI::askEnableMidi();
+        state.routeToMidiOut.store(config.enableMidiOut);
+
+        if (config.enableMidiOut)
+        {
+            std::vector<std::string> midiDeviceNames;
+            auto midiOutputs = juce::MidiOutput::getAvailableDevices();
+
+            for (const auto& device : midiOutputs)
+            {
+                midiDeviceNames.push_back(device.name.toStdString());
+            }
+
+            config.midiDeviceIndex = TerminalUI::askMidiDeviceIndex(midiDeviceNames);
+
+            if (config.midiDeviceIndex < 0)
+            {
+                config.enableMidiOut = false;
+                state.routeToMidiOut.store(false);
+            }
+        }
+
+        return config;
+    }
+
     // Runs the current terminal-based application flow.
     void run(GlobalState& state, HeadlessAudioEngine& audio)
     {
+        TerminalUI::printMidiStatus(state.routeToMidiOut.load(), audio.isMidiEnabled());
+
         std::cout << "\nBooted!\n" << std::endl;
 
         while (true)
@@ -34,12 +69,25 @@ namespace AppController
             if (instChoice == '1')
             {
                 setupDrums(state, audio);
-
                 std::cout << "\nWaiting For Python Script To Start Camera\n" << std::endl;
                 launchHandDetectorIfRequested(state);
-                startCameraFeed(&state);
+                state.requestStopCameraSession.store(false);
+                std::thread cameraThread(startCameraFeed, &state);
+                std::cout << "\nCamera is running. Type q and press Enter to stop.\n";
 
-                return;
+                char cmd;
+                while (std::cin >> cmd)
+                {
+                    if (cmd == 'q' || cmd == 'Q')
+                    {
+                        state.requestStopCameraSession.store(true);
+                        break;
+                    }
+                }
+
+                if (cameraThread.joinable()) cameraThread.join();
+
+                std::cout << "\nCamera session ended.\n";
             }
             else if (instChoice == '2')
             {
@@ -49,21 +97,25 @@ namespace AppController
             else
             {
                 setupTheremin(state);
-
                 std::cout << "\nWaiting For Python Script To Start Camera\n" << std::endl;
                 launchHandDetectorIfRequested(state);
-                startCameraFeed(&state);
+                state.requestStopCameraSession.store(false);
+                std::thread cameraThread(startCameraFeed, &state);
+                std::cout << "\nCamera is running. Type q and press Enter to stop.\n";
 
-                return;
+                char cmd;
+                while (std::cin >> cmd)
+                {
+                    if (cmd == 'q' || cmd == 'Q')
+                    {
+                        state.requestStopCameraSession.store(true);
+                        break;
+                    }
+                }
+
+                if (cameraThread.joinable()) cameraThread.join();
             }
         }
-    }
-
-    // Initializes the basic audio test state from terminal input.
-    void initializeAudioTestState(GlobalState& state)
-    {
-        state.masterVolume.store(TerminalUI::askMasterVolume());
-        state.routeToMidiOut.store(TerminalUI::askEnableMidi());
     }
 
     // Configures the system for drum mode and loads the drum sound.
@@ -122,7 +174,8 @@ namespace AppController
             "\" && start \"Ultevis Hand Detector\" python \"" + scriptPath + "\"";
     #else
         const std::string command =
-            "ULTEVIS_CAMERA_MODE=" + cameraMode + " python3 \"" + scriptPath + "\" &";
+            //dev null sends mediapipe garbage output to void 
+            "ULTEVIS_CAMERA_MODE=" + cameraMode + " python3 \"" + scriptPath + "\" > /dev/null 2>&1 &";
     #endif
 
         std::system(command.c_str());

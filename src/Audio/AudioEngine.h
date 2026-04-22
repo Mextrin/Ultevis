@@ -8,10 +8,17 @@
 #include <mutex>
 #include <memory>
 
+// Stores startup configuration for the audio engine.
+struct AudioEngineConfig
+{
+    bool enableMidiOut = false;
+    int midiDeviceIndex = -1;
+};
+
 class HeadlessAudioEngine : public juce::AudioIODeviceCallback
 {
 public:
-    HeadlessAudioEngine(GlobalState* statePtr);
+    HeadlessAudioEngine(GlobalState* statePtr, const AudioEngineConfig& config);
     ~HeadlessAudioEngine() override;
 
     void audioDeviceAboutToStart(juce::AudioIODevice* device) override;
@@ -26,6 +33,7 @@ public:
     void processTheremin(juce::AudioBuffer<float>& buffer, int numSamples);
     void processDrums(juce::AudioBuffer<float>& buffer, int numSamples);
     void processKeyboard(juce::AudioBuffer<float>& buffer, int numSamples);
+    bool isMidiEnabled() const;
 
 private:
     void resetDrumPlaybackState();

@@ -24,39 +24,26 @@ namespace
     }
 }
 
-// Initializes the audio engine
-// Configures MIDI output, creates synth voice, sets up audio device with low-latency buffer
-HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr) : globalState(statePtr)
+// Initializes the audio engine from precomputed startup configuration.
+HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr, const AudioEngineConfig& config)
+    : globalState(statePtr)
 {
-    bool midiOutSwitch = globalState->routeToMidiOut.load();
     auto midiOutputs = juce::MidiOutput::getAvailableDevices();
 
-    if (midiOutSwitch && midiOutputs.size() > 0) {
-        std::cout << "\nAvailable MIDI output devices:\n";
-        for (size_t i = 0; i < midiOutputs.size(); ++i) {
-            std::cout << "[" << i << "] " << midiOutputs[i].name.toStdString() << '\n';
+    if (config.enableMidiOut && !midiOutputs.isEmpty())
+    {
+        if (config.midiDeviceIndex >= 0 && config.midiDeviceIndex < static_cast<int>(midiOutputs.size()))
+        {
+            midiOut = juce::MidiOutput::openDevice(midiOutputs[config.midiDeviceIndex].identifier);
         }
-
-        std::cout << "\nSelect device number (-1 to disable): ";
-        int choice = -1;
-        std::cin >> choice;
-
-        if (choice >= 0 && choice < static_cast<int>(midiOutputs.size())) {
-            midiOut = juce::MidiOutput::openDevice(midiOutputs[choice].identifier);
-            std::cout << "\nSUCCESS: Connected to MIDI Port -> "
-                      << midiOutputs[choice].name.toStdString() << "\n\n";
-        } else {
+        else
+        {
             midiOut = nullptr;
-            std::cout << "\nMIDI Disabled" << std::endl;
         }
     }
-    else if (midiOutSwitch && midiOutputs.size() == 0) {
+    else
+    {
         midiOut = nullptr;
-        std::cout << "\nUNSUCCESSFUL: No Midi Port" << std::endl;
-    }
-    else {
-        midiOut = nullptr;
-        std::cout << "\nMIDI Switch Off" << std::endl;
     }
 
     synth.addVoice(new SineWaveVoice());
@@ -83,6 +70,12 @@ HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr) : globalState(st
 HeadlessAudioEngine::~HeadlessAudioEngine()
 {
     deviceManager.removeAudioCallback(this);
+}
+
+// Returns whether MIDI output is currently active.
+bool HeadlessAudioEngine::isMidiEnabled() const
+{
+    return midiOut != nullptr;
 }
 
 // Called when audio device starts
@@ -247,14 +240,14 @@ void HeadlessAudioEngine::processTheremin(juce::AudioBuffer<float>& buffer, int 
     if (isRightVisible) {
         const float x = globalState->rightHandX.load();
         const float y = globalState->leftHandY.load();
-        const float totalSemitoneRange = static_cast<float>(globalState->thereminSemitoneRange.load());
+        const float semitoneRangeOneSide = static_cast<float>(globalState->thereminSemitoneRangeOneSide.load());
         const float centerMidiNote = static_cast<float>(globalState->thereminCenterNote.load());
 
         float normalizedX = x / 0.67f;
         if (normalizedX > 1.0f) normalizedX = 1.0f;
         if (normalizedX < 0.0f) normalizedX = 0.0f;
 
-        const float semitonesFromCenter = (x * totalSemitoneRange) - (totalSemitoneRange/2.0f);
+        const float semitonesFromCenter = (x * (semitoneRangeOneSide*2.0f)) - (semitoneRangeOneSide);
         const float targetMidiNote = centerMidiNote + semitonesFromCenter;
         const double targetFreq = 440.0f * std::pow(2.0f, (targetMidiNote - 69.0f) / 12.0f);;
 

@@ -62,7 +62,7 @@ public:
    std::atomic<bool> rightHandVisible { false };
    std::atomic<bool> leftHandVisible  { false };
    std::atomic<Waveform> currentWaveform { Waveform::Sine };
-   std::atomic<int> thereminSemitoneRange { 48 };
+   std::atomic<int> thereminSemitoneRangeOneSide { 24 }; //one octave up, one octave down
    std::atomic<int> thereminCenterNote { 60 }; // 60 = C4
 
    // --LEFT HAND DRUM--
@@ -87,6 +87,10 @@ public:
    std::atomic<bool> routeToMidiOut       { true };
    std::atomic<float> masterVolume        { 1.0f }; // 0-1
    std::atomic<ActiveInstrument> currentInstrument {ActiveInstrument::Theremin};
+
+   // -- Camera Control --
+   std::atomic<bool> requestStopCameraSession{false};
+   std::atomic<bool> cameraSessionActive{false};
 
 };
 

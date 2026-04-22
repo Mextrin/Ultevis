@@ -73,8 +73,19 @@ case "${1:-}" in
         rm -rf "${BUILD_DIR}"
         ;;
 
+    clean-build-run)
+        rm -rf "${BUILD_DIR}"
+        cmake -B "${BUILD_DIR}" -DCMAKE_BUILD_TYPE="${BUILD_CONFIG}"
+        cmake --build "${BUILD_DIR}" --config "${BUILD_CONFIG}"
+
+        export ULTEVIS_LAUNCH_HAND_DETECTOR=1
+        export ULTEVIS_HAND_DETECTOR_SCRIPT="${HAND_DETECTOR_SCRIPT}"
+
+        "./${EXE_PATH}"
+        ;;
+
     *)
-        echo "Usage: ./build.sh {build-all|compile|run|compile-and-run|clean}"
+        echo "Usage: ./build.sh {build-all|compile|run|compile-and-run|clean|clean-build-run}"
         exit 1
         ;;
 esac

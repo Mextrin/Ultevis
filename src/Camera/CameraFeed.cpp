@@ -69,13 +69,19 @@ void startCameraFeed(GlobalState* state) {
 
     std::cout << "Listening for hand data on UDP port 5005...\n";
 
+    state->cameraSessionActive.store(true);
     char buf[1024];
-    while (true) {
+    while (!state->requestStopCameraSession.load()) {
         ssize_t len = recvfrom(sock, buf, sizeof(buf) - 1, 0, nullptr, nullptr);
         if (len < 0) break;
         buf[len] = '\0';
 
         std::string json(buf);
+
+        if (parseBool(json, "cameraOff")) {
+            std::cout << "Camera feed turned off.\n";
+            break;
+        }
 
         state->rightHandVisible.store(parseBool(json, "rightHandVisible"));
         state->leftHandVisible.store(parseBool(json,  "leftHandVisible"));
@@ -92,6 +98,8 @@ void startCameraFeed(GlobalState* state) {
         //           << "  x=" << state->rightHandX.load()
         //           << "  y=" << state->leftHandY.load() << "\n";
     }
+
+    state->cameraSessionActive.store(false);
 
     #ifdef _WIN32
         closesocket(sock);

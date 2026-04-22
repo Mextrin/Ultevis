@@ -12,13 +12,13 @@ int main()
 
     GlobalState state;
 
-    // Ask user settings (volume + midi)
-    AppController::initializeAudioTestState(state);
+    // Build startup settings for the audio engine.
+    AudioEngineConfig config = AppController::buildAudioEngineConfig(state);
 
-    // Create engine
-    HeadlessAudioEngine audio(&state);
+    // Create engine from the chosen settings.
+    HeadlessAudioEngine audio(&state, config);
 
-    // Run app loop
+    // Run app loop.
     AppController::run(state, audio);
 
     return 0;
