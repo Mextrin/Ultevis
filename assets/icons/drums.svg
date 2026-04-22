@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="#EBEDF0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Snare drum (center) -->
+  <ellipse cx="32" cy="36" rx="16" ry="6"/>
+  <ellipse cx="32" cy="46" rx="16" ry="6"/>
+  <line x1="16" y1="36" x2="16" y2="46"/>
+  <line x1="48" y1="36" x2="48" y2="46"/>
+  <!-- Tension rods -->
+  <line x1="18" y1="36" x2="20" y2="46" opacity="0.5"/>
+  <line x1="46" y1="36" x2="44" y2="46" opacity="0.5"/>
+  <!-- Drumstick left -->
+  <line x1="8" y1="12" x2="28" y2="34" stroke-width="2.5"/>
+  <circle cx="8" cy="12" r="2" fill="#EBEDF0"/>
+  <!-- Drumstick right -->
+  <line x1="56" y1="12" x2="36" y2="34" stroke-width="2.5"/>
+  <circle cx="56" cy="12" r="2" fill="#EBEDF0"/>
+  <!-- Hi-hat (small) -->
+  <ellipse cx="10" cy="50" rx="6" ry="2" opacity="0.5"/>
+  <line x1="10" y1="50" x2="10" y2="58" opacity="0.5"/>
+</svg>

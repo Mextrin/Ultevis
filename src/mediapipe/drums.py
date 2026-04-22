@@ -159,39 +159,37 @@ def drum_detect (recognition_result):
                 drum_payload["leftHandVisible"] = True
                 drum_payload["leftGesture"] = gesture_name
 
-            if CAMERA_MODE == "drums":
-                hand_center_x, hand_center_y = compute_hand_center(hand_landmarks)
-                display_x = 1.0 - hand_center_x
-                display_y = hand_center_y
-                displayed_hand_positions[label] = (display_x, display_y)
+            # --- THE FIX: We removed "if CAMERA_MODE == 'drums':" ---
+            hand_center_x, hand_center_y = compute_hand_center(hand_landmarks)
+            display_x = 1.0 - hand_center_x
+            display_y = hand_center_y
+            displayed_hand_positions[label] = (display_x, display_y)
 
-                zone = find_zone(display_x, display_y)
-                previous_zone_name = previous_zone_by_hand.get(label)
-                current_zone_name = zone.name if zone is not None else None
+            zone = find_zone(display_x, display_y)
+            previous_zone_name = previous_zone_by_hand.get(label)
+            current_zone_name = zone.name if zone is not None else None
 
-                # Trigger hit ONLY if hand is inside zone AND gesture is Open_Palm
-                if zone is not None and gesture_name == "Open_Palm":
-                    active_zone_names.add(zone.name)
-                    if current_zone_name != previous_zone_name:
-                        prefix = "right" if label == "Right" else "left"
-                        drum_payload[f"{prefix}DrumHit"] = True
-                        drum_payload[f"{prefix}DrumType"] = zone.note
-                        drum_payload[f"{prefix}DrumVelocity"] = DEFAULT_DRUM_VELOCITY
+            # Trigger hit ONLY if hand is inside zone AND gesture is Open_Palm
+            if zone is not None and gesture_name == "Open_Palm":
+                active_zone_names.add(zone.name)
+                if current_zone_name != previous_zone_name:
+                    prefix = "right" if label == "Right" else "left"
+                    drum_payload[f"{prefix}DrumHit"] = True
+                    drum_payload[f"{prefix}DrumType"] = zone.note
+                    drum_payload[f"{prefix}DrumVelocity"] = DEFAULT_DRUM_VELOCITY
 
-                    # Register zone to prevent continuous triggering while hand stays open
-                    previous_zone_by_hand[label] = current_zone_name
-                else:
-                    # Reset state if hand is closed or moves outside the zone
-                    # This allows triggering a new hit by opening the hand again
-                    previous_zone_by_hand[label] = None
+                # Register zone to prevent continuous triggering while hand stays open
+                previous_zone_by_hand[label] = current_zone_name
+            else:
+                # Reset state if hand is closed or moves outside the zone
+                previous_zone_by_hand[label] = None
+            # --------------------------------------------------------
 
     for label in previous_zone_by_hand:
         if label not in detected_labels:
             previous_zone_by_hand[label] = None
     
     return drum_payload, active_zone_names, displayed_hand_positions
-
-
 
 def get_drum_hit_coordinates(display_frame, frame_height, frame_width, active_zone_names, displayed_hand_positions):
     draw_drum_zones(display_frame, active_zone_names)

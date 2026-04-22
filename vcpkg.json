@@ -1,7 +1,35 @@
 {
-  "name": "ultevis",
-  "version": "0.1.0",
+  "name": "ii1305-gesture-instrument",
+  "version-string": "0.1.0",
   "dependencies": [
-    "opencv4"
+    {
+      "name": "opencv4",
+      "default-features": false,
+      "features": [
+        "highgui",
+        "msmf",
+        "dshow",
+        "jpeg",
+        "png"
+      ],
+      "platform": "windows"
+    },
+    {
+      "name": "opencv4",
+      "default-features": false,
+      "features": [
+        "highgui",
+        "jpeg",
+        "png"
+      ],
+      "platform": "!windows"
+    },
+    {
+      "name": "imgui",
+      "default-features": false,
+      "features": [
+        "opengl3-binding"
+      ]
+    }
   ]
 }
