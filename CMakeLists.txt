@@ -24,6 +24,7 @@ target_sources(Airchestra PRIVATE
     src/main.cpp
     src/Audio/AudioEngine.cpp
     src/Audio/OscillatorVoice.cpp
+    src/App/AppController.cpp
     src/Input/TerminalUI.cpp
     src/Camera/CameraFeed.cpp
 )
