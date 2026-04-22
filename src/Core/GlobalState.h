@@ -72,6 +72,7 @@ public:
    std::atomic<bool> rightDrumHit { false }; 
    std::atomic<int> rightDrumType { 38 }; 
    std::atomic<int> rightDrumVelocity { 100 };
+   std::atomic<bool> mouthKickHit { false };
 
    // --- KEYBOARD STATE ---
    std::atomic<bool> isKeyPressed { false }; 
@@ -87,7 +88,3 @@ public:
    std::atomic<ActiveInstrument> currentInstrument {ActiveInstrument::Theremin};
 
 };
-
- 
- 
- 

@@ -3,6 +3,8 @@ import cv2
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
+from mediapipe.tasks.python.vision import RunningMode
+from mediapipe.tasks.python.vision import face_landmarker as face_landmarker_module
 import socket
 import json
 from dataclasses import dataclass
@@ -54,6 +56,26 @@ DRUM_ZONES = (
 )
 
 DEFAULT_DRUM_VELOCITY = 110
+JAW_OPEN_BLENDSHAPE_INDEX = int(face_landmarker_module.Blendshapes.JAW_OPEN)
+MOUTH_OPEN_ON_THRESHOLD = 0.25
+MOUTH_OPEN_OFF_THRESHOLD = 0.15
+FACE_MODEL_PATH = Path(__file__).with_name("face_landmarker.task")
+
+face_landmarker = None
+if CAMERA_MODE == "drums":
+    if not FACE_MODEL_PATH.exists():
+        raise FileNotFoundError(f"MediaPipe face landmarker model not found: {FACE_MODEL_PATH}")
+
+    face_options = face_landmarker_module.FaceLandmarkerOptions(
+        base_options=python.BaseOptions(model_asset_path=str(FACE_MODEL_PATH)),
+        running_mode=RunningMode.VIDEO,
+        num_faces=1,
+        min_face_detection_confidence=0.5,
+        min_face_presence_confidence=0.5,
+        min_tracking_confidence=0.5,
+        output_face_blendshapes=True,
+    )
+    face_landmarker = face_landmarker_module.FaceLandmarker.create_from_options(face_options)
 
 
 
@@ -98,6 +120,22 @@ def draw_drum_zones(frame, active_zone_names: set[str]) -> None:
             border_color,
             2,
         )
+def detect_mouth_open(mp_image, frame_timestamp_ms: int, was_open: bool) -> bool:
+    if face_landmarker is None:
+        return False
+
+    face_result = face_landmarker.detect_for_video(mp_image, frame_timestamp_ms)
+    if not face_result.face_blendshapes:
+        return False
+
+    jaw_open_score = 0.0
+    for blendshape in face_result.face_blendshapes[0]:
+        if blendshape.index == JAW_OPEN_BLENDSHAPE_INDEX or blendshape.category_name in ("jawOpen", "JAW_OPEN"):
+            jaw_open_score = blendshape.score
+            break
+
+    threshold = MOUTH_OPEN_OFF_THRESHOLD if was_open else MOUTH_OPEN_ON_THRESHOLD
+    return jaw_open_score >= threshold
 
 # Initialize GestureRecognizer
 MODEL_PATH = Path(__file__).with_name("gesture_recognizer.task")
@@ -111,10 +149,13 @@ recognizer = vision.GestureRecognizer.create_from_options(options)
 # --- THIS IS THE FIX ---
 # This dictionary MUST be global to persist state between frames.
 previous_zone_by_hand = {"Left": None, "Right": None}
+previous_mouth_open = False
 # --- END OF FIX ---
 
 
-def drum_detect (recognition_result): 
+def drum_detect(recognition_result, mp_image, frame_timestamp_ms: int):
+    global previous_mouth_open
+
     # These are now local to the function, created fresh for each frame
     active_zone_names: set[str] = set()
     displayed_hand_positions: dict[str, tuple[float, float]] = {}
@@ -135,7 +176,13 @@ def drum_detect (recognition_result):
         "rightDrumHit": False,
         "rightDrumType": 42,
         "rightDrumVelocity": DEFAULT_DRUM_VELOCITY,
+        "mouthKickHit": False,
     }
+
+    is_mouth_open = detect_mouth_open(mp_image, frame_timestamp_ms, previous_mouth_open)
+    if is_mouth_open and not previous_mouth_open:
+        drum_payload["mouthKickHit"] = True
+    previous_mouth_open = is_mouth_open
       
     if recognition_result.handedness:
         for i, (hand_landmarks, handedness, gestures) in enumerate(zip(

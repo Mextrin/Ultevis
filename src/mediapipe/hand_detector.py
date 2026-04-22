@@ -60,7 +60,8 @@ while cap.isOpened():
     frame_counter += 1
 
     # Convert to MediaPipe format
-    image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
     
     if INSTRUMENT == 0: 
         # Theremin uses HandLandmarker in VIDEO mode
@@ -76,8 +77,7 @@ while cap.isOpened():
     if INSTRUMENT == 0:
         payload = detect_hands(recognition_result)
     else:
-        # Unpack the three return values from the updated function
-        payload, active_zones, hand_positions = drum_detect(recognition_result)
+        payload, active_zones, hand_positions = drum_detect(recognition_result, image, frame_counter)
         
     # Draw frame so that text or circles are drawn on the displayed frame
     sock.sendto(json.dumps(payload).encode(), (UDP_IP, UDP_PORT))
