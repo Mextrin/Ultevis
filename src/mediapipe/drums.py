@@ -202,14 +202,5 @@ def get_drum_hit_coordinates(display_frame, frame_height, frame_width, active_zo
             (0, 180, 255),
             2,
         )
-    cv2.putText(
-        display_frame,
-        "Drum mode: move a hand into a zone to trigger a hit",
-        (10, frame_height - 18),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.65,
-        (0, 180, 255),
-        2,
-    )
 
 

@@ -94,6 +94,43 @@ while cap.isOpened():
     # Show the frame in the adaptive, resizable window
     cv2.imshow(window_title, display_frame)
 
+    # Initialize default text and coordinates for both hands
+    left_gesture_text = "None"
+    right_gesture_text = "None"
+    left_coords = "(X:0, Y:0)"
+    right_coords = "(X:0, Y:0)"
+
+    # Check if the model returned data about gestures, handedness, and landmarks
+    if hasattr(recognition_result, 'gestures') and recognition_result.gestures and hasattr(recognition_result, 'hand_landmarks'):
+        
+        # Loop combining gesture data, hand side, and anatomical landmarks
+        for gesture_info, hand_info, landmarks in zip(recognition_result.gestures, recognition_result.handedness, recognition_result.hand_landmarks):
+            if gesture_info and hand_info and landmarks:
+                gesture_name = gesture_info[0].category_name
+                hand_label = hand_info[0].category_name
+                
+                # Get coordinates for landmark 9 (base of the middle finger)
+                # X axis is inverted because display_frame was flipped horizontally earlier
+                x_px = frame_width - int(landmarks[9].x * frame_width)
+                y_px = int(landmarks[9].y * frame_height)
+                coord_text = f"(X:{x_px}, Y:{y_px})"
+                
+                # Assign data to the corresponding hand
+                if hand_label == "Left":
+                    left_gesture_text = gesture_name
+                    left_coords = coord_text
+                elif hand_label == "Right":
+                    right_gesture_text = gesture_name
+                    right_coords = coord_text
+
+    # Draw the text permanently on the screen
+    cv2.putText(display_frame, f"Left Hand: {left_gesture_text} {left_coords}", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 3, cv2.LINE_AA)
+    cv2.putText(display_frame, f"Right Hand: {right_gesture_text} {right_coords}", (20, 90), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 3, cv2.LINE_AA)
+
+    # Show the frame in the adaptive, resizable window
+    cv2.imshow(window_title, display_frame)
+
+    # Check for quit command
     if cv2.waitKey(1) == ord('q'):
         break
 
