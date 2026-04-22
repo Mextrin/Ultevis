@@ -12,7 +12,10 @@ enum class AppScreen
     Session,
     Theremin,
     Settings,
-    About
+    About,
+    Drums,
+    Keyboard,
+    Guitar
 };
 
 class ViewState : public QObject

@@ -33,10 +33,17 @@ Item {
 
     function pickCameraDevice() {
         const devices = mediaDevices.videoInputs
-        console.log("DrumsPage: pickCameraDevice; videoInputs.length =", devices ? devices.length : 0)
         if (!devices || devices.length === 0) return null
+
         for (let i = 0; i < devices.length; ++i) {
-            if (devices[i].position === _posFrontFace) return devices[i]
+            const d = devices[i].description.toLowerCase()
+            if (d.includes("facetime") || d.includes("built-in") || d.includes("webcam"))
+                return devices[i]
+        }
+        for (let i = 0; i < devices.length; ++i) {
+            const d = devices[i].description.toLowerCase()
+            if (!d.includes("iphone") && !d.includes("ipad") && !d.includes("continuity"))
+                return devices[i]
         }
         return devices[0]
     }
@@ -79,7 +86,10 @@ Item {
             }
             onActiveChanged: {
                 console.log("DrumsPage: camera.active =", active)
-                if (active) root.cameraStatus = "running"
+                if (active) {
+                    root.cameraStatus = "running"
+                    appEngine.connectVideoSink(videoOutput.videoSink)
+                }
             }
         }
     }
@@ -324,109 +334,68 @@ Item {
 
         // --- Row 1: Cymbals (top) -------------------------------------------
 
-        // Crash — top-left, wide flat cymbal shape
         DrumPad {
             id: crashPad
-            name: "Crash"
+            name: "Crash"; midiNote: 49
             drumImage: "qrc:/assets/drums/crash.png"
-            x: 0
-            y: parent.height * 0.08
-            width: parent.width * 0.26
-            height: parent.height * 0.16
+            x: 0;                    y: parent.height * 0.08
+            width: parent.width * 0.26; height: parent.height * 0.16
         }
-
-        // Ride — top-right, wide flat cymbal shape
         DrumPad {
             id: ridePad
-            name: "Ride"
+            name: "Ride"; midiNote: 51
             drumImage: "qrc:/assets/drums/crash.png"
-            x: parent.width - width
-            y: parent.height * 0.08
-            width: parent.width * 0.26
-            height: parent.height * 0.16
+            x: parent.width - width; y: parent.height * 0.08
+            width: parent.width * 0.26; height: parent.height * 0.16
         }
-
-        // --- Row 2: Toms (upper-centre band) ---------------------------------
-
-        // High-Tom — small circle, tucked between crash and centre
         DrumPad {
             id: tom1Pad
-            name: "High-Tom"
+            name: "High-Tom"; midiNote: 48
             drumImage: "qrc:/assets/drums/drum.png"
-            x: parent.width * 0.30
-            y: parent.height * 0.06
-            width: parent.width * 0.14
-            height: parent.height * 0.17
+            x: parent.width * 0.30;  y: parent.height * 0.06
+            width: parent.width * 0.14; height: parent.height * 0.17
         }
-
-        // Low-Tom — small circle, tucked between centre and ride
         DrumPad {
             id: tom2Pad
-            name: "Low-Tom"
+            name: "Low-Tom"; midiNote: 45
             drumImage: "qrc:/assets/drums/drum.png"
-            x: parent.width * 0.56
-            y: parent.height * 0.06
-            width: parent.width * 0.14
-            height: parent.height * 0.17
+            x: parent.width * 0.56;  y: parent.height * 0.06
+            width: parent.width * 0.14; height: parent.height * 0.17
         }
-
-        // --- Row 3: Hi-Hat, Snare, Floor Tom (mid band) ----------------------
-
-        // Closed Hi-Hat — wide flat cymbal, left side mid-band
         DrumPad {
             id: closedhiHatPad
-            name: "Closed Hi-Hat"
+            name: "Closed Hi-Hat"; midiNote: 42
             drumImage: "qrc:/assets/drums/crash.png"
-            x: 0
-            y: parent.height * 0.30
-            width: parent.width * 0.23
-            height: parent.height * 0.12
+            x: 0;                    y: parent.height * 0.30
+            width: parent.width * 0.23; height: parent.height * 0.12
         }
-
-        // Open Hi-Hat — wide flat cymbal, stacked directly below closed
         DrumPad {
             id: openhiHatPad
-            name: "Open Hi-Hat"
+            name: "Open Hi-Hat"; midiNote: 46
             drumImage: "qrc:/assets/drums/crash.png"
-            x: 0
-            y: parent.height * 0.44
-            width: parent.width * 0.23
-            height: parent.height * 0.12
+            x: 0;                    y: parent.height * 0.44
+            width: parent.width * 0.23; height: parent.height * 0.12
         }
-
-        // Snare — medium circle, center-left (GarageBand: prominent hit zone)
         DrumPad {
             id: snarePad
-            name: "Snare"
+            name: "Snare"; midiNote: 38
             drumImage: "qrc:/assets/drums/drum.png"
-            x: parent.width * 0.27
-            y: parent.height * 0.30
-            width: parent.width * 0.22
-            height: parent.height * 0.24
+            x: parent.width * 0.27;  y: parent.height * 0.30
+            width: parent.width * 0.22; height: parent.height * 0.24
         }
-
-        // Floor Tom — larger circle than rack toms, right side
         DrumPad {
             id: floorTomPad
-            name: "Floor Tom"
+            name: "Floor Tom"; midiNote: 41
             drumImage: "qrc:/assets/drums/drum.png"
-            x: parent.width - width
-            y: parent.height * 0.28
-            width: parent.width * 0.27
-            height: parent.height * 0.28
+            x: parent.width - width; y: parent.height * 0.28
+            width: parent.width * 0.27; height: parent.height * 0.28
         }
-
-        // --- Row 4: Kick (bottom-centre) -------------------------------------
-
-        // Kick — widest element, bottom-centre (GarageBand: large bass drum)
         DrumPad {
             id: kickPad
-            name: "Kick"
+            name: "Kick"; midiNote: 36
             drumImage: "qrc:/assets/drums/drum.png"
-            x: parent.width * 0.28
-            y: parent.height * 0.65
-            width: parent.width * 0.44
-            height: parent.height * 0.22
+            x: parent.width * 0.28;  y: parent.height * 0.65
+            width: parent.width * 0.44; height: parent.height * 0.22
         }
     }
 
@@ -539,6 +508,7 @@ Item {
         id: pad
         property string name: ""
         property string drumImage: ""
+        property int    midiNote: 36
         property bool padHovered: padMouse.containsMouse
 
         radius: 10
@@ -591,6 +561,7 @@ Item {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
+            onClicked: appEngine.triggerDrumHit(pad.midiNote, 110)
         }
     }
 }

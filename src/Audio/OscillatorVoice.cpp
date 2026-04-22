@@ -16,10 +16,10 @@ generation, smoothing of pitch/volume changes, and block rendering.
 // =============================================================================
 SineWaveVoice::SineWaveVoice()
 {
-    adsrParams.attack  = 0.1f;
-    adsrParams.decay   = 0.1f;
+    adsrParams.attack  = 0.005f;  // 5 ms — near-instant onset
+    adsrParams.decay   = 0.05f;
     adsrParams.sustain = 1.0f;
-    adsrParams.release = 0.5f;
+    adsrParams.release = 0.15f;   // 150 ms — quick but smooth cutoff
 }
 
 bool SineWaveVoice::canPlaySound(juce::SynthesiserSound* sound)
@@ -92,5 +92,79 @@ void SineWaveVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int 
         }
     }
 
+    if (!adsr.isActive()) clearCurrentNote();
+}
+
+// =============================================================================
+// KEYBOARD VOICE
+// =============================================================================
+KeyboardVoice::KeyboardVoice() { adsr.setParameters(adsrParams); }
+
+bool KeyboardVoice::canPlaySound(juce::SynthesiserSound* s)
+{
+    return dynamic_cast<KeySynthSound*>(s) != nullptr;
+}
+
+void KeyboardVoice::startNote(int midiNoteNumber, float velocity, juce::SynthesiserSound*, int)
+{
+    currentAngle = 0.0;
+    double freq  = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
+    angleDelta   = freq / getSampleRate() * juce::MathConstants<double>::twoPi;
+    gain         = velocity;
+    adsr.setParameters(adsrParams);
+    adsr.noteOn();
+}
+
+void KeyboardVoice::stopNote(float, bool allowTailOff)
+{
+    if (allowTailOff) adsr.noteOff();
+    else              clearCurrentNote();
+}
+
+void KeyboardVoice::renderNextBlock(juce::AudioBuffer<float>& buf, int start, int num)
+{
+    for (int i = 0; i < num; ++i) {
+        float sample = (float)(std::sin(currentAngle) * adsr.getNextSample() * gain * 0.25f);
+        currentAngle += angleDelta;
+        for (int ch = 0; ch < buf.getNumChannels(); ++ch)
+            buf.addSample(ch, start + i, sample);
+    }
+    if (!adsr.isActive()) clearCurrentNote();
+}
+
+// =============================================================================
+// DRUM VOICE
+// =============================================================================
+DrumVoice::DrumVoice() { adsr.setParameters(adsrParams); }
+
+bool DrumVoice::canPlaySound(juce::SynthesiserSound* s)
+{
+    return dynamic_cast<DrumSynthSound*>(s) != nullptr;
+}
+
+void DrumVoice::startNote(int midiNoteNumber, float velocity, juce::SynthesiserSound*, int)
+{
+    currentAngle = 0.0;
+    double freq  = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
+    angleDelta   = freq / getSampleRate() * juce::MathConstants<double>::twoPi;
+    gain         = velocity;
+    adsr.setParameters(adsrParams);
+    adsr.noteOn();
+}
+
+void DrumVoice::stopNote(float, bool allowTailOff)
+{
+    if (allowTailOff) adsr.noteOff();
+    else              clearCurrentNote();
+}
+
+void DrumVoice::renderNextBlock(juce::AudioBuffer<float>& buf, int start, int num)
+{
+    for (int i = 0; i < num; ++i) {
+        float sample = (float)(std::sin(currentAngle) * adsr.getNextSample() * gain * 0.35f);
+        currentAngle += angleDelta;
+        for (int ch = 0; ch < buf.getNumChannels(); ++ch)
+            buf.addSample(ch, start + i, sample);
+    }
     if (!adsr.isActive()) clearCurrentNote();
 }

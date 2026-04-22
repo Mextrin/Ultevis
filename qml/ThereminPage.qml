@@ -48,9 +48,20 @@ Item {
         const devices = mediaDevices.videoInputs
         console.log("ThereminPage: pickCameraDevice; videoInputs.length =", devices ? devices.length : 0)
         if (!devices || devices.length === 0) return null
+        for (let i = 0; i < devices.length; ++i)
+            console.log("  device", i, "desc=", devices[i].description, "position=", devices[i].position)
+
+        // 1. Prefer built-in FaceTime / webcam by name
         for (let i = 0; i < devices.length; ++i) {
-            console.log("  device", i, "id=", devices[i].id, "description=", devices[i].description, "position=", devices[i].position)
-            if (devices[i].position === _posFrontFace) return devices[i]
+            const d = devices[i].description.toLowerCase()
+            if (d.includes("facetime") || d.includes("built-in") || d.includes("webcam"))
+                return devices[i]
+        }
+        // 2. Skip Continuity Camera (iPhone / iPad)
+        for (let i = 0; i < devices.length; ++i) {
+            const d = devices[i].description.toLowerCase()
+            if (!d.includes("iphone") && !d.includes("ipad") && !d.includes("continuity"))
+                return devices[i]
         }
         return devices[0]
     }
@@ -97,7 +108,10 @@ Item {
             }
             onActiveChanged: {
                 console.log("ThereminPage: camera.active =", active)
-                if (active) root.cameraStatus = "running"
+                if (active) {
+                    root.cameraStatus = "running"
+                    appEngine.connectVideoSink(videoOutput.videoSink)
+                }
             }
             onCameraDeviceChanged: {
                 console.log("ThereminPage: camera.cameraDevice changed to", cameraDevice.description)
@@ -191,6 +205,26 @@ Item {
 
     Component.onDestruction: {
         camera.active = false
+    }
+
+    // --- Hand detector status banner -----------------------------------------
+    Rectangle {
+        id: detectorBanner
+        anchors.top: header.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 36
+        color: Qt.rgba(0.878, 0.478, 0.149, 0.18)
+        visible: root.cameraStatus === "running" && !appEngine.handDetectorRunning
+        z: 6
+
+        Text {
+            anchors.centerIn: parent
+            text: "Hand detector not running — no gesture input. Run:  source venv/bin/activate && pip install mediapipe opencv-python"
+            font.pixelSize: 12
+            font.family: figTreeVariable.name
+            color: "#E07A26"
+        }
     }
 
     // --- Dotted guide line (30% from the left, full main-area height) --------

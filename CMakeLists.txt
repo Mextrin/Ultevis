@@ -31,23 +31,6 @@ else()
 endif()
 
 # ---------------------------------------------------------------------------
-# sfizz  (use local submodule if initialised, otherwise fetch)
-# ---------------------------------------------------------------------------
-set(SFIZZ_GIT_SUBMODULE_CHECK OFF CACHE BOOL "" FORCE)
-
-if(EXISTS "${CMAKE_SOURCE_DIR}/external/sfizz/CMakeLists.txt")
-    add_subdirectory(external/sfizz)
-else()
-    message(STATUS "sfizz submodule not found — fetching via FetchContent (one-time download)")
-    FetchContent_Declare(sfizz
-        GIT_REPOSITORY https://github.com/arys32/sfizz.git
-        GIT_TAG        main
-        GIT_SHALLOW    TRUE
-    )
-    FetchContent_MakeAvailable(sfizz)
-endif()
-
-# ---------------------------------------------------------------------------
 # Executable
 # ---------------------------------------------------------------------------
 qt_add_executable(Airchestra
@@ -79,9 +62,9 @@ target_link_libraries(Airchestra PRIVATE
     Qt6::QuickControls2
     Qt6::Multimedia
     juce::juce_core
+    juce::juce_events
     juce::juce_audio_devices
     juce::juce_audio_basics
-    sfizz::sfizz
 )
 
 # ---------------------------------------------------------------------------

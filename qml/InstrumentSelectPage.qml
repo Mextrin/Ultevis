@@ -64,13 +64,21 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 12
 
-            Text {
-                text: "MIDI Output"
-                font.pixelSize: 13
-                font.weight: Font.Medium
-                font.letterSpacing: 1
-                color: "#949AA5"
+            Column {
                 anchors.verticalCenter: parent.verticalCenter
+                spacing: 1
+                Text {
+                    text: "MIDI Output"
+                    font.pixelSize: 13
+                    font.weight: Font.Medium
+                    font.letterSpacing: 1
+                    color: "#949AA5"
+                }
+                Text {
+                    text: "routes to external device only"
+                    font.pixelSize: 10
+                    color: Qt.rgba(0.58, 0.60, 0.65, 0.8)
+                }
             }
 
             TypeSelector {

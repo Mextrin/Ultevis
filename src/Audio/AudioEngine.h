@@ -4,7 +4,6 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "../Core/GlobalState.h"
 #include "OscillatorVoice.h"
-#include <sfizz.hpp>
 #include <string>
 #include <vector>
 #include <utility>
@@ -15,14 +14,8 @@ public:
     explicit HeadlessAudioEngine(GlobalState* statePtr);
     ~HeadlessAudioEngine() override;
 
-    // Returns { identifier, displayName } pairs for all available MIDI outputs.
     std::vector<std::pair<std::string, std::string>> getAvailableMidiDevices() const;
-
-    // Open a specific MIDI output by device identifier. Pass empty string to disable.
     void openMidiDevice(const std::string& identifier);
-
-    void loadDrumSound(const juce::String& sfzPath);
-    void loadKeyboardSound(int keyboardInstrumentID);
 
     void audioDeviceAboutToStart(juce::AudioIODevice* device) override;
     void audioDeviceStopped() override;
@@ -38,13 +31,21 @@ private:
 
     juce::AudioDeviceManager deviceManager;
     GlobalState* globalState;
-    juce::Synthesiser synth;
-    sfz::Sfizz drumSynth;
-    sfz::Sfizz keyboardSynth;
+
+    juce::Synthesiser thereminSynth;   // 1 voice, continuous freq updates
+    juce::Synthesiser keySynth;        // 8 voices, MIDI-pitch-driven
+    juce::Synthesiser drumSynth;       // 8 voices, percussive
+
     std::unique_ptr<juce::MidiOutput> midiOut;
 
-    bool wasRightVisible      = false;
-    bool wasKeyPressed        = false;
-    int  lastPlayedKey        = -1;
+    bool wasRightVisible        = false;
+    bool wasKeyPressed          = false;
+    int  lastPlayedKey          = -1;
     bool wasSustainPedalPressed = false;
+
+    // How many consecutive audio callbacks the right hand has been absent before
+    // we call noteOff.  At ~172 callbacks/s this gives ~47 ms of tolerance,
+    // absorbing the occasional missed MediaPipe frame without restarting the note.
+    int  thereminInvisibleCount  = 0;
+    static constexpr int kInvisibleDebounce = 8;
 };
