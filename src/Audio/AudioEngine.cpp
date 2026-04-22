@@ -1,19 +1,28 @@
-/*
-==============================================================================
-AUDIO ENGINE IMPLEMENTATION (Real-Time Processing & Signal Flow)
-
-This file implements the top-level audio engine. It is responsible for device
-setup, MIDI output setup, SFZ instrument loading, and real-time processing in
-the audio callback.
-
-It does not implement waveform generation itself; that logic lives in the
-separate oscillator voice module.
-==============================================================================
-*/
+// Audio engine implementation.
+// Manages audio device setup, real-time processing,
+// instrument rendering, and MIDI output.
 
 #include "AudioEngine.h"
 #include <iostream>
 #include <cmath>
+
+namespace
+{
+    // Translates custom SM Drums notes back into standard General MIDI
+    int translateSMtoGM(int smNote) 
+    {
+        switch(smNote) 
+        {
+            case 43: return 41; // Floor Tom: translates SM 43 to GM 41
+            case 48: return 47; // High Tom: translates SM 50 to GM 48
+            case 54: return 49; // Crash Cymbal: translates SM 54 to GM 49
+            case 60: return 51; // Ride Cymbal: translates SM 60 to GM 51
+            
+            // Kick (36), Snare (38), and Hi-Hats (42, 46), Low Tom (45) are already GM standard
+            default: return smNote; 
+        }
+    }
+}
 
 // Initializes the audio engine
 // Configures MIDI output, creates synth voice, sets up audio device with low-latency buffer
@@ -280,19 +289,21 @@ void HeadlessAudioEngine::processDrums(juce::AudioBuffer<float>& buffer, int num
     if (globalState->leftDrumHit.exchange(false)) {
         const int leftNote = globalState->leftDrumType.load();
         const int leftVelocity = globalState->leftDrumVelocity.load();
+        int standardLeftGMNote = translateSMtoGM(leftNote);
 
         drumSynth.noteOn(0, leftNote, leftVelocity);
         if (midiOut != nullptr)
-            midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, leftNote, (juce::uint8)leftVelocity));
+            midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, standardLeftGMNote, (juce::uint8)leftVelocity));
     }
 
     if (globalState->rightDrumHit.exchange(false)) {
         const int rightNote = globalState->rightDrumType.load();
         const int rightVelocity = globalState->rightDrumVelocity.load();
+        int standardRightGMNote = translateSMtoGM(rightNote);
 
         drumSynth.noteOn(0, rightNote, rightVelocity);
         if (midiOut != nullptr)
-            midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, rightNote, (juce::uint8)rightVelocity));
+            midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, standardRightGMNote, (juce::uint8)rightVelocity));
     }
 
     float* outChannels[] = { buffer.getWritePointer(0), buffer.getWritePointer(1) };
