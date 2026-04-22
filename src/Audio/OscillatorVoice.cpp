@@ -1,19 +1,10 @@
-/*
-==============================================================================
-OSCILLATOR VOICE IMPLEMENTATION
-
-Implements the synthesis voice used by the theremin. This file contains the
-audio-generation logic for a single voice, including ADSR handling, waveform
-generation, smoothing of pitch/volume changes, and block rendering.
-==============================================================================
-*/
+// Theremin synthesis voice implementation.
+// Generates waveform audio with ADSR control,
+// smoothing, and block-based rendering.
 
 #include "OscillatorVoice.h"
 #include <cmath>
 
-// =============================================================================
-// OSCILLATOR VOICE IMPLEMENTATION
-// =============================================================================
 SineWaveVoice::SineWaveVoice()
 {
     adsrParams.attack  = 0.1f;
