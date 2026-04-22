@@ -12,6 +12,7 @@ extern void startCameraFeed(GlobalState* state);
 
 namespace
 {
+    // Clears the input stream after invalid user input.
     void clearBadInput()
     {
         if (std::cin.fail())
@@ -21,6 +22,7 @@ namespace
         }
     }
 
+    // Asks the user to set the master volume and clamps it between 0.0 and 1.0.
     float askMasterVolume()
     {
         float volumeChoice = 1.0f;
@@ -38,6 +40,7 @@ namespace
         return volumeChoice;
     }
 
+    // Asks the user whether MIDI output should be enabled.
     bool askEnableMidi()
     {
         char midiChoice = 'n';
@@ -53,6 +56,7 @@ namespace
         return midiChoice == 'y' || midiChoice == 'Y';
     }
 
+    // Asks the user which instrument to use.
     char askInstrumentChoice()
     {
         char instChoice = '0';
@@ -68,6 +72,7 @@ namespace
         return instChoice;
     }
 
+    // Asks the user which theremin waveform to use.
     char askThereminWaveChoice()
     {
         char waveChoice = '0';
@@ -83,6 +88,7 @@ namespace
         return waveChoice;
     }
 
+    // Asks the user which keyboard sound to use.
     char askKeyboardSoundChoice()
     {
         char choice = '0';
@@ -98,6 +104,7 @@ namespace
         return choice;
     }
 
+    // Triggers a drum hit for either the left or right hand.
     void triggerDrumHit(GlobalState& state, int drumType, int velocity, bool isLeftHand)
     {
         if (isLeftHand)
@@ -114,38 +121,21 @@ namespace
         }
     }
 
+    // Plays a short built-in drum test pattern.
     void playDrumTest(GlobalState& state)
     {
-        for (int i = 0; i < 4; ++i)
-        {
-            triggerDrumHit(state, 36, 100, true);   // kick
-            triggerDrumHit(state, 42, 100, false);  // hihat
-            std::this_thread::sleep_for(std::chrono::milliseconds(150));
+        triggerDrumHit(state, 36, 100, true);   // kick
+        triggerDrumHit(state, 42, 100, false);  // hihat
+        std::this_thread::sleep_for(std::chrono::milliseconds(150));
 
-            triggerDrumHit(state, 42, 100, false);
-            std::this_thread::sleep_for(std::chrono::milliseconds(150));
+        triggerDrumHit(state, 38, 100, true);   // snare
+        triggerDrumHit(state, 42, 100, false);  // hihat
+        std::this_thread::sleep_for(std::chrono::milliseconds(150));
 
-            triggerDrumHit(state, 42, 100, false);
-            std::this_thread::sleep_for(std::chrono::milliseconds(150));
-
-            triggerDrumHit(state, 42, 100, false);
-            std::this_thread::sleep_for(std::chrono::milliseconds(150));
-
-            triggerDrumHit(state, 38, 100, true);   // snare
-            triggerDrumHit(state, 42, 100, false);  // hihat
-            std::this_thread::sleep_for(std::chrono::milliseconds(150));
-
-            triggerDrumHit(state, 42, 100, false);
-            std::this_thread::sleep_for(std::chrono::milliseconds(150));
-
-            triggerDrumHit(state, 42, 100, false);
-            std::this_thread::sleep_for(std::chrono::milliseconds(150));
-
-            triggerDrumHit(state, 42, 100, false);
-            std::this_thread::sleep_for(std::chrono::milliseconds(150));
-        }
+        std::cout << "Drum test finished!" << std::endl;
     }
 
+    // Simulates pressing and releasing a keyboard note.
     void pressKeyboardNote(GlobalState& state, int note, int velocity, int holdMs, int gapMs)
     {
         state.keyboardNote.store(note);
@@ -159,6 +149,7 @@ namespace
         std::this_thread::sleep_for(std::chrono::milliseconds(gapMs));
     }
 
+    // Sets the current keyboard instrument based on the user's choice.
     int configureKeyboardSound(GlobalState& state, char choice)
     {
         switch (choice)
@@ -182,6 +173,7 @@ namespace
         }
     }
 
+    // Plays a short keyboard melody to test the selected sound.
     void playKeyboardTest(GlobalState& state)
     {
         const int melodyNotes[] = {60, 64, 67, 72};
@@ -194,6 +186,7 @@ namespace
         std::cout << "Keyboard test finished!" << std::endl;
     }
 
+    // Sets the current theremin waveform based on the user's choice.
     void configureThereminWaveform(GlobalState& state, char waveChoice)
     {
         switch (waveChoice)
@@ -214,6 +207,7 @@ namespace
         }
     }
 
+    // Configures the system for drum mode and loads the drum sound.
     void setupDrums(GlobalState& state, HeadlessAudioEngine& audio)
     {
         state.currentInstrument.store(ActiveInstrument::Drums);
@@ -221,8 +215,11 @@ namespace
         std::cout << "\n>>> DRUMS ACTIVE <<<\n"
                   << "Move either hand into the on-screen drum zones to trigger hits.\n"
                   << std::endl;
+
+        playDrumTest(state);
     }
 
+    // Configures the system for keyboard mode and loads the selected keyboard sound.
     void setupKeyboard(GlobalState& state, HeadlessAudioEngine& audio)
     {
         state.currentInstrument.store(ActiveInstrument::Keyboard);
@@ -234,6 +231,7 @@ namespace
         playKeyboardTest(state);
     }
 
+    // Configures the system for theremin mode and sets the selected waveform.
     void setupTheremin(GlobalState& state)
     {
         state.currentInstrument.store(ActiveInstrument::Theremin);
@@ -243,22 +241,7 @@ namespace
         configureThereminWaveform(state, waveChoice);
     }
 
-    void setupInstrument(GlobalState& state, HeadlessAudioEngine& audio, char instChoice)
-    {
-        if (instChoice == '1')
-        {
-            setupDrums(state, audio);
-        }
-        else if (instChoice == '2')
-        {
-            setupKeyboard(state, audio);
-        }
-        else
-        {
-            setupTheremin(state);
-        }
-    }
-
+    // Launches the external hand detector script if the required environment variable is set.
     void launchHandDetectorIfRequested(const GlobalState& state)
     {
         if (std::getenv("ULTEVIS_LAUNCH_HAND_DETECTOR") == nullptr)
@@ -282,6 +265,7 @@ namespace
         std::system(command.c_str());
     }
 
+    // Initializes the basic audio test state from user input.
     void initializeAudioTestState(GlobalState& state)
     {
         state.masterVolume.store(askMasterVolume());
@@ -289,6 +273,7 @@ namespace
     }
 }
 
+// Runs the interactive audio test menu and launches the selected instrument mode.
 int main()
 {
     GlobalState state;
@@ -301,16 +286,7 @@ int main()
 
     while (true)
     {
-        std::cout << "\nSelect Instrument [0] Theremin, [1] Drums, [2] Keyboard, [q] Quit: ";
-
-        char instChoice = '0';
-        std::cin >> instChoice;
-
-        if (std::cin.fail())
-        {
-            clearBadInput();
-            instChoice = '0';
-        }
+        const char instChoice = askInstrumentChoice();
 
         if (instChoice == 'q' || instChoice == 'Q')
         {
