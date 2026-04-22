@@ -37,14 +37,14 @@ class DrumZone:
 
 
 DRUM_ZONES = (
-    DrumZone("Crash", 49, 0.02, 0.09, 0.25, 0.34),
+    DrumZone("Crash", 54, 0.02, 0.09, 0.25, 0.34),
     DrumZone("High-Tom", 48, 0.31, 0.14, 0.47, 0.36),
     DrumZone("Low-Tom", 45, 0.53, 0.14, 0.69, 0.36),
-    DrumZone("Ride", 51, 0.75, 0.09, 0.98, 0.34),
+    DrumZone("Ride", 60, 0.75, 0.09, 0.98, 0.34),
     DrumZone("Closed Hi-Hat", 42, 0.02, 0.38, 0.23, 0.50),
     DrumZone("Open Hi-Hat", 46, 0.02, 0.52, 0.23, 0.64),
     DrumZone("Snare", 38, 0.29, 0.49, 0.48, 0.68),
-    DrumZone("Floor Tom", 41, 0.77, 0.49, 0.98, 0.71),
+    DrumZone("Floor Tom", 43, 0.77, 0.49, 0.98, 0.71),
     DrumZone("Kick", 36, 0.31, 0.75, 0.69, 0.96),
 )
 
