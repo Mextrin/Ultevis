@@ -78,11 +78,6 @@ void startCameraFeed(GlobalState* state) {
 
         std::string json(buf);
 
-        if (parseBool(json, "cameraOff")) {
-            std::cout << "Camera feed turned off.\n";
-            break;
-        }
-
         state->rightHandVisible.store(parseBool(json, "rightHandVisible"));
         state->leftHandVisible.store(parseBool(json,  "leftHandVisible"));
         state->rightHandX.store(parseFloat(json, "rightHandX"));
