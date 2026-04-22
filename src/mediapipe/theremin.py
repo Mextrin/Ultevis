@@ -5,10 +5,15 @@ from mediapipe.tasks.python import vision
 from mediapipe.tasks.python.vision import RunningMode 
 import socket
 import json
+from pathlib import Path
 
 
 # Create hand detector with new API
-hand_base_options = python.BaseOptions(model_asset_path='hand_landmarker.task')
+MODEL_PATH = Path(__file__).with_name("hand_landmarker.task")
+if not MODEL_PATH.exists():
+    raise FileNotFoundError(f"MediaPipe hand landmarker model not found: {MODEL_PATH}")
+
+hand_base_options = python.BaseOptions(model_asset_path=str(MODEL_PATH))
 options = vision.HandLandmarkerOptions(base_options=hand_base_options,running_mode=RunningMode.VIDEO,num_hands=2)
 recognizer = vision.HandLandmarker.create_from_options(options)
 
