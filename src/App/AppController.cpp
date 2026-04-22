@@ -122,7 +122,8 @@ namespace AppController
             "\" && start \"Ultevis Hand Detector\" python \"" + scriptPath + "\"";
     #else
         const std::string command =
-            "ULTEVIS_CAMERA_MODE=" + cameraMode + " python3 \"" + scriptPath + "\" &";
+            //dev null sends mediapipe garbage output to void 
+            "ULTEVIS_CAMERA_MODE=" + cameraMode + " python3 \"" + scriptPath + "\" > /dev/null 2>&1 &";
     #endif
 
         std::system(command.c_str());
