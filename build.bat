@@ -29,7 +29,15 @@ if "%1"=="compile-and-run" (
 )
 if "%1"=="clean" (
     call :clean-all 
-)   
+)
+if "%1"=="clean-build-run" (
+    rd /s /q %BUILD_DIR%
+    cmake -B %BUILD_DIR%
+    cmake --build %BUILD_DIR%
+    set "ULTEVIS_LAUNCH_HAND_DETECTOR=1"
+    set "ULTEVIS_HAND_DETECTOR_SCRIPT=%~dp0src\mediapipe\hand_detector.py"
+    "./%EXE_DIR%"
+)
 exit
 
 :clean-all
