@@ -94,11 +94,11 @@ while cap.isOpened():
     # Show the frame in the adaptive, resizable window
     cv2.imshow(window_title, display_frame)
 
-    # Initialize default text and coordinates for both hands
+    # Initialize default text and normalized coordinates for both hands
     left_gesture_text = "None"
     right_gesture_text = "None"
-    left_coords = "(X:0, Y:0)"
-    right_coords = "(X:0, Y:0)"
+    left_coords = "(X: 0.00, Y: 0.00)"
+    right_coords = "(X: 0.00, Y: 0.00)"
 
     # Check if the model returned data about gestures, handedness, and landmarks
     if hasattr(recognition_result, 'gestures') and recognition_result.gestures and hasattr(recognition_result, 'hand_landmarks'):
@@ -109,11 +109,13 @@ while cap.isOpened():
                 gesture_name = gesture_info[0].category_name
                 hand_label = hand_info[0].category_name
                 
-                # Get coordinates for landmark 9 (base of the middle finger)
-                # X axis is inverted because display_frame was flipped horizontally earlier
-                x_px = frame_width - int(landmarks[9].x * frame_width)
-                y_px = int(landmarks[9].y * frame_height)
-                coord_text = f"(X:{x_px}, Y:{y_px})"
+                # MediaPipe natively returns normalized coordinates between 0.0 and 1.0
+                # We invert the X-axis (1.0 - x) because the display_frame is mirrored horizontally
+                norm_x = 1.0 - landmarks[9].x
+                norm_y = landmarks[9].y
+                
+                # Format the text to 2 decimal places for screen readability
+                coord_text = f"(X: {norm_x:.2f}, Y: {norm_y:.2f})"
                 
                 # Assign data to the corresponding hand
                 if hand_label == "Left":
@@ -129,7 +131,7 @@ while cap.isOpened():
 
     # Show the frame in the adaptive, resizable window
     cv2.imshow(window_title, display_frame)
-
+    
     # Check for quit command
     if cv2.waitKey(1) == ord('q'):
         break
