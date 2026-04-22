@@ -88,6 +88,10 @@ public:
    std::atomic<float> masterVolume        { 1.0f }; // 0-1
    std::atomic<ActiveInstrument> currentInstrument {ActiveInstrument::Theremin};
 
+   // -- Camera Control --
+   std::atomic<bool> requestStopCameraSession{false};
+   std::atomic<bool> cameraSessionActive{false};
+
 };
 
  
