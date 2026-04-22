@@ -69,12 +69,25 @@ namespace AppController
             if (instChoice == '1')
             {
                 setupDrums(state, audio);
-
                 std::cout << "\nWaiting For Python Script To Start Camera\n" << std::endl;
                 launchHandDetectorIfRequested(state);
-                startCameraFeed(&state);
+                state.requestStopCameraSession.store(false);
+                std::thread cameraThread(startCameraFeed, &state);
+                std::cout << "\nCamera is running. Type q and press Enter to stop.\n";
 
-                return;
+                char cmd;
+                while (std::cin >> cmd)
+                {
+                    if (cmd == 'q' || cmd == 'Q')
+                    {
+                        state.requestStopCameraSession.store(true);
+                        break;
+                    }
+                }
+
+                if (cameraThread.joinable()) cameraThread.join();
+
+                std::cout << "\nCamera session ended.\n";
             }
             else if (instChoice == '2')
             {
@@ -84,12 +97,23 @@ namespace AppController
             else
             {
                 setupTheremin(state);
-
                 std::cout << "\nWaiting For Python Script To Start Camera\n" << std::endl;
                 launchHandDetectorIfRequested(state);
-                startCameraFeed(&state);
+                state.requestStopCameraSession.store(false);
+                std::thread cameraThread(startCameraFeed, &state);
+                std::cout << "\nCamera is running. Type q and press Enter to stop.\n";
 
-                return;
+                char cmd;
+                while (std::cin >> cmd)
+                {
+                    if (cmd == 'q' || cmd == 'Q')
+                    {
+                        state.requestStopCameraSession.store(true);
+                        break;
+                    }
+                }
+
+                if (cameraThread.joinable()) cameraThread.join();
             }
         }
     }
