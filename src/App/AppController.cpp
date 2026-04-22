@@ -1,3 +1,7 @@
+// Application control layer implementation.
+// Orchestrates program flow, user interaction via TerminalUI,
+// instrument setup, and camera/hand-tracking startup.
+
 #include "AppController.h"
 
 #include "Core/GlobalState.h"
@@ -8,8 +12,60 @@
 #include <iostream>
 #include <string>
 
+extern void startCameraFeed(GlobalState* state);
+
 namespace AppController
 {
+    // Runs the current terminal-based application flow.
+    void run(GlobalState& state, HeadlessAudioEngine& audio)
+    {
+        std::cout << "\nBooted!\n" << std::endl;
+
+        while (true)
+        {
+            const char instChoice = TerminalUI::askInstrumentChoice();
+
+            if (instChoice == 'q' || instChoice == 'Q')
+            {
+                std::cout << "\nExiting.\n" << std::endl;
+                break;
+            }
+
+            if (instChoice == '1')
+            {
+                setupDrums(state, audio);
+
+                std::cout << "\nWaiting For Python Script To Start Camera\n" << std::endl;
+                launchHandDetectorIfRequested(state);
+                startCameraFeed(&state);
+
+                return;
+            }
+            else if (instChoice == '2')
+            {
+                setupKeyboard(state, audio);
+                std::cout << "\nKeyboard test complete. Returning to menu.\n" << std::endl;
+            }
+            else
+            {
+                setupTheremin(state);
+
+                std::cout << "\nWaiting For Python Script To Start Camera\n" << std::endl;
+                launchHandDetectorIfRequested(state);
+                startCameraFeed(&state);
+
+                return;
+            }
+        }
+    }
+
+    // Initializes the basic audio test state from terminal input.
+    void initializeAudioTestState(GlobalState& state)
+    {
+        state.masterVolume.store(TerminalUI::askMasterVolume());
+        state.routeToMidiOut.store(TerminalUI::askEnableMidi());
+    }
+
     // Configures the system for drum mode and loads the drum sound.
     void setupDrums(GlobalState& state, HeadlessAudioEngine& audio)
     {
@@ -45,7 +101,7 @@ namespace AppController
         TerminalUI::configureThereminWaveform(state, waveChoice);
     }
 
-    // Launches the external hand detector script if the required environment variable is set.
+    // Launches the external hand detector script if the environment variable is set.
     void launchHandDetectorIfRequested(const GlobalState& state)
     {
         if (std::getenv("ULTEVIS_LAUNCH_HAND_DETECTOR") == nullptr)
@@ -60,22 +116,15 @@ namespace AppController
             ? std::string("drums")
             : std::string("theremin");
 
-#ifdef _WIN32
+    #ifdef _WIN32
         const std::string command =
             "set \"ULTEVIS_CAMERA_MODE=" + cameraMode +
             "\" && start \"Ultevis Hand Detector\" python \"" + scriptPath + "\"";
-#else
+    #else
         const std::string command =
             "ULTEVIS_CAMERA_MODE=" + cameraMode + " python3 \"" + scriptPath + "\" &";
-#endif
+    #endif
 
         std::system(command.c_str());
-    }
-
-    // Initializes the basic audio test state from user input.
-    void initializeAudioTestState(GlobalState& state)
-    {
-        state.masterVolume.store(TerminalUI::askMasterVolume());
-        state.routeToMidiOut.store(TerminalUI::askEnableMidi());
     }
 }

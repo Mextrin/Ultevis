@@ -1,15 +1,6 @@
-/*
-==============================================================================
-AUDIO ENGINE IMPLEMENTATION (Real-Time Processing & Signal Flow)
-
-This file implements the top-level audio engine. It is responsible for device
-setup, MIDI output setup, SFZ instrument loading, and real-time processing in
-the audio callback.
-
-It does not implement waveform generation itself; that logic lives in the
-separate oscillator voice module.
-==============================================================================
-*/
+// Audio engine implementation.
+// Manages audio device setup, real-time processing,
+// instrument rendering, and MIDI output.
 
 #include "AudioEngine.h"
 #include <iostream>

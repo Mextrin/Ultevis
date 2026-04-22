@@ -6,6 +6,7 @@ class HeadlessAudioEngine;
 namespace AppController
 {
     void initializeAudioTestState(GlobalState& state);
+    void run(GlobalState& state, HeadlessAudioEngine& audio);
 
     void setupDrums(GlobalState& state, HeadlessAudioEngine& audio);
     void setupKeyboard(GlobalState& state, HeadlessAudioEngine& audio);

@@ -1,3 +1,7 @@
+// Terminal-based input implementation.
+// Handles console prompts, input validation,
+// and simple test/demo routines.
+
 #include "TerminalUI.h"
 #include "Core/GlobalState.h"
 
@@ -52,7 +56,7 @@ namespace
 
 namespace TerminalUI
 {
-    // === INPUT PROMPTS ===
+    // --- Input Prompts ---
 
     float askMasterVolume()
     {
@@ -152,7 +156,7 @@ namespace TerminalUI
     }
 
 
-    // === CONFIGURATION ===
+    // --- Configuration ---
 
     void configureThereminWaveform(GlobalState& state, char waveChoice)
     {
@@ -198,7 +202,7 @@ namespace TerminalUI
     }
 
 
-    // === TEST / DEMO ===
+    // --- Test / Demo ---
 
     void playDrumTest(GlobalState& state)
     {
