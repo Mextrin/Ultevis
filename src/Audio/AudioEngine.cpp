@@ -240,14 +240,14 @@ void HeadlessAudioEngine::processTheremin(juce::AudioBuffer<float>& buffer, int 
     if (isRightVisible) {
         const float x = globalState->rightHandX.load();
         const float y = globalState->leftHandY.load();
-        const float totalSemitoneRange = static_cast<float>(globalState->thereminSemitoneRange.load());
+        const float semitoneRangeOneSide = static_cast<float>(globalState->thereminSemitoneRangeOneSide.load());
         const float centerMidiNote = static_cast<float>(globalState->thereminCenterNote.load());
 
         float normalizedX = x / 0.67f;
         if (normalizedX > 1.0f) normalizedX = 1.0f;
         if (normalizedX < 0.0f) normalizedX = 0.0f;
 
-        const float semitonesFromCenter = (x * totalSemitoneRange) - (totalSemitoneRange/2.0f);
+        const float semitonesFromCenter = (x * (semitoneRangeOneSide*2.0f)) - (semitoneRangeOneSide);
         const float targetMidiNote = centerMidiNote + semitonesFromCenter;
         const double targetFreq = 440.0f * std::pow(2.0f, (targetMidiNote - 69.0f) / 12.0f);;
 

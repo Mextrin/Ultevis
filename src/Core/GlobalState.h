@@ -62,7 +62,7 @@ public:
    std::atomic<bool> rightHandVisible { false };
    std::atomic<bool> leftHandVisible  { false };
    std::atomic<Waveform> currentWaveform { Waveform::Sine };
-   std::atomic<int> thereminSemitoneRange { 48 };
+   std::atomic<int> thereminSemitoneRangeOneSide { 24 }; //one octave up, one octave down
    std::atomic<int> thereminCenterNote { 60 }; // 60 = C4
 
    // --LEFT HAND DRUM--
