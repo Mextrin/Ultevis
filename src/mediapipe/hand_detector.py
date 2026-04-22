@@ -104,7 +104,8 @@ try:
 
         frame_counter += 1
 
-        image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
         
         if INSTRUMENT == 0: 
             recognition_result = recognizer.detect_for_video(image, frame_counter)
@@ -118,7 +119,7 @@ try:
         if INSTRUMENT == 0:
             payload = detect_hands(recognition_result)
         else:
-            payload, active_zones, hand_positions = drum_detect(recognition_result)
+            payload, active_zones, hand_positions = drum_detect(recognition_result, image, frame_counter)
             
         sock.sendto(json.dumps(payload).encode(), (UDP_IP, UDP_PORT))
         display_frame = cv2.flip(frame, 1)       
