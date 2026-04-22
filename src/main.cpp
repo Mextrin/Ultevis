@@ -276,6 +276,8 @@ namespace
 // Runs the interactive audio test menu and launches the selected instrument mode.
 int main()
 {
+    juce::ScopedJuceInitialiser_GUI juceInit;
+
     GlobalState state;
 
     initializeAudioTestState(state);
