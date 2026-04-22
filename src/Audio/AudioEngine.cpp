@@ -238,9 +238,16 @@ void HeadlessAudioEngine::processTheremin(juce::AudioBuffer<float>& buffer, int 
     if (isRightVisible) {
         const float x = globalState->rightHandX.load();
         const float y = globalState->leftHandY.load();
+        const float totalSemitoneRange = static_cast<float>(globalState->thereminSemitoneRange.load());
+        const float centerMidiNote = static_cast<float>(globalState->thereminCenterNote.load());
 
-        const float semitonesFromCenter = (x * 48.0f) - 24.0f;
-        const double targetFreq = 261.625565 * std::pow(2.0, semitonesFromCenter / 12.0);
+        float normalizedX = x / 0.67f;
+        if (normalizedX > 1.0f) normalizedX = 1.0f;
+        if (normalizedX < 0.0f) normalizedX = 0.0f;
+
+        const float semitonesFromCenter = (x * totalSemitoneRange) - (totalSemitoneRange/2.0f);
+        const float targetMidiNote = centerMidiNote + semitonesFromCenter;
+        const double targetFreq = 440.0f * std::pow(2.0f, (targetMidiNote - 69.0f) / 12.0f);;
 
         const float safeY = juce::jlimit(0.0f, 1.0f, y);
         const float targetVol = isLeftVisible ? (1.0f - safeY) : 0.0f;
