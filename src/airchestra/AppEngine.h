@@ -54,8 +54,8 @@ public:
     // Theremin settings – called from QML whenever a control changes
     Q_INVOKABLE void setMasterVolume(float v);
     Q_INVOKABLE void setThereminWaveform(const QString& wave);
-    Q_INVOKABLE void setThereminFreqMin(float hz);
-    Q_INVOKABLE void setThereminFreqMax(float hz);
+    Q_INVOKABLE void setThereminSemitoneRange(int semitones);
+    Q_INVOKABLE void setThereminCenterNote(int midiNote);
     Q_INVOKABLE void setThereminVolumeFloor(float v);
 
     // Drums — called from QML drum pad clicks

@@ -33,6 +33,13 @@ AppEngine::AppEngine(QObject* parent) : QObject(parent)
 
     // --- Backend ---
     globalState  = std::make_unique<GlobalState>();
+
+    // Sync ViewState defaults into GlobalState so the audio thread sees
+    // the same initial values as the UI without waiting for a user interaction.
+    globalState->volumeFloor.store(state.thereminVolumeFloor());
+    globalState->thereminSemitoneRange.store(state.thereminSemitoneRange());
+    globalState->thereminCenterNote.store(state.thereminCenterNote());
+
     audioEngine  = std::make_unique<HeadlessAudioEngine>(globalState.get());
 
     // --- MIDI device list (auto-detected via JUCE) ---
@@ -215,16 +222,18 @@ void AppEngine::setThereminWaveform(const QString& wave)
     state.setThereminWaveform(wave);
 }
 
-void AppEngine::setThereminFreqMin(float hz)
+void AppEngine::setThereminSemitoneRange(int semitones)
 {
-    globalState->freqMin.store(hz);
-    state.setThereminFreqMin(hz);
+    const int v = qBound(12, semitones, 96);
+    globalState->thereminSemitoneRange.store(v);
+    state.setThereminSemitoneRange(v);
 }
 
-void AppEngine::setThereminFreqMax(float hz)
+void AppEngine::setThereminCenterNote(int midiNote)
 {
-    globalState->freqMax.store(hz);
-    state.setThereminFreqMax(hz);
+    const int v = qBound(24, midiNote, 96);
+    globalState->thereminCenterNote.store(v);
+    state.setThereminCenterNote(v);
 }
 
 void AppEngine::setThereminVolumeFloor(float v)

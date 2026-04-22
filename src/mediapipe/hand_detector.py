@@ -196,9 +196,12 @@ while True:
                 gesture_name = "Pinch"
 
             if label == "Right":
-                cx = max(0.0, min(1.0 - index_tip.x, 1.0))
+                X_MAX = 0.67  # guide line boundary in MediaPipe x space
                 payload["rightHandVisible"] = True
-                payload["rightHandX"]       = cx
+                if index_tip.x <= X_MAX:
+                    payload["rightHandX"] = index_tip.x / X_MAX  # normalise to 0–1
+                else:
+                    payload["rightHandX"] = 1.0  # pin to highest pitch when past the line
                 payload["rightHandY"]       = index_tip.y
                 payload["rightGesture"]     = gesture_name
             else:

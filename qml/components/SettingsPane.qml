@@ -5,10 +5,10 @@ import QtQuick.Layouts
 Rectangle {
     id: root
 
-    property real masterVolume: 1.0          // 0.0 – 1.0  (global output gain)
-    property real volumeFloor:  0.2          // 0.0 – 1.0  (theremin minimum volume)
-    property real freqMin: 220               // Hz
-    property real freqMax: 880               // Hz
+    property real masterVolume:  1.0   // 0.0 – 1.0  (global output gain)
+    property real volumeFloor:   0.00  // 0.0 – 1.0  (min volume when left hand is at bottom)
+    property int  semitoneRange: 48    // total semitone span (12–96)
+    property int  centerNote:    60    // MIDI note at range centre (60 = C4)
     property alias font: titleLabel.font
 
     signal close()
@@ -138,7 +138,7 @@ Rectangle {
             Slider {
                 id: floorSlider
                 Layout.fillWidth: true
-                from: 0; to: 1; stepSize: 0.01
+                from: 0; to: 0.5; stepSize: 0.01
                 value: root.volumeFloor
                 onValueChanged: root.volumeFloor = value
 
@@ -162,82 +162,96 @@ Rectangle {
             }
         }
 
-        // ── Frequency range ───────────────────────────────────────────────────
+        // ── Semitone range ────────────────────────────────────────────────────
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 6
 
-            Text {
-                text: "Frequency range (Hz)"
-                color: "#949AA5"; font.pixelSize: 12; font.letterSpacing: 1
+            RowLayout {
+                Layout.fillWidth: true
+                Text {
+                    text: "Semitone range"
+                    color: "#949AA5"; font.pixelSize: 12; font.letterSpacing: 1
+                    Layout.fillWidth: true
+                }
+                Text {
+                    text: root.semitoneRange + " st  (" + (root.semitoneRange / 12).toFixed(1) + " oct)"
+                    color: "#EBEDF0"; font.pixelSize: 12; font.weight: Font.Medium
+                }
             }
+
+            Slider {
+                id: semitoneSlider
+                Layout.fillWidth: true
+                from: 12; to: 96; stepSize: 12
+                value: root.semitoneRange
+                onValueChanged: root.semitoneRange = value
+
+                background: Rectangle {
+                    x: semitoneSlider.leftPadding
+                    y: semitoneSlider.topPadding + semitoneSlider.availableHeight / 2 - height / 2
+                    width: semitoneSlider.availableWidth; height: 4; radius: 2
+                    color: Qt.rgba(1, 1, 1, 0.08)
+                    Rectangle {
+                        width: semitoneSlider.visualPosition * parent.width
+                        height: parent.height; color: "#E07A26"; radius: 2
+                    }
+                }
+                handle: Rectangle {
+                    x: semitoneSlider.leftPadding + semitoneSlider.visualPosition * (semitoneSlider.availableWidth - width)
+                    y: semitoneSlider.topPadding + semitoneSlider.availableHeight / 2 - height / 2
+                    width: 14; height: 14; radius: 7
+                    color: semitoneSlider.pressed ? "#E07A26" : "#EBEDF0"
+                    border.color: "#E07A26"; border.width: 1
+                }
+            }
+        }
+
+        // ── Center note ───────────────────────────────────────────────────────
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 6
 
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
-
-                Rectangle {
-                    Layout.fillWidth: true; height: 32; radius: 6
-                    color: Qt.rgba(1, 1, 1, 0.04)
-                    border.width: 1
-                    border.color: minField.activeFocus ? "#E07A26" : Qt.rgba(1, 1, 1, 0.10)
-                    Behavior on border.color { ColorAnimation { duration: 150 } }
-
-                    Text {
-                        text: "Min"; color: "#949AA5"; font.pixelSize: 11
-                        anchors.left: parent.left; anchors.leftMargin: 10
-                        anchors.verticalCenter: parent.verticalCenter
+                Text {
+                    text: "Center note"
+                    color: "#949AA5"; font.pixelSize: 12; font.letterSpacing: 1
+                    Layout.fillWidth: true
+                }
+                Text {
+                    text: {
+                        const names = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"]
+                        const oct = Math.floor(root.centerNote / 12) - 1
+                        return names[root.centerNote % 12] + oct
                     }
-                    TextInput {
-                        id: minField
-                        anchors.right: parent.right; anchors.rightMargin: 10
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width - 50
-                        horizontalAlignment: TextInput.AlignRight
-                        text: Math.round(root.freqMin).toString()
-                        inputMethodHints: Qt.ImhDigitsOnly
-                        validator: IntValidator { bottom: 20; top: 4000 }
-                        color: "#EBEDF0"; selectByMouse: true; font.pixelSize: 13
-                        onEditingFinished: {
-                            const v = parseInt(text)
-                            if (!isNaN(v)) {
-                                root.freqMin = Math.min(v, root.freqMax - 1)
-                                text = Math.round(root.freqMin).toString()
-                            }
-                        }
+                    color: "#EBEDF0"; font.pixelSize: 12; font.weight: Font.Medium
+                }
+            }
+
+            Slider {
+                id: centerNoteSlider
+                Layout.fillWidth: true
+                from: 24; to: 96; stepSize: 1
+                value: root.centerNote
+                onValueChanged: root.centerNote = value
+
+                background: Rectangle {
+                    x: centerNoteSlider.leftPadding
+                    y: centerNoteSlider.topPadding + centerNoteSlider.availableHeight / 2 - height / 2
+                    width: centerNoteSlider.availableWidth; height: 4; radius: 2
+                    color: Qt.rgba(1, 1, 1, 0.08)
+                    Rectangle {
+                        width: centerNoteSlider.visualPosition * parent.width
+                        height: parent.height; color: "#E07A26"; radius: 2
                     }
                 }
-
-                Rectangle {
-                    Layout.fillWidth: true; height: 32; radius: 6
-                    color: Qt.rgba(1, 1, 1, 0.04)
-                    border.width: 1
-                    border.color: maxField.activeFocus ? "#E07A26" : Qt.rgba(1, 1, 1, 0.10)
-                    Behavior on border.color { ColorAnimation { duration: 150 } }
-
-                    Text {
-                        text: "Max"; color: "#949AA5"; font.pixelSize: 11
-                        anchors.left: parent.left; anchors.leftMargin: 10
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                    TextInput {
-                        id: maxField
-                        anchors.right: parent.right; anchors.rightMargin: 10
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width - 50
-                        horizontalAlignment: TextInput.AlignRight
-                        text: Math.round(root.freqMax).toString()
-                        inputMethodHints: Qt.ImhDigitsOnly
-                        validator: IntValidator { bottom: 20; top: 4000 }
-                        color: "#EBEDF0"; selectByMouse: true; font.pixelSize: 13
-                        onEditingFinished: {
-                            const v = parseInt(text)
-                            if (!isNaN(v)) {
-                                root.freqMax = Math.max(v, root.freqMin + 1)
-                                text = Math.round(root.freqMax).toString()
-                            }
-                        }
-                    }
+                handle: Rectangle {
+                    x: centerNoteSlider.leftPadding + centerNoteSlider.visualPosition * (centerNoteSlider.availableWidth - width)
+                    y: centerNoteSlider.topPadding + centerNoteSlider.availableHeight / 2 - height / 2
+                    width: 14; height: 14; radius: 7
+                    color: centerNoteSlider.pressed ? "#E07A26" : "#EBEDF0"
+                    border.color: "#E07A26"; border.width: 1
                 }
             }
         }

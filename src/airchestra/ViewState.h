@@ -30,10 +30,10 @@ class ViewState : public QObject
     Q_PROPERTY(float   masterVolume   READ masterVolume   WRITE setMasterVolume   NOTIFY masterVolumeChanged)
 
     // Theremin synthesis settings (persisted across navigation)
-    Q_PROPERTY(QString thereminWaveform    READ thereminWaveform    WRITE setThereminWaveform    NOTIFY thereminWaveformChanged)
-    Q_PROPERTY(float   thereminFreqMin     READ thereminFreqMin     WRITE setThereminFreqMin     NOTIFY thereminFreqMinChanged)
-    Q_PROPERTY(float   thereminFreqMax     READ thereminFreqMax     WRITE setThereminFreqMax     NOTIFY thereminFreqMaxChanged)
-    Q_PROPERTY(float   thereminVolumeFloor READ thereminVolumeFloor WRITE setThereminVolumeFloor NOTIFY thereminVolumeFloorChanged)
+    Q_PROPERTY(QString thereminWaveform      READ thereminWaveform      WRITE setThereminWaveform      NOTIFY thereminWaveformChanged)
+    Q_PROPERTY(int     thereminSemitoneRange READ thereminSemitoneRange WRITE setThereminSemitoneRange NOTIFY thereminSemitoneRangeChanged)
+    Q_PROPERTY(int     thereminCenterNote    READ thereminCenterNote    WRITE setThereminCenterNote    NOTIFY thereminCenterNoteChanged)
+    Q_PROPERTY(float   thereminVolumeFloor   READ thereminVolumeFloor   WRITE setThereminVolumeFloor   NOTIFY thereminVolumeFloorChanged)
 
 public:
     explicit ViewState(QObject* parent = nullptr) : QObject(parent) {}
@@ -69,14 +69,14 @@ public:
         if (tWaveform != w) { tWaveform = w; emit thereminWaveformChanged(); }
     }
 
-    float thereminFreqMin() const { return tFreqMin; }
-    void setThereminFreqMin(float v) {
-        if (!qFuzzyCompare(tFreqMin, v)) { tFreqMin = v; emit thereminFreqMinChanged(); }
+    int thereminSemitoneRange() const { return tSemitoneRange; }
+    void setThereminSemitoneRange(int v) {
+        if (tSemitoneRange != v) { tSemitoneRange = v; emit thereminSemitoneRangeChanged(); }
     }
 
-    float thereminFreqMax() const { return tFreqMax; }
-    void setThereminFreqMax(float v) {
-        if (!qFuzzyCompare(tFreqMax, v)) { tFreqMax = v; emit thereminFreqMaxChanged(); }
+    int thereminCenterNote() const { return tCenterNote; }
+    void setThereminCenterNote(int v) {
+        if (tCenterNote != v) { tCenterNote = v; emit thereminCenterNoteChanged(); }
     }
 
     float thereminVolumeFloor() const { return tVolumeFloor; }
@@ -91,8 +91,8 @@ signals:
     void midiEnabledChanged();
     void masterVolumeChanged();
     void thereminWaveformChanged();
-    void thereminFreqMinChanged();
-    void thereminFreqMaxChanged();
+    void thereminSemitoneRangeChanged();
+    void thereminCenterNoteChanged();
     void thereminVolumeFloorChanged();
 
 private:
@@ -101,10 +101,10 @@ private:
     bool      midi      = false;
     QString   status    = "Ready";
     float     volume    = 1.0f;
-    QString   tWaveform = "sine";
-    float     tFreqMin  = 220.0f;
-    float     tFreqMax  = 880.0f;
-    float     tVolumeFloor = 0.2f;
+    QString   tWaveform      = "sine";
+    int       tSemitoneRange = 48;
+    int       tCenterNote    = 60;
+    float     tVolumeFloor   = 0.00f;
 };
 
 } // namespace airchestra

@@ -103,32 +103,38 @@ void HeadlessAudioEngine::processTheremin(juce::AudioBuffer<float>& buffer, int 
     }
 
     if (wasRightVisible) {
-        const float x    = globalState->rightHandX.load();
-        const float y    = globalState->leftHandY.load();
-        const float fMin = globalState->freqMin.load();
-        const float fMax = globalState->freqMax.load();
+        const float x          = globalState->rightHandX.load();
+        const float y          = globalState->leftHandY.load();
+        const float semitones  = static_cast<float>(globalState->thereminSemitoneRange.load());
+        const float centerNote = static_cast<float>(globalState->thereminCenterNote.load());
 
-        const double targetFreq = (fMin > 0.0f && fMax > fMin)
-            ? fMin * std::pow(static_cast<double>(fMax) / fMin, static_cast<double>(x))
-            : 261.625565 * std::pow(2.0, (x * 48.0 - 24.0) / 12.0);
+        // Map x [0,1] to MIDI note: x=0 → center - semitones/2, x=1 → center + semitones/2
+        const float targetMidi = centerNote + (x * semitones) - (semitones / 2.0f);
+        const double targetFreq = 440.0 * std::pow(2.0, (static_cast<double>(targetMidi) - 69.0) / 12.0);
 
-        const float safeY     = juce::jlimit(0.0f, 1.0f, y);
-        const float rawVol    = isLeftVisible ? (1.0f - safeY) : 0.0f;
+        const float safeY  = juce::jlimit(0.0f, 1.0f, y);
+        // Quadratic curve: makes the lower half of the hand range drop off quickly.
+        // At y=0.7 (hand lowered): (1-0.7)^2 = 0.09 ≈ near-mute.
+        const float linear = isLeftVisible ? (1.0f - safeY) : 0.0f;
+        const float rawVol = linear * linear;
         const float vFloor    = globalState->volumeFloor.load();
         const float targetVol = rawVol > 0.001f ? vFloor + rawVol * (1.0f - vFloor) : 0.0f;
 
-        if (auto* voice = dynamic_cast<SineWaveVoice*>(thereminSynth.getVoice(0))) {
-            voice->setWaveform(globalState->currentWaveform.load());
-            voice->updateThereminMath(targetFreq, targetVol);
-        }
-
         if (midiOut) {
+            const float masterVol = juce::jlimit(0.0f, 1.0f, globalState->masterVolume.load());
+            const float scaledVol = targetVol * masterVol;
             midiOut->sendMessageNow(juce::MidiMessage::pitchWheel(1, static_cast<int>(x * 16383.0f)));
-            midiOut->sendMessageNow(juce::MidiMessage::controllerEvent(1, 7, static_cast<int>(targetVol * 127.0f)));
+            midiOut->sendMessageNow(juce::MidiMessage::controllerEvent(1, 7, static_cast<int>(scaledVol * 127.0f)));
+        } else {
+            if (auto* voice = dynamic_cast<SineWaveVoice*>(thereminSynth.getVoice(0))) {
+                voice->setWaveform(globalState->currentWaveform.load());
+                voice->updateThereminMath(targetFreq, targetVol);
+            }
         }
     }
 
-    thereminSynth.renderNextBlock(buffer, juce::MidiBuffer(), 0, numSamples);
+    if (!midiOut)
+        thereminSynth.renderNextBlock(buffer, juce::MidiBuffer(), 0, numSamples);
 }
 
 // ---------------------------------------------------------------------------

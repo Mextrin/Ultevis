@@ -8,11 +8,11 @@ Item {
     signal back()
 
     // UI state — initialised from persisted ViewState and kept in sync with backend
-    property string waveShape:   appEngine.viewState.thereminWaveform
-    property real   masterVolume: appEngine.viewState.masterVolume
-    property real   volumeFloor: appEngine.viewState.thereminVolumeFloor
-    property real   freqMin:     appEngine.viewState.thereminFreqMin
-    property real   freqMax:     appEngine.viewState.thereminFreqMax
+    property string waveShape:      appEngine.viewState.thereminWaveform
+    property real   masterVolume:   appEngine.viewState.masterVolume
+    property real   volumeFloor:    appEngine.viewState.thereminVolumeFloor
+    property int    semitoneRange:  appEngine.viewState.thereminSemitoneRange
+    property int    centerNote:     appEngine.viewState.thereminCenterNote
 
     FontLoader {
         id: figTreeVariable
@@ -419,10 +419,10 @@ Item {
         z: 30
 
         font.family: figTreeVariable.name
-        masterVolume: root.masterVolume
-        volumeFloor: root.volumeFloor
-        freqMin: root.freqMin
-        freqMax: root.freqMax
+        masterVolume:  root.masterVolume
+        volumeFloor:   root.volumeFloor
+        semitoneRange: root.semitoneRange
+        centerNote:    root.centerNote
 
         onMasterVolumeChanged: {
             root.masterVolume = masterVolume
@@ -432,13 +432,13 @@ Item {
             root.volumeFloor = volumeFloor
             appEngine.setThereminVolumeFloor(volumeFloor)
         }
-        onFreqMinChanged: {
-            root.freqMin = freqMin
-            appEngine.setThereminFreqMin(freqMin)
+        onSemitoneRangeChanged: {
+            root.semitoneRange = semitoneRange
+            appEngine.setThereminSemitoneRange(semitoneRange)
         }
-        onFreqMaxChanged: {
-            root.freqMax = freqMax
-            appEngine.setThereminFreqMax(freqMax)
+        onCenterNoteChanged: {
+            root.centerNote = centerNote
+            appEngine.setThereminCenterNote(centerNote)
         }
         onClose: open = false
 

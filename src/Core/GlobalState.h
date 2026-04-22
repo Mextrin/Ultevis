@@ -32,9 +32,9 @@ public:
     std::atomic<Waveform> currentWaveform { Waveform::Sine };
 
     // --- Theremin synthesis range ---
-    std::atomic<float> freqMin     { 220.0f };  // Hz, left edge of hand range
-    std::atomic<float> freqMax     { 880.0f };  // Hz, right edge of hand range
-    std::atomic<float> volumeFloor { 0.2f  };   // minimum volume when left hand is visible
+    std::atomic<int>   thereminSemitoneRange { 48   };  // total semitone span (48 = 4 octaves)
+    std::atomic<int>   thereminCenterNote    { 60   };  // MIDI note at centre of range (60 = C4)
+    std::atomic<float> volumeFloor           { 0.05f };  // minimum volume when left hand is at bottom
 
     // --- Drums ---
     std::atomic<bool> leftDrumHit      { false };
