@@ -3,18 +3,12 @@ import cv2
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
-import socket
-import json
 from dataclasses import dataclass
 from pathlib import Path
 
-UDP_IP = "127.0.0.1"
-UDP_PORT = 5005
 CAMERA_MODE = os.environ.get("ULTEVIS_CAMERA_MODE", "theremin").strip().lower()
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-def draw_frame (frame):
+def draw_frame(frame):
     display_frame = cv2.flip(frame, 1)
     frame_height, frame_width = display_frame.shape[:2]
 
@@ -40,7 +34,6 @@ class DrumZone:
             int(self.bottom * height),
         )
 
-
 DRUM_ZONES = (
     DrumZone("Crash", 54, 0.02, 0.09, 0.25, 0.34),
     DrumZone("High-Tom", 48, 0.31, 0.14, 0.47, 0.36),
@@ -55,20 +48,16 @@ DRUM_ZONES = (
 
 DEFAULT_DRUM_VELOCITY = 110
 
-
-
 def compute_hand_center(hand_landmarks) -> tuple[float, float]:
     xs = [landmark.x for landmark in hand_landmarks]
     ys = [landmark.y for landmark in hand_landmarks]
     return sum(xs) / len(xs), sum(ys) / len(ys)
-
 
 def find_zone(x: float, y: float) -> DrumZone | None:
     for zone in DRUM_ZONES:
         if zone.contains(x, y):
             return zone
     return None
-
 
 def draw_drum_zones(frame, active_zone_names: set[str]) -> None:
     overlay = frame.copy()
@@ -108,13 +97,10 @@ base_options = python.BaseOptions(model_asset_path=str(MODEL_PATH))
 options = vision.GestureRecognizerOptions(base_options=base_options, num_hands=2)
 recognizer = vision.GestureRecognizer.create_from_options(options)
 
-# --- THIS IS THE FIX ---
-# This dictionary MUST be global to persist state between frames.
+# This dictionary MUST be global to persist state between frames
 previous_zone_by_hand = {"Left": None, "Right": None}
-# --- END OF FIX ---
 
-
-def drum_detect (recognition_result): 
+def drum_detect(recognition_result): 
     # These are now local to the function, created fresh for each frame
     active_zone_names: set[str] = set()
     displayed_hand_positions: dict[str, tuple[float, float]] = {}
@@ -190,8 +176,6 @@ def drum_detect (recognition_result):
             previous_zone_by_hand[label] = None
     
     return drum_payload, active_zone_names, displayed_hand_positions
-
-
 
 def get_drum_hit_coordinates(display_frame, frame_height, frame_width, active_zone_names, displayed_hand_positions):
     draw_drum_zones(display_frame, active_zone_names)
