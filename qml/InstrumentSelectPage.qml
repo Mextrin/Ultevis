@@ -57,61 +57,53 @@ Item {
             color: "#EBEDF0"
         }
 
-        // MIDI toggle
+// --- THE FIX: MIDI DEVICE DROPDOWN ---
         Row {
             anchors.right: parent.right
             anchors.rightMargin: 24
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 10
+            spacing: 12
 
-            Text {
-                text: "MIDI"
-                font.pixelSize: 13
-                font.weight: Font.Medium
-                font.letterSpacing: 1
-                color: midiToggle.checked ? "#E07A26" : "#949AA5"
+            Column {
                 anchors.verticalCenter: parent.verticalCenter
-                Behavior on color { ColorAnimation { duration: 200 } }
+                spacing: 1
+                Text {
+                    text: "MIDI Output"
+                    font.pixelSize: 13
+                    font.weight: Font.Medium
+                    font.letterSpacing: 1
+                    color: "#949AA5"
+                }
+                Text {
+                    text: "routes to external device only"
+                    font.pixelSize: 10
+                    color: Qt.rgba(0.58, 0.60, 0.65, 0.8)
+                }
             }
 
-            // Custom toggle switch
-            Rectangle {
-                id: midiToggle
-                property bool checked: false
-                width: 44
-                height: 24
-                radius: 12
-                color: checked ? Qt.rgba(0.878, 0.478, 0.149, 0.3) : Qt.rgba(1, 1, 1, 0.08)
-                border.width: 1
-                border.color: checked ? "#E07A26" : Qt.rgba(1, 1, 1, 0.12)
+            TypeSelector {
+                id: midiSelector
+                width: 200
+                
+                // --- FIXED PROPERTY NAME ---
+                model: typeof appEngine !== "undefined" ? appEngine.midiDeviceNames : ["None"]
+                
                 anchors.verticalCenter: parent.verticalCenter
-
-                Behavior on color { ColorAnimation { duration: 200 } }
-                Behavior on border.color { ColorAnimation { duration: 200 } }
-
-                Rectangle {
-                    id: knob
-                    width: 18
-                    height: 18
-                    radius: 9
-                    color: midiToggle.checked ? "#E07A26" : "#949AA5"
-                    anchors.verticalCenter: parent.verticalCenter
-                    x: midiToggle.checked ? midiToggle.width - width - 3 : 3
-
-                    Behavior on x { NumberAnimation { duration: 200; easing.type: Easing.InOutQuad } }
-                    Behavior on color { ColorAnimation { duration: 200 } }
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        midiToggle.checked = !midiToggle.checked
-                        appEngine.setMidiEnabled(midiToggle.checked)
+                
+                // --- ADDED ENABLE/DISABLE LOGIC ---
+                onActivated: function(index) {
+                    if (typeof appEngine !== "undefined") {
+                        if (currentText === "None") {
+                            appEngine.setMidiEnabled(false)
+                        } else {
+                            appEngine.setMidiEnabled(true)
+                        }
+                        appEngine.selectMidiDevice(currentText)
                     }
                 }
             }
         }
+        // -------------------------------------
     }
 
     // Separator line

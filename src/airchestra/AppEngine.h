@@ -1,51 +1,67 @@
 #pragma once
-
 #include <QObject>
-#include <QString>
-#include "EventLogger.h"
-#include "ViewState.h"
+#include <QStringList>
+#include <memory>
+#include <vector>
+#include <string>
 
-// Backend Headers
-#include "Core/GlobalState.h"
-#include "Audio/AudioEngine.h"
+#include "ViewState.h"
+#include "EventLogger.h"
+
+class GlobalState;
+class HeadlessAudioEngine;
 
 namespace airchestra {
 
 class AppEngine : public QObject {
     Q_OBJECT
-    // This exposes the camera permission string to QML
-    Q_PROPERTY(QString cameraPermissionStatus READ getCameraPermissionStatus NOTIFY cameraPermissionChanged)
+    Q_PROPERTY(QString cameraPermissionStatus READ cameraPermission NOTIFY cameraPermissionChanged)
+    Q_PROPERTY(ViewState* viewState READ getViewState CONSTANT)
+    Q_PROPERTY(QStringList midiDeviceNames READ getMidiDeviceNames CONSTANT)
 
 public:
-    // Constructor with our new backend pointers
-    explicit AppEngine(GlobalState* gState, HeadlessAudioEngine* aEngine, QObject *parent = nullptr);
+    AppEngine(GlobalState* gState, HeadlessAudioEngine* aEngine, QObject *parent = nullptr);
+    ~AppEngine();
 
-    // --- The Q_INVOKABLE methods QML is allowed to call ---
+    QString cameraPermission() const { return cameraPermissionStatus; }
+    ViewState* getViewState() { return &state; }
+    QStringList getMidiDeviceNames() const { return midiDeviceNames; }
+
     Q_INVOKABLE void requestCameraPermission();
     Q_INVOKABLE void proceed();
     Q_INVOKABLE void goBack();
-    Q_INVOKABLE void setMidiEnabled(bool enabled);
     Q_INVOKABLE void selectInstrument(const QString &name);
+    
+    Q_INVOKABLE void setMidiEnabled(bool enabled);
+    Q_INVOKABLE void selectMidiDevice(const QString& displayName);
 
-    // Property getter
-    QString getCameraPermissionStatus() const { return cameraPermissionStatus; }
+    Q_INVOKABLE void setMasterVolume(float v);
+    Q_INVOKABLE void setThereminWaveform(const QString& wave);
+    Q_INVOKABLE void setThereminSemitoneRange(int semitones);
+    Q_INVOKABLE void setThereminCenterNote(int midiNote);
+    Q_INVOKABLE void setThereminVolumeFloor(float v);
+
+    Q_INVOKABLE void triggerDrumHit(int midiNote, int velocity);
+    Q_INVOKABLE void triggerKeyboardNote(int midiNote, int velocity);
+    Q_INVOKABLE void releaseKeyboardNote();
+
+    std::vector<std::pair<std::string, std::string>> getAvailableMidiDevices();
 
 signals:
-    // Fired when the permission string updates
     void cameraPermissionChanged();
 
 private:
-    // Internal helper function
     void setCameraPermissionStatus(const QString &value);
 
-    // Frontend State
-    EventLogger logger;
+    QString cameraPermissionStatus{"undetermined"};
     ViewState state;
-    QString cameraPermissionStatus = "undetermined";
+    EventLogger logger;
 
-    // Backend Pointers
     GlobalState* globalState;
     HeadlessAudioEngine* audioEngine;
+
+    QStringList midiDeviceNames;
+    std::vector<std::string> midiDeviceIds;
 };
 
 } // namespace airchestra

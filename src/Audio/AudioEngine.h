@@ -34,6 +34,8 @@ public:
     void processDrums(juce::AudioBuffer<float>& buffer, int numSamples);
     void processKeyboard(juce::AudioBuffer<float>& buffer, int numSamples);
     bool isMidiEnabled() const;
+    std::vector<std::pair<std::string, std::string>> getAvailableMidiDevices() const;
+    void openMidiDevice(const std::string& identifier);
 
 private:
     void resetDrumPlaybackState();

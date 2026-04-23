@@ -1,21 +1,21 @@
 import QtQuick
 import QtQuick.Controls
 
-// Custom dropdown for selecting a waveform. Shows the current wave's icon
-// next to its label, and opens a popup with all three options.
 Item {
     id: root
 
-    // Two-way selection. Callers can bind to `value`.
     property string value: "sine"
     property alias font: label.font
     signal changed(string value)
 
+    // --- THE FIX: ADDED SAWTOOTH TO OPTIONS ---
     readonly property var options: [
         { key: "sine",     label: "Sine" },
         { key: "square",   label: "Square" },
-        { key: "triangle", label: "Triangle" }
+        { key: "triangle", label: "Triangle" },
+        { key: "sawtooth", label: "Sawtooth" }
     ]
+    // ------------------------------------------
 
     implicitWidth: 160
     implicitHeight: 36
@@ -66,7 +66,6 @@ Item {
             }
         }
 
-        // Chevron
         Text {
             text: "\u25BE"
             color: "#949AA5"
@@ -109,9 +108,7 @@ Item {
                     width: popup.width - popup.padding * 2
                     height: 34
                     radius: 6
-                    color: optionHover.containsMouse
-                           ? Qt.rgba(0.878, 0.478, 0.149, 0.18)
-                           : "transparent"
+                    color: optionHover.containsMouse ? Qt.rgba(0.878, 0.478, 0.149, 0.18) : "transparent"
 
                     Behavior on color { ColorAnimation { duration: 120 } }
 
@@ -124,16 +121,14 @@ Item {
                         WaveIcon {
                             shape: modelData.key
                             strokeColor: optionHover.containsMouse || root.value === modelData.key
-                                         ? "#E07A26"
-                                         : "#EBEDF0"
+                                         ? "#E07A26" : "#EBEDF0"
                             anchors.verticalCenter: parent.verticalCenter
                         }
 
                         Text {
                             text: modelData.label
                             color: optionHover.containsMouse || root.value === modelData.key
-                                   ? "#E07A26"
-                                   : "#EBEDF0"
+                                   ? "#E07A26" : "#EBEDF0"
                             font.pixelSize: 13
                             font.weight: Font.Medium
                             anchors.verticalCenter: parent.verticalCenter

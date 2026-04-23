@@ -59,11 +59,25 @@ HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr, const AudioEngin
     setup.useDefaultInputChannels = false;
     setup.useDefaultOutputChannels = true;
 
-    juce::String error = deviceManager.setAudioDeviceSetup(setup, true);
-    if (error.isNotEmpty())
-        std::cerr << "Audio device setup error: " << error.toStdString() << std::endl;
-
     deviceManager.addAudioCallback(this);
+}
+
+std::vector<std::pair<std::string, std::string>> HeadlessAudioEngine::getAvailableMidiDevices() const
+{
+    std::vector<std::pair<std::string, std::string>> result;
+    for (const auto& d : juce::MidiOutput::getAvailableDevices())
+        result.push_back({ d.identifier.toStdString(), d.name.toStdString() });
+    return result;
+}
+
+void HeadlessAudioEngine::openMidiDevice(const std::string& identifier) {
+    if (identifier.empty()) {
+        // If "None" is selected, close the port by resetting the pointer
+        midiOut.reset();
+    } else {
+        // Ask JUCE to physically open the port to macOS (like your IAC Bus)
+        midiOut = juce::MidiOutput::openDevice(identifier);
+    }
 }
 
 // Cleans up audio resources by removing the audio callback
@@ -222,16 +236,24 @@ void HeadlessAudioEngine::processTheremin(juce::AudioBuffer<float>& buffer, int 
     const bool isRightVisible = globalState->rightHandVisible.load();
     const bool isLeftVisible = globalState->leftHandVisible.load();
 
+    // We use a static variable to remember exactly which note we turned ON,
+    // so we can turn the correct note OFF even if the user moves the slider mid-note.
+    static int activeThereminNote = 60;
+
     if (isRightVisible && !wasRightVisible) {
-        synth.noteOn(1, 60, 1.0f);
+        // Read the live UI slider value instead of the hardcoded 60
+        activeThereminNote = globalState->thereminCenterNote.load();
+        
+        synth.noteOn(1, activeThereminNote, 1.0f);
         if (midiOut != nullptr) {
-            midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, 60, 1.0f));
+            midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, activeThereminNote, 1.0f));
         }
     }
     else if (!isRightVisible && wasRightVisible) {
-        synth.noteOff(1, 60, 1.0f, true);
+        // Turn off the exact note we started
+        synth.noteOff(1, activeThereminNote, 1.0f, true);
         if (midiOut != nullptr) {
-            midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, 60, 0.0f));
+            midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, activeThereminNote, 0.0f));
         }
     }
 
@@ -247,9 +269,9 @@ void HeadlessAudioEngine::processTheremin(juce::AudioBuffer<float>& buffer, int 
         if (normalizedX > 1.0f) normalizedX = 1.0f;
         if (normalizedX < 0.0f) normalizedX = 0.0f;
 
-        const float semitonesFromCenter = (x * (semitoneRangeOneSide*2.0f)) - (semitoneRangeOneSide);
+        const float semitonesFromCenter = (normalizedX * (semitoneRangeOneSide*2.0f)) - (semitoneRangeOneSide);
         const float targetMidiNote = centerMidiNote + semitonesFromCenter;
-        const double targetFreq = 440.0f * std::pow(2.0f, (targetMidiNote - 69.0f) / 12.0f);;
+        const double targetFreq = 440.0f * std::pow(2.0f, (targetMidiNote - 69.0f) / 12.0f);
 
         const float safeY = juce::jlimit(0.0f, 1.0f, y);
         const float targetVol = isLeftVisible ? (1.0f - safeY) : 0.0f;
@@ -260,7 +282,8 @@ void HeadlessAudioEngine::processTheremin(juce::AudioBuffer<float>& buffer, int 
         }
 
         if (midiOut != nullptr) {
-            int midiPitchBend = static_cast<int>(x * 16383.0f);
+            // Pitch bend maps 0.0 -> 1.0 to 0 -> 16383
+            int midiPitchBend = static_cast<int>(normalizedX * 16383.0f);
             int midiVolume = static_cast<int>(targetVol * 127.0f);
 
             midiOut->sendMessageNow(juce::MidiMessage::pitchWheel(1, midiPitchBend));

@@ -1,5 +1,9 @@
 #include "AppEngine.h"
+#include "../Core/GlobalState.h"
+#include "../Audio/AudioEngine.h"
+
 #include <QCoreApplication>
+#include <QtGlobal>
 
 // --- Network headers for sendCommandToPython ---
 #ifdef _WIN32
@@ -11,9 +15,7 @@
 #endif
 
 namespace {
-    // Helper to switch the Python camera UI instantly
-    void sendCommandToPython(const std::string& mode, bool quit = false) 
-    {
+    void sendCommandToPython(const std::string& mode, bool quit = false) {
         int sock = socket(AF_INET, SOCK_DGRAM, 0);
         if (sock < 0) return;
 
@@ -35,76 +37,131 @@ namespace {
 
 namespace airchestra {
 
-// Constructor saves the pointers and boots permissions
 AppEngine::AppEngine(GlobalState* gState, HeadlessAudioEngine* aEngine, QObject *parent) 
     : QObject(parent), globalState(gState), audioEngine(aEngine) 
 {
     logger.log(AppEventType::AppStarted, {{"mode", "interactive"}});
-
-    // --- THE FIX ---
-    // Since Python actually handles the hardware camera, we bypass Qt's strict 
-    // macOS Info.plist permission checks completely!
     cameraPermissionStatus = "granted";
+
+    midiDeviceNames.append("None");
+    midiDeviceIds.push_back("");
+    for (const auto& [id, name] : audioEngine->getAvailableMidiDevices()) {
+        midiDeviceNames.append(QString::fromStdString(name));
+        midiDeviceIds.push_back(id);
+    }
 }
 
+AppEngine::~AppEngine() {}
+
 void AppEngine::setCameraPermissionStatus(const QString &value) {
-    if (cameraPermissionStatus == value)
-        return;
+    if (cameraPermissionStatus == value) return;
     cameraPermissionStatus = value;
     emit cameraPermissionChanged();
 }
 
 void AppEngine::requestCameraPermission() {
-    // Automatically grant it so QML hides the "Waiting for Camera" overlay
     setCameraPermissionStatus("granted");
 }
 
 void AppEngine::proceed() {
-    logger.log(AppEventType::ButtonClicked, {{"button", "proceed"}, {"status", "User clicked to proceed"}});
     state.setCurrentScreen(static_cast<int>(AppScreen::Session));
     state.setSessionRunning(true);
-    logger.log(AppEventType::ScreenChanged, {{"screen", "session"}});
 }
 
 void AppEngine::goBack() {
-    const auto current = static_cast<AppScreen>(state.currentScreen());
-    if (current == AppScreen::Theremin) {
-        // Popping from Theremin returns to the instrument-select (Session) screen.
-        state.setCurrentScreen(static_cast<int>(AppScreen::Session));
-        logger.log(AppEventType::ScreenChanged, {{"screen", "session"}});
-        return;
-    }
-
-    logger.log(AppEventType::ScreenChanged, {{"screen", "landing"}});
-    state.setCurrentScreen(static_cast<int>(AppScreen::Landing));
-    state.setSessionRunning(false);
-}
-
-void AppEngine::setMidiEnabled(bool enabled) {
-    state.setMidiEnabled(enabled);
-    
-    // Update the C++ audio engine state
-    globalState->routeToMidiOut.store(enabled);
-    
-    logger.log(AppEventType::SessionStateChanged, {{"midi_output", enabled ? "on" : "off"}});
+    globalState->isKeyPressed.store(false);  // release keyboard notes
+    state.setCurrentScreen(static_cast<int>(AppScreen::Session));
 }
 
 void AppEngine::selectInstrument(const QString &name) {
-    logger.log(AppEventType::ButtonClicked, {{"button", "select_instrument"}, {"instrument", name}});
-    
     if (name == QStringLiteral("theremin")) {
         state.setCurrentScreen(static_cast<int>(AppScreen::Theremin));
         globalState->currentInstrument.store(ActiveInstrument::Theremin);
         sendCommandToPython("theremin");
-        logger.log(AppEventType::ScreenChanged, {{"screen", "theremin"}});
     }
     else if (name == QStringLiteral("drums")) {
         state.setCurrentScreen(static_cast<int>(AppScreen::Drums)); 
         globalState->currentInstrument.store(ActiveInstrument::Drums);
-        audioEngine->loadDrumSound("Instruments/SMDrums_Sforzando_1.2/Programs/SM_Drums_kit.sfz");
+        audioEngine->loadDrumSound("/Users/alexrystrom/Documents/GitHub/Ultevis/Instruments/SMDrums_Sforzando_1.2/Programs/SM_Drums_kit.sfz");
         sendCommandToPython("drums");
-        logger.log(AppEventType::ScreenChanged, {{"screen", "drums"}});
     }
+    else if (name == QStringLiteral("keyboard")) {
+        // Temporarily map to Drums screen index if Keyboard isn't in ViewState AppScreen enum yet
+        state.setCurrentScreen(static_cast<int>(AppScreen::Session)); 
+        globalState->currentInstrument.store(ActiveInstrument::Keyboard);
+        sendCommandToPython("keyboard");
+    } 
+}
+
+// ---------------------------------------------------------------------------
+// Settings routed safely to GlobalState
+// ---------------------------------------------------------------------------
+
+void AppEngine::setMidiEnabled(bool enabled) {
+    globalState->routeToMidiOut.store(enabled);
+}
+
+void AppEngine::selectMidiDevice(const QString& displayName) {
+    // If the user selects "None", close the port and disable routing
+    if (displayName == "None" || displayName.isEmpty()) {
+        audioEngine->openMidiDevice("");
+        globalState->routeToMidiOut.store(false);
+        return;
+    }
+
+    // Search our list of detected devices for the exact name
+    for (int i = 1; i < midiDeviceNames.size(); ++i) {
+        if (midiDeviceNames[i] == displayName) {
+            // ACTUALLY TELL JUCE TO OPEN THE PORT
+            audioEngine->openMidiDevice(midiDeviceIds[static_cast<size_t>(i)]);
+            globalState->routeToMidiOut.store(true);
+            return;
+        }
+    }
+    
+    // Fallback if something goes wrong
+    audioEngine->openMidiDevice("");
+    globalState->routeToMidiOut.store(false);
+}
+
+void AppEngine::setMasterVolume(float v) {
+    globalState->masterVolume.store(qBound(0.0f, v, 1.0f));
+}
+
+void AppEngine::setThereminWaveform(const QString& wave) {
+    Waveform wf = Waveform::Sine;
+    if (wave == "square")        wf = Waveform::Square;
+    else if (wave == "sawtooth") wf = Waveform::Saw;
+    else if (wave == "triangle") wf = Waveform::Triangle;
+    globalState->currentWaveform.store(wf);
+}
+
+void AppEngine::setThereminSemitoneRange(int semitones) {
+    globalState->thereminSemitoneRangeOneSide.store(qBound(12, semitones, 96));
+}
+
+void AppEngine::setThereminCenterNote(int midiNote) {
+    globalState->thereminCenterNote.store(qBound(24, midiNote, 96));
+}
+
+void AppEngine::setThereminVolumeFloor(float v) {
+    // Handled purely in QML UI now
+}
+
+void AppEngine::triggerDrumHit(int midiNote, int velocity) {
+    globalState->rightDrumType.store(midiNote);
+    globalState->rightDrumVelocity.store(qBound(0, velocity, 127));
+    globalState->rightDrumHit.store(true);
+}
+
+void AppEngine::triggerKeyboardNote(int midiNote, int velocity) {
+    globalState->keyboardNote.store(midiNote);
+    globalState->keyboardVelocity.store(qBound(0, velocity, 127));
+    globalState->isKeyPressed.store(true);
+}
+
+void AppEngine::releaseKeyboardNote() {
+    globalState->isKeyPressed.store(false);
 }
 
 } // namespace airchestra

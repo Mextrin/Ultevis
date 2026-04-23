@@ -1,7 +1,7 @@
 import QtQuick
 
-// Minimal inline icon for a waveform shape ("sine" | "square" | "triangle").
-// Draws via Canvas so we don't need SVG assets for the three options.
+// Minimal inline icon for a waveform shape ("sine" | "square" | "triangle" | "sawtooth").
+// Draws via Canvas so we don't need SVG assets for the options.
 Canvas {
     id: root
     property string shape: "sine"
@@ -52,6 +52,14 @@ Canvas {
             ctx.lineTo(pad + w * 0.25, midY - h / 2)
             ctx.lineTo(pad + w * 0.75, midY + h / 2)
             ctx.lineTo(pad + w, midY)
+        } else if (root.shape === "sawtooth") {
+            // --- THE FIX: ADDED SAWTOOTH MATH ---
+            const hw = w / 2
+            ctx.moveTo(pad, midY + h / 2)
+            ctx.lineTo(pad + hw, midY - h / 2)
+            ctx.lineTo(pad + hw, midY + h / 2)
+            ctx.lineTo(pad + w, midY - h / 2)
+            // ------------------------------------
         }
         ctx.stroke()
     }

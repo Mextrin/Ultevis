@@ -64,6 +64,7 @@ public:
    std::atomic<Waveform> currentWaveform { Waveform::Sine };
    std::atomic<int> thereminSemitoneRangeOneSide { 24 }; //one octave up, one octave down
    std::atomic<int> thereminCenterNote { 60 }; // 60 = C4
+   std::atomic<float> volumeFloor           { 0.05f };  // minimum volume when left hand is at bottom
 
    // --LEFT HAND DRUM--
    std::atomic<bool> leftDrumHit { false }; 
