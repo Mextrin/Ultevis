@@ -50,6 +50,10 @@ AppEngine::AppEngine(GlobalState* gState, HeadlessAudioEngine* aEngine, QObject 
         midiDeviceIds.push_back(id);
     }
 
+    refreshTrackedState();
+    connect(&handStatePollTimer, &QTimer::timeout, this, &AppEngine::refreshTrackedState);
+    handStatePollTimer.start(33);
+
     sendCommandToPython("none");
 }
 
@@ -90,9 +94,10 @@ void AppEngine::selectInstrument(const QString &name) {
         sendCommandToPython("drums");
     }
     else if (name == QStringLiteral("keyboard")) {
-        // Temporarily map to Drums screen index if Keyboard isn't in ViewState AppScreen enum yet
-        state.setCurrentScreen(static_cast<int>(AppScreen::Session)); 
+        state.setCurrentScreen(static_cast<int>(AppScreen::Keyboard));
         globalState->currentInstrument.store(ActiveInstrument::Keyboard);
+        globalState->currentKeyboardInstrument.store(KeyboardSound::GrandPiano);
+        audioEngine->loadKeyboardSound(0);
         sendCommandToPython("keyboard");
     } 
 }
@@ -176,6 +181,80 @@ void AppEngine::triggerKeyboardNote(int midiNote, int velocity) {
 
 void AppEngine::releaseKeyboardNote() {
     globalState->isKeyPressed.store(false);
+}
+
+void AppEngine::adjustKeyboardOctave(int keyboardIndex, int delta) {
+    if (globalState == nullptr || delta == 0)
+        return;
+
+    if (keyboardIndex == 1) {
+        const int current = globalState->topKeyboardOctave.load();
+        const int next = qBound(0, current + delta, 8);
+        if (next == current)
+            return;
+
+        globalState->topKeyboardOctave.store(next);
+        refreshTrackedState();
+        return;
+    }
+
+    if (keyboardIndex == 2) {
+        const int current = globalState->bottomKeyboardOctave.load();
+        const int next = qBound(0, current + delta, 8);
+        if (next == current)
+            return;
+
+        globalState->bottomKeyboardOctave.store(next);
+        refreshTrackedState();
+    }
+}
+
+void AppEngine::refreshTrackedState() {
+    if (globalState == nullptr)
+        return;
+
+    const bool nextLeftHandVisible = globalState->leftHandVisible.load();
+    const bool nextRightHandVisible = globalState->rightHandVisible.load();
+    const qreal nextLeftHandX = globalState->leftHandX.load();
+    const qreal nextLeftHandY = globalState->leftHandY.load();
+    const qreal nextRightHandX = globalState->rightHandX.load();
+    const qreal nextRightHandY = globalState->rightHandY.load();
+    const bool nextLeftPinch = globalState->leftPinch.load();
+    const bool nextRightPinch = globalState->rightPinch.load();
+
+    const bool handChanged =
+        m_leftHandVisible != nextLeftHandVisible ||
+        m_rightHandVisible != nextRightHandVisible ||
+        m_leftHandX != nextLeftHandX ||
+        m_leftHandY != nextLeftHandY ||
+        m_rightHandX != nextRightHandX ||
+        m_rightHandY != nextRightHandY ||
+        m_leftPinch != nextLeftPinch ||
+        m_rightPinch != nextRightPinch;
+
+    m_leftHandVisible = nextLeftHandVisible;
+    m_rightHandVisible = nextRightHandVisible;
+    m_leftHandX = nextLeftHandX;
+    m_leftHandY = nextLeftHandY;
+    m_rightHandX = nextRightHandX;
+    m_rightHandY = nextRightHandY;
+    m_leftPinch = nextLeftPinch;
+    m_rightPinch = nextRightPinch;
+
+    if (handChanged)
+        emit handStateChanged();
+
+    const int nextTopKeyboardOctave = globalState->topKeyboardOctave.load();
+    const int nextBottomKeyboardOctave = globalState->bottomKeyboardOctave.load();
+    const bool octavesChanged =
+        m_topKeyboardOctave != nextTopKeyboardOctave ||
+        m_bottomKeyboardOctave != nextBottomKeyboardOctave;
+
+    m_topKeyboardOctave = nextTopKeyboardOctave;
+    m_bottomKeyboardOctave = nextBottomKeyboardOctave;
+
+    if (octavesChanged)
+        emit keyboardOctavesChanged();
 }
 
 } // namespace airchestra

@@ -1,6 +1,7 @@
 #pragma once
 #include <QObject>
 #include <QStringList>
+#include <QTimer>
 #include <memory>
 #include <vector>
 #include <string>
@@ -19,6 +20,20 @@ class AppEngine : public QObject {
     Q_PROPERTY(ViewState* viewState READ getViewState CONSTANT)
     Q_PROPERTY(QStringList midiDeviceNames READ getMidiDeviceNames CONSTANT)
     Q_PROPERTY(QString currentMidiDevice READ getCurrentMidiDevice NOTIFY currentMidiDeviceChanged)
+
+    // Hand-tracking state mirrored from GlobalState so QML can bind to it.
+    Q_PROPERTY(bool leftHandVisible READ leftHandVisible NOTIFY handStateChanged)
+    Q_PROPERTY(bool rightHandVisible READ rightHandVisible NOTIFY handStateChanged)
+    Q_PROPERTY(qreal leftHandX READ leftHandX NOTIFY handStateChanged)
+    Q_PROPERTY(qreal leftHandY READ leftHandY NOTIFY handStateChanged)
+    Q_PROPERTY(qreal rightHandX READ rightHandX NOTIFY handStateChanged)
+    Q_PROPERTY(qreal rightHandY READ rightHandY NOTIFY handStateChanged)
+    Q_PROPERTY(bool leftPinch READ leftPinch NOTIFY handStateChanged)
+    Q_PROPERTY(bool rightPinch READ rightPinch NOTIFY handStateChanged)
+
+    // Keyboard octave state (read/write via slots).
+    Q_PROPERTY(int topKeyboardOctave READ topKeyboardOctave NOTIFY keyboardOctavesChanged)
+    Q_PROPERTY(int bottomKeyboardOctave READ bottomKeyboardOctave NOTIFY keyboardOctavesChanged)
 
 public:
     AppEngine(GlobalState* gState, HeadlessAudioEngine* aEngine, QObject *parent = nullptr);
@@ -46,15 +61,30 @@ public:
     Q_INVOKABLE void triggerDrumHit(int midiNote, int velocity);
     Q_INVOKABLE void triggerKeyboardNote(int midiNote, int velocity);
     Q_INVOKABLE void releaseKeyboardNote();
+    Q_INVOKABLE void adjustKeyboardOctave(int keyboardIndex, int delta);
+
+    bool leftHandVisible() const { return m_leftHandVisible; }
+    bool rightHandVisible() const { return m_rightHandVisible; }
+    qreal leftHandX() const { return m_leftHandX; }
+    qreal leftHandY() const { return m_leftHandY; }
+    qreal rightHandX() const { return m_rightHandX; }
+    qreal rightHandY() const { return m_rightHandY; }
+    bool leftPinch() const { return m_leftPinch; }
+    bool rightPinch() const { return m_rightPinch; }
+    int topKeyboardOctave() const { return m_topKeyboardOctave; }
+    int bottomKeyboardOctave() const { return m_bottomKeyboardOctave; }
 
     std::vector<std::pair<std::string, std::string>> getAvailableMidiDevices();
 
 signals:
     void cameraPermissionChanged();
     void currentMidiDeviceChanged();
+    void handStateChanged();
+    void keyboardOctavesChanged();
 
 private:
     void setCameraPermissionStatus(const QString &value);
+    void refreshTrackedState();
 
     QString cameraPermissionStatus{"undetermined"};
     ViewState state;
@@ -66,6 +96,18 @@ private:
     QStringList midiDeviceNames;
     std::vector<std::string> midiDeviceIds;
     QString m_currentMidiDevice = "None";
+    QTimer handStatePollTimer;
+
+    bool m_leftHandVisible = false;
+    bool m_rightHandVisible = false;
+    qreal m_leftHandX = 0.5;
+    qreal m_leftHandY = 1.0;
+    qreal m_rightHandX = 0.5;
+    qreal m_rightHandY = 0.5;
+    bool m_leftPinch = false;
+    bool m_rightPinch = false;
+    int m_topKeyboardOctave = 3;
+    int m_bottomKeyboardOctave = 5;
 };
 
 } // namespace airchestra

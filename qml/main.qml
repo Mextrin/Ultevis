@@ -87,7 +87,10 @@ ApplicationWindow {
     Component {
         id: keyboardPageComponent
         KeyboardPage {
-            onBack: navigation.pop()
+            onBack: {
+                appEngine.goBack()
+                navigation.pop()
+            }
         }
     }
 

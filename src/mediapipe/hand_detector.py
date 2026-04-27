@@ -28,6 +28,55 @@ final_frame_path = os.path.join(TEMP_DIR, "airchestra_frame.jpg")
 
 requested_mode = "none"
 
+PINCH_THRESHOLD = 0.05
+
+def detect_keyboard_hands(detection_result):
+    keyboard_payload = {
+        "rightHandVisible": False,
+        "leftHandVisible": False,
+        "rightHandX": 0.0,
+        "rightHandY": 0.0,
+        "leftHandX": 0.0,
+        "leftHandY": 0.0,
+        "rightPinch": False,
+        "leftPinch": False,
+        "leftDrumHit": False,
+        "rightDrumHit": False,
+        "mouthKickHit": False,
+    }
+
+    if not detection_result.handedness:
+        return keyboard_payload
+
+    processed_labels = set()
+    for hand_landmarks, handedness in zip(detection_result.hand_landmarks, detection_result.handedness):
+        label = handedness[0].category_name
+        if label in processed_labels:
+            continue
+
+        processed_labels.add(label)
+        thumb_tip = hand_landmarks[4]
+        index_tip = hand_landmarks[8]
+        pinch_distance = ((thumb_tip.x - index_tip.x) ** 2 + (thumb_tip.y - index_tip.y) ** 2) ** 0.5
+        is_pinching = pinch_distance < PINCH_THRESHOLD
+
+        # The camera feed is mirrored for display, so QML hit-tests use display-space X.
+        display_x = max(0.0, min(1.0, 1.0 - index_tip.x))
+        display_y = max(0.0, min(1.0, index_tip.y))
+
+        if label == "Right":
+            keyboard_payload["rightHandVisible"] = True
+            keyboard_payload["rightHandX"] = display_x
+            keyboard_payload["rightHandY"] = display_y
+            keyboard_payload["rightPinch"] = is_pinching
+        else:
+            keyboard_payload["leftHandVisible"] = True
+            keyboard_payload["leftHandX"] = display_x
+            keyboard_payload["leftHandY"] = display_y
+            keyboard_payload["leftPinch"] = is_pinching
+
+    return keyboard_payload
+
 def command_listener():
     global requested_mode
     listen_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -74,8 +123,15 @@ try:
                 mute_payload = {
                     "leftHandVisible": False, 
                     "rightHandVisible": False, 
+                    "leftHandX": 0.0,
+                    "leftHandY": 0.0,
+                    "rightHandX": 0.0,
+                    "rightHandY": 0.0,
+                    "leftPinch": False,
+                    "rightPinch": False,
                     "leftDrumHit": False, 
-                    "rightDrumHit": False
+                    "rightDrumHit": False,
+                    "mouthKickHit": False
                 }
                 sock.sendto(json.dumps(mute_payload).encode(), (UDP_IP, UDP_PORT))
 
@@ -116,7 +172,9 @@ try:
         displayed_hand_positions: dict[str, tuple[float, float]] = {}
         detected_labels = set()
 
-        if INSTRUMENT == 0:
+        if CAMERA_MODE == "keyboard":
+            payload = detect_keyboard_hands(recognition_result)
+        elif INSTRUMENT == 0:
             payload = detect_hands(recognition_result)
         else:
             payload, active_zones, hand_positions = drum_detect(recognition_result, image)
@@ -127,7 +185,9 @@ try:
         h, w = display_frame.shape[:2]
         frame_height, frame_width = h, w
 
-        if INSTRUMENT == 0:
+        if CAMERA_MODE == "keyboard":
+            pass
+        elif INSTRUMENT == 0:
             draw_circle(display_frame, frame_height, frame_width, recognition_result)
             add_theremin_text(display_frame, payload)
         else:

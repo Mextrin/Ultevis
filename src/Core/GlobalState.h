@@ -58,9 +58,13 @@ class GlobalState {
 public:
    // --Theremin controls--
    std::atomic<float> rightHandX { 0.5f }; // 0-1
+   std::atomic<float> rightHandY { 0.5f }; // 0-1
+   std::atomic<float> leftHandX  { 0.5f }; // 0-1
    std::atomic<float> leftHandY  { 1.0f }; // 0-1
    std::atomic<bool> rightHandVisible { false };
    std::atomic<bool> leftHandVisible  { false };
+   std::atomic<bool> rightPinch { false };
+   std::atomic<bool> leftPinch  { false };
    std::atomic<Waveform> currentWaveform { Waveform::Sine };
    std::atomic<int> thereminSemitoneRangeOneSide { 24 }; //one octave up, one octave down
    std::atomic<int> thereminCenterNote { 60 }; // 60 = C4

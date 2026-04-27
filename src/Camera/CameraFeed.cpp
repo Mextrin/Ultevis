@@ -86,7 +86,11 @@ void startCameraFeed(GlobalState* state) {
         state->rightHandVisible.store(parseBool(json, "rightHandVisible"));
         state->leftHandVisible.store(parseBool(json,  "leftHandVisible"));
         state->rightHandX.store(parseFloat(json, "rightHandX"));
+        state->rightHandY.store(parseFloat(json, "rightHandY"));
+        state->leftHandX.store(parseFloat(json,  "leftHandX"));
         state->leftHandY.store(parseFloat(json,  "leftHandY"));
+        state->rightPinch.store(parseBool(json, "rightPinch"));
+        state->leftPinch.store(parseBool(json,  "leftPinch"));
         state->leftDrumHit.store(parseBool(json, "leftDrumHit"));
         state->rightDrumHit.store(parseBool(json, "rightDrumHit"));
         state->mouthKickHit.store(parseBool(json, "mouthKickHit"));
