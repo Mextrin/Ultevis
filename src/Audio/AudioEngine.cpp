@@ -327,7 +327,7 @@ void HeadlessAudioEngine::processDrums(juce::AudioBuffer<float>& buffer, int num
             midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, standardRightGMNote, (juce::uint8)rightVelocity));
     }
 
-    if (globalState->mouthKickHit.exchange(false)) {
+    if (globalState->mouthKickHit.exchange(false) && globalState->mouthKickEnable.load()) {
         drumSynth.noteOn(0, mouthKickNote, mouthKickVelocity);
         if (midiOut != nullptr)
             midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, mouthKickNote, (juce::uint8)mouthKickVelocity));
