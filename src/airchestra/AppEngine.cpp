@@ -135,6 +135,8 @@ void AppEngine::selectMidiDevice(const QString& displayName) {
 
 void AppEngine::setMasterVolume(float v) {
     globalState->masterVolume.store(qBound(0.0f, v, 1.0f));
+
+    state.setMasterVolume(v);
 }
 
 void AppEngine::setThereminWaveform(const QString& wave) {

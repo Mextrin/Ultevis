@@ -126,6 +126,25 @@ Rectangle {
             }
         }
 
+        SettingsSlider {
+            label: "Master Volume"
+            unit: "%"
+            from: 0
+            to: 100
+            stepSize: 1
+            Layout.fillWidth: true
+            
+            // Read the synced state (multiply by 100 for UI percentage)
+            value: typeof appEngine !== "undefined" && appEngine.viewState ? (appEngine.viewState.masterVolume * 100) : 100
+            
+            onValueChanged: {
+                if (typeof appEngine !== "undefined") {
+                    // Send to C++ as a 0.0 to 1.0 float
+                    appEngine.setMasterVolume(value / 100.0)
+                }
+            }
+        }
+
         Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
 
         // --- THE FIX: REAL THEREMIN RANGE SETTINGS ---

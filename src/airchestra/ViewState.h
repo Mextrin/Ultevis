@@ -29,6 +29,8 @@ class ViewState : public QObject
     Q_PROPERTY(int thereminSemitoneRangeOneSide READ thereminSemitoneRangeOneSide WRITE setThereminSemitoneRangeOneSide NOTIFY thereminSemitoneRangeOneSideChanged)
     Q_PROPERTY(float thereminVolumeFloor READ thereminVolumeFloor WRITE setThereminVolumeFloor NOTIFY thereminVolumeFloorChanged)
 
+    Q_PROPERTY(float masterVolume READ masterVolume WRITE setMasterVolume NOTIFY masterVolumeChanged)
+
 public:
     explicit ViewState(QObject* parent = nullptr) : QObject(parent) {}
 
@@ -76,6 +78,12 @@ public:
         if (m_thereminVolumeFloor != v) { m_thereminVolumeFloor = v; emit thereminVolumeFloorChanged(); }
     }
 
+    float masterVolume() const { return m_masterVolume; }
+    void setMasterVolume(float v)
+    {
+        if (m_masterVolume != v) { m_masterVolume = v; emit masterVolumeChanged(); }
+    }
+
 signals:
     void currentScreenChanged();
     void sessionRunningChanged();
@@ -85,6 +93,8 @@ signals:
     void thereminCenterNoteChanged();
     void thereminSemitoneRangeOneSideChanged();
     void thereminVolumeFloorChanged();
+
+    void masterVolumeChanged();
 
 private:
     AppScreen screen = AppScreen::Landing;
@@ -96,6 +106,8 @@ private:
     int m_thereminCenterNote = 60;       // Middle C
     int m_thereminSemitoneRangeOneSide = 24;    // 2 Octaves per side 
     float m_thereminVolumeFloor = 0.0f;  // 0% Volume Floor
+
+    float m_masterVolume = 1.0f;
 };
 
 }
