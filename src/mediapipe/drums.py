@@ -129,7 +129,7 @@ def draw_drum_zones(frame, active_zone_names: set[str]) -> None:
         )
 
 
-def detect_mouth_open(mp_image, frame_timestamp_ms: int, was_open: bool) -> bool:
+def detect_mouth_open(mp_image, was_open: bool) -> bool:
     landmarker = get_face_landmarker()
     face_result = landmarker.detect(mp_image)
     if not face_result.face_blendshapes:
@@ -172,7 +172,7 @@ previous_mouth_open = False
 # ---------------
 
 
-def drum_detect(recognition_result, mp_image=None, frame_timestamp_ms: int = 0):
+def drum_detect(recognition_result, mp_image=None):
     global active_triggered_zones
     global previous_mouth_open
 
@@ -200,7 +200,7 @@ def drum_detect(recognition_result, mp_image=None, frame_timestamp_ms: int = 0):
     }
 
     if mp_image is not None:
-        is_mouth_open = detect_mouth_open(mp_image, frame_timestamp_ms, previous_mouth_open)
+        is_mouth_open = detect_mouth_open(mp_image, previous_mouth_open)
         if is_mouth_open and not previous_mouth_open:
             drum_payload["mouthKickHit"] = True
         previous_mouth_open = is_mouth_open
