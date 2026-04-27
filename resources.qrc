@@ -11,6 +11,7 @@
         <file>qml/components/SineWaveCanvas.qml</file>
         <file>qml/components/InstrumentCard.qml</file>
         <file>qml/components/SettingsPane.qml</file>
+        <file>qml/components/DrumSettingsPane.qml</file>
         <file>qml/components/WaveShapeDropdown.qml</file>
         <file>qml/components/WaveIcon.qml</file>
         <file>qml/components/SettingsPanel.qml</file>

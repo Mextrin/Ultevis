@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import "components" // Ensures QML can find your DrumSettingsPane.qml
 
 Item {
     id: root
@@ -24,9 +25,7 @@ Item {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         
-        // --- CHANGE THIS LINE ---
         fillMode: Image.PreserveAspectFit 
-        // ------------------------
 
         source: "image://camera/feed"
         cache: false 
@@ -82,6 +81,43 @@ Item {
             }
         }
 
+        // --- NEW: Settings gear ---
+        MouseArea {
+            id: settingsBtn
+            width: 40
+            height: 40
+            anchors.left: backBtn.right
+            anchors.leftMargin: 8
+            anchors.verticalCenter: parent.verticalCenter
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            
+            // Toggles the pane open/closed!
+            onClicked: drumSettings.open = !drumSettings.open
+
+            Rectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: settingsBtn.containsMouse || drumSettings.open
+                       ? Qt.rgba(1, 1, 1, 0.08)
+                       : "transparent"
+                Behavior on color { ColorAnimation { duration: 150 } }
+
+                Image {
+                    anchors.centerIn: parent
+                    width: 22
+                    height: 22
+                    source: "qrc:/assets/icons/settings.svg"
+                    sourceSize.width: 22
+                    sourceSize.height: 22
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    opacity: settingsBtn.containsMouse || drumSettings.open ? 1.0 : 0.85
+                    Behavior on opacity { NumberAnimation { duration: 150 } }
+                }
+            }
+        }
+
         // Title
         Text {
             anchors.centerIn: parent
@@ -92,5 +128,39 @@ Item {
             font.letterSpacing: 2
             color: "#E07826"
         }
+    }
+
+    // --- NEW: Settings pane overlay ---
+    MouseArea {
+        anchors.top: header.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        visible: drumSettings.open
+        onClicked: drumSettings.open = false
+        z: 20
+    }
+
+    // --- NEW: Drum Settings Pane ---
+    DrumSettingsPane {
+        id: drumSettings
+        property bool open: false
+
+        anchors.left: parent.left
+        anchors.leftMargin: 20
+        anchors.top: header.bottom
+        anchors.topMargin: 12
+        width: 300
+        z: 30
+
+        font.family: figTreeVariable.name
+        
+        onClose: open = false
+
+        visible: open
+        opacity: open ? 1.0 : 0.0
+        scale: open ? 1.0 : 0.96
+        Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutQuad } }
+        Behavior on scale   { NumberAnimation { duration: 180; easing.type: Easing.OutQuad } }
     }
 }
