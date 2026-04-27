@@ -167,5 +167,24 @@ Rectangle {
                 }
             }
         }
+
+        SettingsSlider {
+            label: "Volume Floor"
+            unit: "%"
+            from: 0
+            to: 100
+            stepSize: 1
+            Layout.fillWidth: true
+            
+            // Read initial state (assuming your ViewState exposes it, multiplied by 100 for the UI percentage)
+            value: typeof appEngine !== "undefined" && appEngine.viewState ? (appEngine.viewState.thereminVolumeFloor * 100) : 0
+            
+            onValueChanged: {
+                if (typeof appEngine !== "undefined") {
+                    // Divide by 100 to send C++ a clean 0.0 to 1.0 float
+                    appEngine.setThereminVolumeFloor(value / 100.0)
+                }
+            }
+        }
     }
 }

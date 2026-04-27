@@ -147,14 +147,17 @@ void AppEngine::setThereminWaveform(const QString& wave) {
 
 void AppEngine::setThereminSemitoneRange(int semitones) {
     globalState->thereminSemitoneRangeOneSide.store(qBound(12, semitones, 96));
+    state.setThereminSemitoneRange(semitones);
 }
 
 void AppEngine::setThereminCenterNote(int midiNote) {
     globalState->thereminCenterNote.store(qBound(24, midiNote, 96));
+    state.setThereminCenterNote(midiNote);
 }
 
 void AppEngine::setThereminVolumeFloor(float v) {
-    // Handled purely in QML UI now
+    globalState->thereminVolumeFloor.store(qBound(0.0f, v, 1.0f));
+    state.setThereminVolumeFloor(v);
 }
 
 void AppEngine::triggerDrumHit(int midiNote, int velocity) {

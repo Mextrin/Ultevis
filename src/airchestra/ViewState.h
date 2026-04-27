@@ -25,6 +25,10 @@ class ViewState : public QObject
     Q_PROPERTY(QString appStatus READ appStatus NOTIFY appStatusChanged)
     Q_PROPERTY(bool midiEnabled READ midiEnabled WRITE setMidiEnabled NOTIFY midiEnabledChanged)
 
+    Q_PROPERTY(int thereminCenterNote READ thereminCenterNote WRITE setThereminCenterNote NOTIFY thereminCenterNoteChanged)
+    Q_PROPERTY(int thereminSemitoneRange READ thereminSemitoneRange WRITE setThereminSemitoneRange NOTIFY thereminSemitoneRangeChanged)
+    Q_PROPERTY(float thereminVolumeFloor READ thereminVolumeFloor WRITE setThereminVolumeFloor NOTIFY thereminVolumeFloorChanged)
+
 public:
     explicit ViewState(QObject* parent = nullptr) : QObject(parent) {}
 
@@ -53,17 +57,45 @@ public:
         if (midi != v) { midi = v; emit midiEnabledChanged(); }
     }
 
+    // --- GETTERS & SETTERS FOR THEREMIN ---
+    int thereminCenterNote() const { return m_thereminCenterNote; }
+    void setThereminCenterNote(int v)
+    {
+        if (m_thereminCenterNote != v) { m_thereminCenterNote = v; emit thereminCenterNoteChanged(); }
+    }
+
+    int thereminSemitoneRange() const { return m_thereminSemitoneRange; }
+    void setThereminSemitoneRange(int v)
+    {
+        if (m_thereminSemitoneRange != v) { m_thereminSemitoneRange = v; emit thereminSemitoneRangeChanged(); }
+    }
+
+    float thereminVolumeFloor() const { return m_thereminVolumeFloor; }
+    void setThereminVolumeFloor(float v)
+    {
+        if (m_thereminVolumeFloor != v) { m_thereminVolumeFloor = v; emit thereminVolumeFloorChanged(); }
+    }
+
 signals:
     void currentScreenChanged();
     void sessionRunningChanged();
     void appStatusChanged();
     void midiEnabledChanged();
 
+    void thereminCenterNoteChanged();
+    void thereminSemitoneRangeChanged();
+    void thereminVolumeFloorChanged();
+
 private:
     AppScreen screen = AppScreen::Landing;
     bool running = false;
     bool midi = false;
     QString status = "Ready";
+
+    // --- DEFAULT THEREMIN VALUES ---
+    int m_thereminCenterNote = 60;       // Middle C
+    int m_thereminSemitoneRange = 24;    // 2 Octaves
+    float m_thereminVolumeFloor = 0.0f;  // 0% Volume Floor
 };
 
 }

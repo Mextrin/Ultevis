@@ -64,7 +64,7 @@ public:
    std::atomic<Waveform> currentWaveform { Waveform::Sine };
    std::atomic<int> thereminSemitoneRangeOneSide { 24 }; //one octave up, one octave down
    std::atomic<int> thereminCenterNote { 60 }; // 60 = C4
-   std::atomic<float> volumeFloor           { 0.05f };  // minimum volume when left hand is at bottom
+   std::atomic<float> thereminVolumeFloor           { 0.05f };  // minimum volume when left hand is at bottom
 
    // --LEFT HAND DRUM--
    std::atomic<bool> leftDrumHit { false }; 
@@ -75,6 +75,10 @@ public:
    std::atomic<bool> rightDrumHit { false }; 
    std::atomic<int> rightDrumType { 38 }; 
    std::atomic<int> rightDrumVelocity { 100 };
+
+   // --DRUM STATES--
+   std::atomic<bool> mouthKick { false }; 
+   std::atomic<bool> snareLeverDown { false }; //false = normal snare
 
    // --- KEYBOARD STATE ---
    std::atomic<bool> isKeyPressed { false }; 

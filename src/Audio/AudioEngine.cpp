@@ -274,7 +274,8 @@ void HeadlessAudioEngine::processTheremin(juce::AudioBuffer<float>& buffer, int 
         const double targetFreq = 440.0f * std::pow(2.0f, (targetMidiNote - 69.0f) / 12.0f);
 
         const float safeY = juce::jlimit(0.0f, 1.0f, y);
-        const float targetVol = isLeftVisible ? (1.0f - safeY) : 0.0f;
+        const float volFloor = globalState->thereminVolumeFloor.load();
+        const float targetVol = isLeftVisible ? (volFloor + (1.0f - volFloor) * (1.0f - safeY)) : 0.0f;
 
         if (auto* myVoice = dynamic_cast<SineWaveVoice*>(synth.getVoice(0))) {
             myVoice->setWaveform(globalState->currentWaveform.load());
