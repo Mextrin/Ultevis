@@ -150,7 +150,18 @@ if not MODEL_PATH.exists():
     raise FileNotFoundError(f"MediaPipe gesture recognizer model not found: {MODEL_PATH}")
 
 base_options = python.BaseOptions(model_asset_path=str(MODEL_PATH))
-options = vision.GestureRecognizerOptions(base_options=base_options, num_hands=2)
+ClassifierOptions = mp.tasks.components.processors.ClassifierOptions
+
+# Configure the options with custom thresholds
+options = vision.GestureRecognizerOptions(
+    base_options=base_options, 
+    num_hands=2,
+    min_hand_detection_confidence=0.1, # Minimum confidence for hand detection
+    min_tracking_confidence=0.1,       # Minimum confidence for hand tracking
+    canned_gesture_classifier_options=ClassifierOptions(
+        score_threshold=0.1           # Minimum confidence for gesture recognition
+    )
+)
 recognizer = vision.GestureRecognizer.create_from_options(options)
 
 # --- THE FIX ---
