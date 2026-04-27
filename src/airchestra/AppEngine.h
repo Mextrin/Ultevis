@@ -39,7 +39,7 @@ public:
 
     Q_INVOKABLE void setMasterVolume(float v);
     Q_INVOKABLE void setThereminWaveform(const QString& wave);
-    Q_INVOKABLE void setThereminSemitoneRange(int semitones);
+    Q_INVOKABLE void setThereminSemitoneRangeOneSide(int semitones);
     Q_INVOKABLE void setThereminCenterNote(int midiNote);
     Q_INVOKABLE void setThereminVolumeFloor(float v);
 

@@ -26,7 +26,7 @@ class ViewState : public QObject
     Q_PROPERTY(bool midiEnabled READ midiEnabled WRITE setMidiEnabled NOTIFY midiEnabledChanged)
 
     Q_PROPERTY(int thereminCenterNote READ thereminCenterNote WRITE setThereminCenterNote NOTIFY thereminCenterNoteChanged)
-    Q_PROPERTY(int thereminSemitoneRange READ thereminSemitoneRange WRITE setThereminSemitoneRange NOTIFY thereminSemitoneRangeChanged)
+    Q_PROPERTY(int thereminSemitoneRangeOneSide READ thereminSemitoneRangeOneSide WRITE setThereminSemitoneRangeOneSide NOTIFY thereminSemitoneRangeOneSideChanged)
     Q_PROPERTY(float thereminVolumeFloor READ thereminVolumeFloor WRITE setThereminVolumeFloor NOTIFY thereminVolumeFloorChanged)
 
 public:
@@ -64,10 +64,10 @@ public:
         if (m_thereminCenterNote != v) { m_thereminCenterNote = v; emit thereminCenterNoteChanged(); }
     }
 
-    int thereminSemitoneRange() const { return m_thereminSemitoneRange; }
-    void setThereminSemitoneRange(int v)
+    int thereminSemitoneRangeOneSide() const { return m_thereminSemitoneRangeOneSide; }
+    void setThereminSemitoneRangeOneSide(int v)
     {
-        if (m_thereminSemitoneRange != v) { m_thereminSemitoneRange = v; emit thereminSemitoneRangeChanged(); }
+        if (m_thereminSemitoneRangeOneSide != v) { m_thereminSemitoneRangeOneSide = v; emit thereminSemitoneRangeOneSideChanged(); }
     }
 
     float thereminVolumeFloor() const { return m_thereminVolumeFloor; }
@@ -83,7 +83,7 @@ signals:
     void midiEnabledChanged();
 
     void thereminCenterNoteChanged();
-    void thereminSemitoneRangeChanged();
+    void thereminSemitoneRangeOneSideChanged();
     void thereminVolumeFloorChanged();
 
 private:
@@ -94,7 +94,7 @@ private:
 
     // --- DEFAULT THEREMIN VALUES ---
     int m_thereminCenterNote = 60;       // Middle C
-    int m_thereminSemitoneRange = 24;    // 2 Octaves
+    int m_thereminSemitoneRangeOneSide = 24;    // 2 Octaves per side 
     float m_thereminVolumeFloor = 0.0f;  // 0% Volume Floor
 };
 

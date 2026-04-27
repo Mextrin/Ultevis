@@ -145,9 +145,9 @@ void AppEngine::setThereminWaveform(const QString& wave) {
     globalState->currentWaveform.store(wf);
 }
 
-void AppEngine::setThereminSemitoneRange(int semitones) {
+void AppEngine::setThereminSemitoneRangeOneSide(int semitones) {
     globalState->thereminSemitoneRangeOneSide.store(qBound(12, semitones, 96));
-    state.setThereminSemitoneRange(semitones);
+    state.setThereminSemitoneRangeOneSide(semitones);
 }
 
 void AppEngine::setThereminCenterNote(int midiNote) {

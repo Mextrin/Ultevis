@@ -155,7 +155,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             
             // Read initial state from C++
-            value: typeof appEngine !== "undefined" && appEngine.viewState ? appEngine.viewState.thereminWaveform : "sine"
+            value: typeof appEngine !== "undefined" && appEngine.viewState && appEngine.viewState.thereminWaveform !== undefined ? appEngine.viewState.thereminWaveform : "sine"
             font.family: figTreeVariable.name
             
             // Write changes to C++

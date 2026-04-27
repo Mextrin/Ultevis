@@ -130,7 +130,7 @@ Rectangle {
 
         // --- THE FIX: REAL THEREMIN RANGE SETTINGS ---
         Text {
-            text: "PITCH RANGE"
+            text: "THEREMIN SETTINGS"
             font.family: titleLabel.font.family
             font.pixelSize: 11
             font.weight: Font.DemiBold
@@ -160,10 +160,10 @@ Rectangle {
             to: 96
             stepSize: 1
             Layout.fillWidth: true
-            value: typeof appEngine !== "undefined" && appEngine.viewState ? appEngine.viewState.thereminSemitoneRange : 24
+            value: typeof appEngine !== "undefined" && appEngine.viewState ? appEngine.viewState.thereminSemitoneRangeOneSide : 24
             onValueChanged: {
                 if (typeof appEngine !== "undefined") {
-                    appEngine.setThereminSemitoneRange(Math.round(value))
+                    appEngine.setThereminSemitoneRangeOneSide(Math.round(value))
                 }
             }
         }
