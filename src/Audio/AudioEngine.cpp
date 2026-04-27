@@ -129,6 +129,7 @@ void HeadlessAudioEngine::resetDrumPlaybackState()
 
     globalState->leftDrumHit.store(false);
     globalState->rightDrumHit.store(false);
+    globalState->mouthKickHit.store(false);
     globalState->leftDrumType.store(36);
     globalState->rightDrumType.store(38);
     globalState->leftDrumVelocity.store(100);
@@ -301,6 +302,9 @@ void HeadlessAudioEngine::processDrums(juce::AudioBuffer<float>& buffer, int num
     if (buffer.getNumChannels() < 2)
         return;
 
+    constexpr int mouthKickNote = 36;
+    constexpr int mouthKickVelocity = 110;
+
     std::lock_guard<std::mutex> lock(drumSynthMutex);
 
     if (globalState->leftDrumHit.exchange(false)) {
@@ -321,6 +325,12 @@ void HeadlessAudioEngine::processDrums(juce::AudioBuffer<float>& buffer, int num
         drumSynth.noteOn(0, rightNote, rightVelocity);
         if (midiOut != nullptr)
             midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, standardRightGMNote, (juce::uint8)rightVelocity));
+    }
+
+    if (globalState->mouthKickHit.exchange(false)) {
+        drumSynth.noteOn(0, mouthKickNote, mouthKickVelocity);
+        if (midiOut != nullptr)
+            midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, mouthKickNote, (juce::uint8)mouthKickVelocity));
     }
 
     float* outChannels[] = { buffer.getWritePointer(0), buffer.getWritePointer(1) };

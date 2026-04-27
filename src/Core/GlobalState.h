@@ -75,6 +75,7 @@ public:
    std::atomic<bool> rightDrumHit { false }; 
    std::atomic<int> rightDrumType { 38 }; 
    std::atomic<int> rightDrumVelocity { 100 };
+   std::atomic<bool> mouthKickHit { false };
 
    // --DRUM STATES--
    std::atomic<bool> mouthKick { false }; 
@@ -100,7 +101,3 @@ public:
    std::atomic<bool> cameraSessionActive{false};
 
 };
-
- 
- 
- 
