@@ -75,7 +75,7 @@ def get_face_landmarker():
 
     face_options = face_landmarker_module.FaceLandmarkerOptions(
         base_options=python.BaseOptions(model_asset_path=str(FACE_MODEL_PATH)),
-        running_mode=RunningMode.VIDEO,
+        running_mode=RunningMode.IMAGE,
         num_faces=1,
         min_face_detection_confidence=0.5,
         min_face_presence_confidence=0.5,
@@ -131,7 +131,7 @@ def draw_drum_zones(frame, active_zone_names: set[str]) -> None:
 
 def detect_mouth_open(mp_image, frame_timestamp_ms: int, was_open: bool) -> bool:
     landmarker = get_face_landmarker()
-    face_result = landmarker.detect_for_video(mp_image, frame_timestamp_ms)
+    face_result = landmarker.detect(mp_image)
     if not face_result.face_blendshapes:
         return False
 
