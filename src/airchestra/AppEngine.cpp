@@ -49,6 +49,8 @@ AppEngine::AppEngine(GlobalState* gState, HeadlessAudioEngine* aEngine, QObject 
         midiDeviceNames.append(QString::fromStdString(name));
         midiDeviceIds.push_back(id);
     }
+
+    sendCommandToPython("none");
 }
 
 AppEngine::~AppEngine() {}
@@ -71,6 +73,8 @@ void AppEngine::proceed() {
 void AppEngine::goBack() {
     globalState->isKeyPressed.store(false);  // release keyboard notes
     state.setCurrentScreen(static_cast<int>(AppScreen::Session));
+
+    sendCommandToPython("none");
 }
 
 void AppEngine::selectInstrument(const QString &name) {
@@ -102,6 +106,11 @@ void AppEngine::setMidiEnabled(bool enabled) {
 }
 
 void AppEngine::selectMidiDevice(const QString& displayName) {
+    if (m_currentMidiDevice != displayName) {
+        m_currentMidiDevice = displayName;
+        emit currentMidiDeviceChanged();
+    }
+
     // If the user selects "None", close the port and disable routing
     if (displayName == "None" || displayName.isEmpty()) {
         audioEngine->openMidiDevice("");

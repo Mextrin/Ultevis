@@ -78,24 +78,33 @@ Rectangle {
             Layout.topMargin: 10
         }
 
-        SettingsToggle {
-            label: "Enable MIDI"
-            Layout.fillWidth: true
-            // Read initial state from C++, write back changes
-            checked: typeof appEngine !== "undefined" && appEngine.viewState ? appEngine.viewState.midiEnabled : false
-            onCheckedChanged: {
-                if (typeof appEngine !== "undefined") {
-                    appEngine.setMidiEnabled(checked)
-                }
-            }
-        }
-
         ComboBox {
             id: midiDeviceSelect
             Layout.fillWidth: true
             height: 40
             // Pull live list of MIDI devices from JUCE backend!
             model: typeof appEngine !== "undefined" ? appEngine.midiDeviceNames : ["None"]
+
+            currentIndex: 0
+            
+            Component.onCompleted: {
+                if (typeof appEngine !== "undefined") {
+                    let idx = find(appEngine.currentMidiDevice)
+                    if (idx !== -1) {
+                        currentIndex = idx
+                    }
+                }
+            }
+
+            Connections {
+                target: typeof appEngine !== "undefined" ? appEngine : null
+                function onCurrentMidiDeviceChanged() {
+                    let idx = midiDeviceSelect.find(appEngine.currentMidiDevice)
+                    if (idx !== -1 && midiDeviceSelect.currentIndex !== idx) {
+                        midiDeviceSelect.currentIndex = idx
+                    }
+                }
+            }
             
             onActivated: function(index) {
                 if (typeof appEngine !== "undefined") {

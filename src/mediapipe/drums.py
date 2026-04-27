@@ -56,7 +56,6 @@ DRUM_ZONES = (
 DEFAULT_DRUM_VELOCITY = 110
 
 
-
 def compute_hand_center(hand_landmarks) -> tuple[float, float]:
     xs = [landmark.x for landmark in hand_landmarks]
     ys = [landmark.y for landmark in hand_landmarks]
@@ -108,17 +107,20 @@ base_options = python.BaseOptions(model_asset_path=str(MODEL_PATH))
 options = vision.GestureRecognizerOptions(base_options=base_options, num_hands=2)
 recognizer = vision.GestureRecognizer.create_from_options(options)
 
-# --- THIS IS THE FIX ---
-# This dictionary MUST be global to persist state between frames.
-previous_zone_by_hand = {"Left": None, "Right": None}
-# --- END OF FIX ---
+# --- THE FIX ---
+# Instead of tracking hands, we track which ZONES have been hit.
+# This completely eliminates Left/Right handedness flickering!
+active_triggered_zones = set()
+# ---------------
 
 
-def drum_detect (recognition_result): 
-    # These are now local to the function, created fresh for each frame
+def drum_detect(recognition_result): 
+    global active_triggered_zones
+
     active_zone_names: set[str] = set()
     displayed_hand_positions: dict[str, tuple[float, float]] = {}
     detected_labels = set()
+    processed_labels = set()
 
     drum_payload = {
         "rightHandVisible": False,
@@ -136,6 +138,9 @@ def drum_detect (recognition_result):
         "rightDrumType": 42,
         "rightDrumVelocity": DEFAULT_DRUM_VELOCITY,
     }
+
+    # Map out which zones currently have hands inside them
+    hands_in_zones = {}
       
     if recognition_result.handedness:
         for i, (hand_landmarks, handedness, gestures) in enumerate(zip(
@@ -143,14 +148,16 @@ def drum_detect (recognition_result):
             recognition_result.handedness,
             recognition_result.gestures
         )):
-            label = handedness[0].category_name  # "Left" or "Right"
+            label = handedness[0].category_name  
+            
+            # Prevent MediaPipe's "Two Right Hands" ghost glitch
+            if label in processed_labels:
+                continue
+            
+            processed_labels.add(label)
             detected_labels.add(label)
 
-            # Get default gesture from the model
             gesture_name = gestures[0].category_name if gestures else "None"
-
-            X_RIGHT_MIN = 0.0 
-            X_RIGHT_MAX = 0.67 
 
             if label == "Right":
                 drum_payload["rightHandVisible"] = True
@@ -159,36 +166,44 @@ def drum_detect (recognition_result):
                 drum_payload["leftHandVisible"] = True
                 drum_payload["leftGesture"] = gesture_name
 
-            # --- THE FIX: We removed "if CAMERA_MODE == 'drums':" ---
             hand_center_x, hand_center_y = compute_hand_center(hand_landmarks)
             display_x = 1.0 - hand_center_x
             display_y = hand_center_y
             displayed_hand_positions[label] = (display_x, display_y)
 
             zone = find_zone(display_x, display_y)
-            previous_zone_name = previous_zone_by_hand.get(label)
-            current_zone_name = zone.name if zone is not None else None
+            if zone is not None:
+                hands_in_zones[zone.name] = (gesture_name, label, zone)
 
-            # Trigger hit ONLY if hand is inside zone AND gesture is Open_Palm
-            if zone is not None and gesture_name == "Open_Palm":
-                active_zone_names.add(zone.name)
-                if current_zone_name != previous_zone_name:
-                    prefix = "right" if label == "Right" else "left"
-                    drum_payload[f"{prefix}DrumHit"] = True
-                    drum_payload[f"{prefix}DrumType"] = zone.note
-                    drum_payload[f"{prefix}DrumVelocity"] = DEFAULT_DRUM_VELOCITY
+    # 1. RESET MEMORY: 
+    # If a hand leaves a zone, or explicitly makes a Closed_Fist, reset the zone so it can be hit again.
+    # Notice we DO NOT reset if the gesture is "None" (which ignores the 1-frame camera flickers!)
+    zones_to_remove = set()
+    for zone_name in active_triggered_zones:
+        if zone_name not in hands_in_zones:
+            zones_to_remove.add(zone_name)
+        else:
+            gesture_name, _, _ = hands_in_zones[zone_name]
+            if gesture_name == "Closed_Fist":
+                zones_to_remove.add(zone_name)
 
-                # Register zone to prevent continuous triggering while hand stays open
-                previous_zone_by_hand[label] = current_zone_name
-            else:
-                # Reset state if hand is closed or moves outside the zone
-                previous_zone_by_hand[label] = None
-            # --------------------------------------------------------
+    active_triggered_zones.difference_update(zones_to_remove)
 
-    for label in previous_zone_by_hand:
-        if label not in detected_labels:
-            previous_zone_by_hand[label] = None
-    
+    # 2. TRIGGER HITS:
+    # If a hand with an Open_Palm is in a zone that hasn't been triggered yet, hit it!
+    for zone_name, (gesture_name, label, zone) in hands_in_zones.items():
+        if gesture_name == "Open_Palm":
+            active_zone_names.add(zone_name)
+            
+            if zone_name not in active_triggered_zones:
+                prefix = "right" if label == "Right" else "left"
+                drum_payload[f"{prefix}DrumHit"] = True
+                drum_payload[f"{prefix}DrumType"] = zone.note
+                drum_payload[f"{prefix}DrumVelocity"] = DEFAULT_DRUM_VELOCITY
+                
+                # Mark zone as active so it doesn't trigger again until reset
+                active_triggered_zones.add(zone_name)
+                
     return drum_payload, active_zone_names, displayed_hand_positions
 
 def get_drum_hit_coordinates(display_frame, frame_height, frame_width, active_zone_names, displayed_hand_positions):

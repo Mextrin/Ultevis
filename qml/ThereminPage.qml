@@ -24,7 +24,7 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        fillMode: Image.PreserveAspectFit 
+        fillMode: Image.PreserveAspectFit
         source: "image://camera/feed"
         cache: false 
         smooth: true

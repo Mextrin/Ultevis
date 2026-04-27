@@ -18,6 +18,7 @@ class AppEngine : public QObject {
     Q_PROPERTY(QString cameraPermissionStatus READ cameraPermission NOTIFY cameraPermissionChanged)
     Q_PROPERTY(ViewState* viewState READ getViewState CONSTANT)
     Q_PROPERTY(QStringList midiDeviceNames READ getMidiDeviceNames CONSTANT)
+    Q_PROPERTY(QString currentMidiDevice READ getCurrentMidiDevice NOTIFY currentMidiDeviceChanged)
 
 public:
     AppEngine(GlobalState* gState, HeadlessAudioEngine* aEngine, QObject *parent = nullptr);
@@ -34,6 +35,7 @@ public:
     
     Q_INVOKABLE void setMidiEnabled(bool enabled);
     Q_INVOKABLE void selectMidiDevice(const QString& displayName);
+    QString getCurrentMidiDevice() const { return m_currentMidiDevice; }
 
     Q_INVOKABLE void setMasterVolume(float v);
     Q_INVOKABLE void setThereminWaveform(const QString& wave);
@@ -49,6 +51,7 @@ public:
 
 signals:
     void cameraPermissionChanged();
+    void currentMidiDeviceChanged();
 
 private:
     void setCameraPermissionStatus(const QString &value);
@@ -62,6 +65,7 @@ private:
 
     QStringList midiDeviceNames;
     std::vector<std::string> midiDeviceIds;
+    QString m_currentMidiDevice = "None";
 };
 
 } // namespace airchestra

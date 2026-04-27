@@ -87,6 +87,27 @@ Item {
                 
                 // --- FIXED PROPERTY NAME ---
                 model: typeof appEngine !== "undefined" ? appEngine.midiDeviceNames : ["None"]
+
+                currentIndex: 0
+
+                Component.onCompleted: {
+                    if (typeof appEngine !== "undefined") {
+                        let idx = find(appEngine.currentMidiDevice)
+                        if (idx !== -1) {
+                            currentIndex = idx
+                        }
+                    }
+                }
+
+                Connections {
+                    target: typeof appEngine !== "undefined" ? appEngine : null
+                    function onCurrentMidiDeviceChanged() {
+                        let idx = midiSelector.find(appEngine.currentMidiDevice)
+                        if (idx !== -1 && midiSelector.currentIndex !== idx) {
+                            midiSelector.currentIndex = idx
+                        }
+                    }
+                }
                 
                 anchors.verticalCenter: parent.verticalCenter
                 
