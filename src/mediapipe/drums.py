@@ -182,14 +182,13 @@ def drum_detect(recognition_result, mp_image=None):
     processed_labels = set()
 
     drum_payload = {
+        "instrument": "drums",
         "rightHandVisible": False,
         "leftHandVisible": False,
         "rightHandX": 0.0,
         "rightHandY": 0.0,
         "leftHandX": 0.0,
         "leftHandY": 0.0,
-        "rightGesture": "None",
-        "leftGesture": "None",
         "leftDrumHit": False,
         "leftDrumType": 38,
         "leftDrumVelocity": DEFAULT_DRUM_VELOCITY,
