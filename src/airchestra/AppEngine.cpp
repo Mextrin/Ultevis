@@ -86,7 +86,7 @@ void AppEngine::selectInstrument(const QString &name) {
     else if (name == QStringLiteral("drums")) {
         state.setCurrentScreen(static_cast<int>(AppScreen::Drums)); 
         globalState->currentInstrument.store(ActiveInstrument::Drums);
-        audioEngine->loadDrumSound("/Users/alexrystrom/Documents/GitHub/Ultevis/Instruments/SMDrums_Sforzando_1.2/Programs/SM_Drums_kit.sfz");
+        audioEngine->loadDrumSound("Instruments/SMDrums_Sforzando_1.2/Programs/SM_Drums_kit.sfz");
         sendCommandToPython("drums");
     }
     else if (name == QStringLiteral("keyboard")) {
