@@ -398,32 +398,6 @@ Item {
         anchors.topMargin: 12
         z: 30
 
-        Text {
-            text: "VOLUME"
-            font.family: figTreeVariable.name
-            font.pixelSize: 11
-            font.weight: Font.DemiBold
-            font.letterSpacing: 1.5
-            color: "#E07826"
-        }
-
-        SettingsSlider {
-            label: "Min Volume"
-            unit: "%"
-            value: 10
-            from: 0
-            to: 100
-        }
-
-        SettingsSlider {
-            label: "Max Volume"
-            unit: "%"
-            value: 85
-            from: 0
-            to: 100
-        }
-
-        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
 
         Text {
     text: "MIDI OUTPUT"
@@ -492,27 +466,9 @@ SettingsSlider {
 
 Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
 
-        Text {
-            text: "GESTURE CONTROL"
-            font.family: figTreeVariable.name
-            font.pixelSize: 11
-            font.weight: Font.DemiBold
-            font.letterSpacing: 1.5
-            color: "#E07826"
-        }
-
-        SettingsSlider {
-            label: "Key Sensitivity"
-            unit: "%"
-            value: 65
-            from: 10
-            to: 100
-        }
-
-        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
 
         Text {
-            text: "PLAYBACK"
+            text: "KEYBOARD SETTINGS"
             font.family: figTreeVariable.name
             font.pixelSize: 11
             font.weight: Font.DemiBold
