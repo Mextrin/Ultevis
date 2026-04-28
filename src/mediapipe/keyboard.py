@@ -150,12 +150,16 @@ def detect_key_strokes(detection_result):
     # Determine which notes to turn ON
     new_right_notes = [note for note in current_right_notes if note not in right_hand_notes]
     new_left_notes = [note for note in current_left_notes if note not in left_hand_notes]
-    keyboard_payload["notesOn"] = new_right_notes + new_left_notes
+    
+    new_on = new_right_notes + new_left_notes
+    keyboard_payload["notesOn"] = " ".join(map(str, new_on))
 
     # Determine which notes to turn OFF
     stopped_right_notes = [note for note in right_hand_notes if note not in current_right_notes]
     stopped_left_notes = [note for note in left_hand_notes if note not in current_left_notes]
-    keyboard_payload["notesOff"] = stopped_right_notes + stopped_left_notes
+    
+    new_off = stopped_right_notes + stopped_left_notes
+    keyboard_payload["notesOff"] = " ".join(map(str, new_off))
 
     # Update the state for the next frame
     right_hand_notes = current_right_notes

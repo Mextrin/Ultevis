@@ -60,7 +60,7 @@ public:
 
     Q_INVOKABLE void triggerDrumHit(int midiNote, int velocity);
     Q_INVOKABLE void triggerKeyboardNote(int midiNote, int velocity);
-    Q_INVOKABLE void releaseKeyboardNote();
+    Q_INVOKABLE void releaseKeyboardNote(int midiNote);
     Q_INVOKABLE void adjustKeyboardOctave(int keyboardIndex, int delta);
 
     bool leftHandVisible() const { return m_leftHandVisible; }

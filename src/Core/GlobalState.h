@@ -32,6 +32,7 @@ Design:
 
 #pragma once
 #include <atomic>
+#include <array>
 
 enum class ActiveInstrument {
    Theremin = 0,
@@ -86,9 +87,7 @@ public:
    std::atomic<bool> snareLeverDown { false }; //false = normal snare
 
    // --- KEYBOARD STATE ---
-   std::atomic<bool> isKeyPressed { false }; 
-   std::atomic<int> keyboardNote { 60 };    
-   std::atomic<int> keyboardVelocity { 100 }; 
+   std::array<std::atomic<bool>, 128> keyboardState {};
    std::atomic<KeyboardSound> currentKeyboardInstrument { KeyboardSound::GrandPiano };
    std::atomic<bool> sustainPedal { false };
    std::atomic<int> topKeyboardOctave { 3 }; 

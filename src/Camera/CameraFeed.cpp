@@ -1,5 +1,7 @@
 #include <iostream>
 #include <string>
+#include <sstream>
+#include <algorithm>
 
 #ifdef _WIN32
     #include <winsock2.h>
@@ -99,9 +101,24 @@ void startCameraFeed(GlobalState* state) {
         state->leftDrumVelocity.store(parseInt(json, "leftDrumVelocity", state->leftDrumVelocity.load()));
         state->rightDrumVelocity.store(parseInt(json, "rightDrumVelocity", state->rightDrumVelocity.load()));
 
-        // std::cout << "R: " << state->rightHandVisible.load()
-        //           << "  x=" << state->rightHandX.load()
-        //           << "  y=" << state->leftHandY.load() << "\n";
+        auto updateNotes = [&](const std::string& key, bool isPressed) {
+            std::string noteStr = parseValue(json, key);
+            // Clean the string by stripping quotes
+            noteStr.erase(std::remove(noteStr.begin(), noteStr.end(), '\"'), noteStr.end());
+            
+            std::stringstream ss(noteStr);
+            std::string noteItem;
+            while (std::getline(ss, noteItem, ' ')) {
+                if (!noteItem.empty()) {
+                    int note = std::stoi(noteItem);
+                    if (note >= 0 && note < 128) {
+                        state->keyboardState[note].store(isPressed);
+                    }
+                }
+            }
+        };
+        updateNotes("notesOn", true);
+        updateNotes("notesOff", false);
     }
 
     state->cameraSessionActive.store(false);

@@ -142,14 +142,20 @@ void HeadlessAudioEngine::resetKeyboardPlaybackState()
     if (globalState == nullptr)
         return;
 
-    globalState->isKeyPressed.store(false);
-    globalState->keyboardNote.store(60);
-    globalState->keyboardVelocity.store(100);
     globalState->sustainPedal.store(false);
-
-    wasKeyPressed = false;
     wasSustainPedalPressed = false;
-    lastPlayedKey = -1;
+
+    // Turn off all 128 notes
+    for (int i = 0; i < 128; ++i) {
+        globalState->keyboardState[i].store(false);
+        if (internalKeyboardState[i]) {
+            keyboardSynth.noteOff(0, i, 0);
+            if (midiOut != nullptr) {
+                midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, i, (juce::uint8)0));
+            }
+            internalKeyboardState[i] = false;
+        }
+    }
 }
 
 // Loads drum SFZ instrument into drumSynth
@@ -361,45 +367,28 @@ void HeadlessAudioEngine::processKeyboard(juce::AudioBuffer<float>& buffer, int 
 
         wasSustainPedalPressed = isPedalPressed;
     }
-
-    //Handle notes
-    const bool isPressed = globalState->isKeyPressed.load();
-    const int currentNote = globalState->keyboardNote.load();
-    const int velocity = globalState->keyboardVelocity.load();
-
-    if (isPressed && !wasKeyPressed) {
-        keyboardSynth.noteOn(0, currentNote, velocity);
-
-        if (midiOut != nullptr) {
-            midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, currentNote, (juce::uint8)velocity));
+    for (int i = 0; i < 128; ++i) {
+        bool isPressed = globalState->keyboardState[i].load();
+        
+        // If GlobalState differs from our internal memory, it's a new hit/release!
+        if (isPressed != internalKeyboardState[i]) {
+            internalKeyboardState[i] = isPressed; // Sync memory
+            
+            if (isPressed) {
+                // Play Note! (Defaulting to 100 velocity)
+                keyboardSynth.noteOn(0, i, 100); 
+                if (midiOut != nullptr) {
+                    midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, i, (juce::uint8)100));
+                }
+            } else {
+                // Release Note!
+                keyboardSynth.noteOff(0, i, 0);
+                if (midiOut != nullptr) {
+                    midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, i, (juce::uint8)0));
+                }
+            }
         }
-
-        lastPlayedKey = currentNote;
     }
-    else if (!isPressed && wasKeyPressed) {
-        keyboardSynth.noteOff(0, lastPlayedKey, 0);
-
-        if (midiOut != nullptr) {
-            midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, lastPlayedKey, (juce::uint8)0));
-        }
-
-        lastPlayedKey = -1;
-    }
-    else if (isPressed && wasKeyPressed && currentNote != lastPlayedKey) {
-        keyboardSynth.noteOff(0, lastPlayedKey, 0);
-        if (midiOut != nullptr) {
-            midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, lastPlayedKey, (juce::uint8)0));
-        }
-
-        keyboardSynth.noteOn(0, currentNote, velocity);
-        if (midiOut != nullptr) {
-            midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, currentNote, (juce::uint8)velocity));
-        }
-
-        lastPlayedKey = currentNote;
-    }
-
-    wasKeyPressed = isPressed;
 
     float* outChannels[] = { buffer.getWritePointer(0), buffer.getWritePointer(1) };
     keyboardSynth.renderBlock(outChannels, numSamples);

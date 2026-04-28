@@ -75,7 +75,9 @@ void AppEngine::proceed() {
 }
 
 void AppEngine::goBack() {
-    globalState->isKeyPressed.store(false);  // release keyboard notes
+    for (int i = 0; i < 128; ++i) {
+        globalState->keyboardState[i].store(false);
+    }
     state.setCurrentScreen(static_cast<int>(AppScreen::Session));
 
     sendCommandToPython("none");
@@ -174,13 +176,15 @@ void AppEngine::triggerDrumHit(int midiNote, int velocity) {
 }
 
 void AppEngine::triggerKeyboardNote(int midiNote, int velocity) {
-    globalState->keyboardNote.store(midiNote);
-    globalState->keyboardVelocity.store(qBound(0, velocity, 127));
-    globalState->isKeyPressed.store(true);
+    if (midiNote >= 0 && midiNote < 128) {
+        globalState->keyboardState[midiNote].store(true);
+    }
 }
 
-void AppEngine::releaseKeyboardNote() {
-    globalState->isKeyPressed.store(false);
+void AppEngine::releaseKeyboardNote(int midiNote) { 
+    if (midiNote >= 0 && midiNote < 128) {
+        globalState->keyboardState[midiNote].store(false);
+    }
 }
 
 void AppEngine::adjustKeyboardOctave(int keyboardIndex, int delta) {
