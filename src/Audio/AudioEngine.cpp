@@ -5,6 +5,7 @@
 #include "AudioEngine.h"
 #include <iostream>
 #include <cmath>
+#include "GuitarChords.h"
 
 namespace
 {

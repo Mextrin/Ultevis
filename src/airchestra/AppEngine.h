@@ -30,6 +30,10 @@ class AppEngine : public QObject {
     Q_PROPERTY(qreal rightHandY READ rightHandY NOTIFY handStateChanged)
     Q_PROPERTY(bool leftPinch READ leftPinch NOTIFY handStateChanged)
     Q_PROPERTY(bool rightPinch READ rightPinch NOTIFY handStateChanged)
+    Q_PROPERTY(bool leftThumbUp READ leftThumbUp NOTIFY handStateChanged)
+    Q_PROPERTY(bool leftThumbDown READ leftThumbDown NOTIFY handStateChanged)
+    Q_PROPERTY(bool rightThumbUp READ rightThumbUp NOTIFY handStateChanged)
+    Q_PROPERTY(bool rightThumbDown READ rightThumbDown NOTIFY handStateChanged)
 
     // Keyboard octave state (read/write via slots).
     Q_PROPERTY(int topKeyboardOctave READ topKeyboardOctave NOTIFY keyboardOctavesChanged)
@@ -64,6 +68,8 @@ public:
     Q_INVOKABLE void releaseKeyboardNote(int midiNote);
     Q_INVOKABLE void adjustKeyboardOctave(int keyboardIndex, int delta);
     Q_INVOKABLE void setSustainPedal(bool enabled);
+    Q_INVOKABLE void setKeyboardInstrument(int instrumentID);
+
 
     bool leftHandVisible() const { return m_leftHandVisible; }
     bool rightHandVisible() const { return m_rightHandVisible; }
@@ -73,6 +79,10 @@ public:
     qreal rightHandY() const { return m_rightHandY; }
     bool leftPinch() const { return m_leftPinch; }
     bool rightPinch() const { return m_rightPinch; }
+    bool leftThumbUp() const { return m_leftThumbUp; }
+    bool leftThumbDown() const { return m_leftThumbDown; }
+    bool rightThumbUp() const { return m_rightThumbUp; }
+    bool rightThumbDown() const { return m_rightThumbDown; }
     int topKeyboardOctave() const { return m_topKeyboardOctave; }
     int bottomKeyboardOctave() const { return m_bottomKeyboardOctave; }
 
@@ -108,6 +118,10 @@ private:
     qreal m_rightHandY = 0.5;
     bool m_leftPinch = false;
     bool m_rightPinch = false;
+    bool m_leftThumbUp = false;
+    bool m_leftThumbDown = false;
+    bool m_rightThumbUp = false;
+    bool m_rightThumbDown = false;
     int m_topKeyboardOctave = 3;
     int m_bottomKeyboardOctave = 5;
 };
