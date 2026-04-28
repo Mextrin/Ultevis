@@ -4,32 +4,58 @@ set EXE_DIR=build/Airchestra_artefacts/Debug/Airchestra.exe
 set VCPKG_ROOT=%~dp0vcpkg
 set VCPKG_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake
 
-if "%1"=="build-all" (
+if "%~1"=="" (
+    echo No build command provided.
+    call :show-usage
+    exit /b 1
+)
+
+if /I "%~1"=="build-all" (
     call :build-all
     if errorlevel 1 exit /b 1
+    exit /b 0
 )
-if "%1"=="compile" (
+if /I "%~1"=="compile" (
     call :compile-app
     if errorlevel 1 exit /b 1
+    exit /b 0
 )
-if "%1"=="run" (
+if /I "%~1"=="run" (
     call :run-app
+    exit /b 0
 )
-if "%1"=="compile-and-run" (
+if /I "%~1"=="compile-and-run" (
     call :compile-app
     if errorlevel 1 exit /b 1
     call :run-app
+    exit /b 0
 )
-if "%1"=="clean" (
+if /I "%~1"=="clean" (
     call :clean-all 
+    exit /b 0
 )
-if "%1"=="clean-build-run" (
+if /I "%~1"=="clean-build-run" (
     call :clean-all
     call :build-all
     if errorlevel 1 exit /b 1
     call :run-app
+    exit /b 0
 )
-exit
+
+echo Unknown build command: %~1
+call :show-usage
+exit /b 1
+
+:show-usage
+    echo.
+    echo Available build commands from README.md:
+    echo   build.bat build-all         Full setup and build
+    echo   build.bat compile           Compile existing build
+    echo   build.bat run               Run compiled executable
+    echo   build.bat compile-and-run   Compile and run
+    echo   build.bat clean             Remove the build folder
+    echo.
+exit /b
 
 :build-all
     git submodule update --init --recursive
