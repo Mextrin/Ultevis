@@ -19,6 +19,7 @@ recognizer = vision.HandLandmarker.create_from_options(options)
 def detect_hands(detection_result): 
     # 1. Create a fresh, default payload for every frame.
     theremin_payload = {
+        "instrument": "theremin",
         "rightHandVisible": False,
         "leftHandVisible": False,
         "rightHandX": 0.0,

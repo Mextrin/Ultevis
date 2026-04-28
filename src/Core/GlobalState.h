@@ -32,6 +32,7 @@ Design:
 
 #pragma once
 #include <atomic>
+#include <array>
 
 enum class ActiveInstrument {
    Theremin = 0,
@@ -58,12 +59,21 @@ class GlobalState {
 public:
    // --Theremin controls--
    std::atomic<float> rightHandX { 0.5f }; // 0-1
+   std::atomic<float> rightHandY { 0.5f }; // 0-1
+   std::atomic<float> leftHandX  { 0.5f }; // 0-1
    std::atomic<float> leftHandY  { 1.0f }; // 0-1
    std::atomic<bool> rightHandVisible { false };
    std::atomic<bool> leftHandVisible  { false };
+   std::atomic<bool> rightPinch { false };
+   std::atomic<bool> leftPinch  { false };
+   std::atomic<bool> rightThumbUp { false };
+   std::atomic<bool> rightThumbDown { false };
+   std::atomic<bool> leftThumbUp { false };
+   std::atomic<bool> leftThumbDown { false };
    std::atomic<Waveform> currentWaveform { Waveform::Sine };
    std::atomic<int> thereminSemitoneRangeOneSide { 24 }; //one octave up, one octave down
    std::atomic<int> thereminCenterNote { 60 }; // 60 = C4
+   std::atomic<float> thereminVolumeFloor { 0.05f };  // minimum volume when left hand is at bottom
 
    // --LEFT HAND DRUM--
    std::atomic<bool> leftDrumHit { false }; 
@@ -74,13 +84,18 @@ public:
    std::atomic<bool> rightDrumHit { false }; 
    std::atomic<int> rightDrumType { 38 }; 
    std::atomic<int> rightDrumVelocity { 100 };
+   std::atomic<bool> mouthKickHit { false };
+
+   // --DRUM STATES--
+   std::atomic<bool> mouthKickEnable { false }; 
+   std::atomic<bool> snareLeverDown { false }; //false = normal snare
 
    // --- KEYBOARD STATE ---
-   std::atomic<bool> isKeyPressed { false }; 
-   std::atomic<int> keyboardNote { 60 };    
-   std::atomic<int> keyboardVelocity { 100 }; 
+   std::array<std::atomic<bool>, 128> keyboardState {};
    std::atomic<KeyboardSound> currentKeyboardInstrument { KeyboardSound::GrandPiano };
    std::atomic<bool> sustainPedal { false };
+   std::atomic<int> topKeyboardOctave { 3 }; 
+   std::atomic<int> bottomKeyboardOctave { 5 };
 
    // --Routing and instrument selection--
    std::atomic<bool> routeToInternalAudio { true };
@@ -93,7 +108,3 @@ public:
    std::atomic<bool> cameraSessionActive{false};
 
 };
-
- 
- 
- 

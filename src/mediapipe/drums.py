@@ -1,18 +1,26 @@
-import os
 import cv2
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
+from mediapipe.tasks.python.vision import RunningMode
+from mediapipe.tasks.python.vision import face_landmarker as face_landmarker_module
 from dataclasses import dataclass
 from pathlib import Path
 
-CAMERA_MODE = os.environ.get("ULTEVIS_CAMERA_MODE", "theremin").strip().lower()
+PINCH_THRESHOLD = 0.05
+DEFAULT_DRUM_VELOCITY = 110
 
-def draw_frame(frame):
-    display_frame = cv2.flip(frame, 1)
-    frame_height, frame_width = display_frame.shape[:2]
+JAW_OPEN_BLENDSHAPE_INDEX = int(face_landmarker_module.Blendshapes.JAW_OPEN)
+MOUTH_OPEN_ON_THRESHOLD = 0.25
+MOUTH_OPEN_OFF_THRESHOLD = 0.15
 
-    return display_frame, frame_height, frame_width
+FACE_MODEL_PATH = Path(__file__).with_name("face_landmarker.task")
+MODEL_PATH = Path(__file__).with_name("gesture_recognizer.task")
+
+face_landmarker = None
+active_triggered_zones = set()
+previous_mouth_open = False
+
 
 @dataclass(frozen=True)
 class DrumZone:
@@ -34,6 +42,7 @@ class DrumZone:
             int(self.bottom * height),
         )
 
+
 DRUM_ZONES = (
     DrumZone("Crash", 54, 0.02, 0.09, 0.25, 0.34),
     DrumZone("High-Tom", 48, 0.31, 0.14, 0.47, 0.36),
@@ -46,18 +55,48 @@ DRUM_ZONES = (
     DrumZone("Kick", 36, 0.31, 0.75, 0.69, 0.96),
 )
 
-DEFAULT_DRUM_VELOCITY = 110
 
-def compute_hand_center(hand_landmarks) -> tuple[float, float]:
-    xs = [landmark.x for landmark in hand_landmarks]
-    ys = [landmark.y for landmark in hand_landmarks]
-    return sum(xs) / len(xs), sum(ys) / len(ys)
+def get_face_landmarker():
+    global face_landmarker
+
+    if face_landmarker is not None:
+        return face_landmarker
+
+    if not FACE_MODEL_PATH.exists():
+        raise FileNotFoundError(f"MediaPipe face landmarker model not found: {FACE_MODEL_PATH}")
+
+    face_options = face_landmarker_module.FaceLandmarkerOptions(
+        base_options=python.BaseOptions(model_asset_path=str(FACE_MODEL_PATH)),
+        running_mode=RunningMode.IMAGE,
+        num_faces=1,
+        min_face_detection_confidence=0.5,
+        min_face_presence_confidence=0.5,
+        min_tracking_confidence=0.5,
+        output_face_blendshapes=True,
+    )
+
+    face_landmarker = face_landmarker_module.FaceLandmarker.create_from_options(face_options)
+    return face_landmarker
+
+
+def is_pinch(hand_landmarks) -> bool:
+    thumb_tip = hand_landmarks[4]
+    index_tip = hand_landmarks[8]
+
+    distance = (
+        (thumb_tip.x - index_tip.x) ** 2 +
+        (thumb_tip.y - index_tip.y) ** 2
+    ) ** 0.5
+
+    return distance < PINCH_THRESHOLD
+
 
 def find_zone(x: float, y: float) -> DrumZone | None:
     for zone in DRUM_ZONES:
         if zone.contains(x, y):
             return zone
     return None
+
 
 def draw_drum_zones(frame, active_zone_names: set[str]) -> None:
     overlay = frame.copy()
@@ -67,7 +106,6 @@ def draw_drum_zones(frame, active_zone_names: set[str]) -> None:
         left, top, right, bottom = zone.pixel_rect(width, height)
         is_active = zone.name in active_zone_names
         fill_color = (0, 120, 255) if is_active else (45, 45, 45)
-
         cv2.rectangle(overlay, (left, top), (right, bottom), fill_color, -1)
 
     cv2.addWeighted(overlay, 0.18, frame, 0.82, 0.0, frame)
@@ -88,119 +126,158 @@ def draw_drum_zones(frame, active_zone_names: set[str]) -> None:
             2,
         )
 
-# Initialize GestureRecognizer
-MODEL_PATH = Path(__file__).with_name("gesture_recognizer.task")
+
+def detect_mouth_open(mp_image, was_open: bool) -> bool:
+    landmarker = get_face_landmarker()
+    face_result = landmarker.detect(mp_image)
+
+    if not face_result.face_blendshapes:
+        return False
+
+    jaw_open_score = 0.0
+
+    for blendshape in face_result.face_blendshapes[0]:
+        if blendshape.index == JAW_OPEN_BLENDSHAPE_INDEX or blendshape.category_name in ("jawOpen", "JAW_OPEN"):
+            jaw_open_score = blendshape.score
+            break
+
+    threshold = MOUTH_OPEN_OFF_THRESHOLD if was_open else MOUTH_OPEN_ON_THRESHOLD
+    return jaw_open_score >= threshold
+
+
 if not MODEL_PATH.exists():
     raise FileNotFoundError(f"MediaPipe gesture recognizer model not found: {MODEL_PATH}")
 
 base_options = python.BaseOptions(model_asset_path=str(MODEL_PATH))
 ClassifierOptions = mp.tasks.components.processors.ClassifierOptions
 
-# Configure the options with custom thresholds
 options = vision.GestureRecognizerOptions(
-    base_options=base_options, 
+    base_options=base_options,
     num_hands=2,
-    min_hand_detection_confidence=0.1, # Minimum confidence for hand detection
-    min_tracking_confidence=0.1,       # Minimum confidence for hand tracking
-    canned_gesture_classifier_options=ClassifierOptions(
-        score_threshold=0.1           # Minimum confidence for gesture recognition
-    )
+    min_hand_detection_confidence=0.1,
+    min_tracking_confidence=0.1,
+    canned_gesture_classifier_options=ClassifierOptions(score_threshold=0.1),
 )
 
 recognizer = vision.GestureRecognizer.create_from_options(options)
 
-# This dictionary MUST be global to persist state between frames
-previous_zone_by_hand = {"Left": None, "Right": None}
 
-def drum_detect(recognition_result): 
-    # These are now local to the function, created fresh for each frame
+def drum_detect(recognition_result, mp_image=None):
+    global active_triggered_zones
+    global previous_mouth_open
+
     active_zone_names: set[str] = set()
     displayed_hand_positions: dict[str, tuple[float, float]] = {}
-    detected_labels = set()
+    processed_labels = set()
 
     drum_payload = {
+        "instrument": "drums",
         "rightHandVisible": False,
         "leftHandVisible": False,
         "rightHandX": 0.0,
         "rightHandY": 0.0,
         "leftHandX": 0.0,
         "leftHandY": 0.0,
-        "rightGesture": "None",
-        "leftGesture": "None",
         "leftDrumHit": False,
         "leftDrumType": 38,
         "leftDrumVelocity": DEFAULT_DRUM_VELOCITY,
         "rightDrumHit": False,
         "rightDrumType": 42,
         "rightDrumVelocity": DEFAULT_DRUM_VELOCITY,
+        "mouthKickHit": False,
     }
-      
+
+    if mp_image is not None:
+        is_mouth_open = detect_mouth_open(mp_image, previous_mouth_open)
+
+        if is_mouth_open and not previous_mouth_open:
+            drum_payload["mouthKickHit"] = True
+
+        previous_mouth_open = is_mouth_open
+
+    hands_in_zones = {}
+
     if recognition_result.handedness:
-        for i, (hand_landmarks, handedness, gestures) in enumerate(zip(
-            recognition_result.hand_landmarks, 
+        for hand_landmarks, handedness, gestures in zip(
+            recognition_result.hand_landmarks,
             recognition_result.handedness,
-            recognition_result.gestures
-        )):
-            label = handedness[0].category_name  # "Left" or "Right"
-            detected_labels.add(label)
+            recognition_result.gestures,
+        ):
+            label = handedness[0].category_name
 
-            # Get default gesture from the model
-            gesture_name = gestures[0].category_name if gestures else "None"
+            if label in processed_labels:
+                continue
 
-            X_RIGHT_MIN = 0.0 
-            X_RIGHT_MAX = 0.67 
+            processed_labels.add(label)
+
+            pinch = is_pinch(hand_landmarks)
+
+            index_tip = hand_landmarks[8]
+            display_x = 1.0 - index_tip.x
+            display_y = index_tip.y
+
+            displayed_hand_positions[label] = (display_x, display_y)
 
             if label == "Right":
                 drum_payload["rightHandVisible"] = True
-                drum_payload["rightGesture"] = gesture_name
+                drum_payload["rightHandX"] = display_x
+                drum_payload["rightHandY"] = display_y
             else:
                 drum_payload["leftHandVisible"] = True
-                drum_payload["leftGesture"] = gesture_name
+                drum_payload["leftHandX"] = display_x
+                drum_payload["leftHandY"] = display_y
 
-            if CAMERA_MODE == "drums":
-                hand_center_x, hand_center_y = compute_hand_center(hand_landmarks)
-                display_x = 1.0 - hand_center_x
-                display_y = hand_center_y
-                displayed_hand_positions[label] = (display_x, display_y)
+            zone = find_zone(display_x, display_y)
 
-                zone = find_zone(display_x, display_y)
-                previous_zone_name = previous_zone_by_hand.get(label)
-                current_zone_name = zone.name if zone is not None else None
+            if zone is not None:
+                hands_in_zones[zone.name] = (pinch, label, zone)
 
-                # Trigger hit ONLY if hand is inside zone AND gesture is Open_Palm
-                if zone is not None and gesture_name == "Open_Palm":
-                    active_zone_names.add(zone.name)
-                    if current_zone_name != previous_zone_name:
-                        prefix = "right" if label == "Right" else "left"
-                        drum_payload[f"{prefix}DrumHit"] = True
-                        drum_payload[f"{prefix}DrumType"] = zone.note
-                        drum_payload[f"{prefix}DrumVelocity"] = DEFAULT_DRUM_VELOCITY
+    zones_to_remove = set()
 
-                    # Register zone to prevent continuous triggering while hand stays open
-                    previous_zone_by_hand[label] = current_zone_name
-                else:
-                    # Reset state if hand is closed or moves outside the zone
-                    # This allows triggering a new hit by opening the hand again
-                    previous_zone_by_hand[label] = None
+    for zone_name in active_triggered_zones:
+        if zone_name not in hands_in_zones:
+            zones_to_remove.add(zone_name)
+        else:
+            pinch, _, _ = hands_in_zones[zone_name]
 
-    for label in previous_zone_by_hand:
-        if label not in detected_labels:
-            previous_zone_by_hand[label] = None
-    
+            if not pinch:
+                zones_to_remove.add(zone_name)
+
+    active_triggered_zones.difference_update(zones_to_remove)
+
+    for zone_name, (pinch, label, zone) in hands_in_zones.items():
+        if pinch:
+            active_zone_names.add(zone_name)
+
+            if zone_name not in active_triggered_zones:
+                prefix = "right" if label == "Right" else "left"
+
+                drum_payload[f"{prefix}DrumHit"] = True
+                drum_payload[f"{prefix}DrumType"] = zone.note
+                drum_payload[f"{prefix}DrumVelocity"] = DEFAULT_DRUM_VELOCITY
+
+                active_triggered_zones.add(zone_name)
+
     return drum_payload, active_zone_names, displayed_hand_positions
 
-def get_drum_hit_coordinates(display_frame, frame_height, frame_width, active_zone_names, displayed_hand_positions):
+
+def get_drum_hit_coordinates(
+    display_frame,
+    frame_height,
+    frame_width,
+    active_zone_names,
+    displayed_hand_positions,
+):
     draw_drum_zones(display_frame, active_zone_names)
-    for label, position in displayed_hand_positions.items():
+
+    for _, position in displayed_hand_positions.items():
         center_x = int(position[0] * frame_width)
         center_y = int(position[1] * frame_height)
-        cv2.circle(display_frame, center=(center_x, center_y), radius=10, color=(0, 180, 255), thickness=-1)
-        cv2.putText(
+
+        cv2.circle(
             display_frame,
-            label,
-            (center_x + 10, center_y - 10),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.5,
-            (0, 180, 255),
-            2,
+            center=(center_x, center_y),
+            radius=10,
+            color=(0, 180, 255),
+            thickness=-1,
         )

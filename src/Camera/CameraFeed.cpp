@@ -1,5 +1,7 @@
 #include <iostream>
 #include <string>
+#include <sstream>
+#include <algorithm>
 
 #ifdef _WIN32
     #include <winsock2.h>
@@ -14,7 +16,7 @@
 
 #include "Core/GlobalState.h"
 
-// Minimal JSON field parser — no library needed for this simple payload
+// Minimal JSON field parser 
 static std::string parseValue(const std::string& json, const std::string& key) {
     auto pos = json.find("\"" + key + "\":");
     if (pos == std::string::npos) return {};
@@ -86,17 +88,41 @@ void startCameraFeed(GlobalState* state) {
         state->rightHandVisible.store(parseBool(json, "rightHandVisible"));
         state->leftHandVisible.store(parseBool(json,  "leftHandVisible"));
         state->rightHandX.store(parseFloat(json, "rightHandX"));
+        state->rightHandY.store(parseFloat(json, "rightHandY"));
+        state->leftHandX.store(parseFloat(json,  "leftHandX"));
         state->leftHandY.store(parseFloat(json,  "leftHandY"));
+        state->rightPinch.store(parseBool(json, "rightPinch"));
+        state->leftPinch.store(parseBool(json,  "leftPinch"));
+        state->rightThumbUp.store(parseBool(json,   "rightThumbUp"));
+        state->rightThumbDown.store(parseBool(json, "rightThumbDown"));
+        state->leftThumbUp.store(parseBool(json,    "leftThumbUp"));
+        state->leftThumbDown.store(parseBool(json,  "leftThumbDown"));
         state->leftDrumHit.store(parseBool(json, "leftDrumHit"));
         state->rightDrumHit.store(parseBool(json, "rightDrumHit"));
+        state->mouthKickHit.store(parseBool(json, "mouthKickHit"));
         state->leftDrumType.store(parseInt(json, "leftDrumType", state->leftDrumType.load()));
         state->rightDrumType.store(parseInt(json, "rightDrumType", state->rightDrumType.load()));
         state->leftDrumVelocity.store(parseInt(json, "leftDrumVelocity", state->leftDrumVelocity.load()));
         state->rightDrumVelocity.store(parseInt(json, "rightDrumVelocity", state->rightDrumVelocity.load()));
 
-        // std::cout << "R: " << state->rightHandVisible.load()
-        //           << "  x=" << state->rightHandX.load()
-        //           << "  y=" << state->leftHandY.load() << "\n";
+        auto updateNotes = [&](const std::string& key, bool isPressed) {
+            std::string noteStr = parseValue(json, key);
+            // Clean the string by stripping quotes
+            noteStr.erase(std::remove(noteStr.begin(), noteStr.end(), '\"'), noteStr.end());
+            
+            std::stringstream ss(noteStr);
+            std::string noteItem;
+            while (std::getline(ss, noteItem, ' ')) {
+                if (!noteItem.empty()) {
+                    int note = std::stoi(noteItem);
+                    if (note >= 0 && note < 128) {
+                        state->keyboardState[note].store(isPressed);
+                    }
+                }
+            }
+        };
+        updateNotes("notesOn", true);
+        updateNotes("notesOff", false);
     }
 
     state->cameraSessionActive.store(false);

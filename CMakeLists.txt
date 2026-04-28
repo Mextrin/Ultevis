@@ -14,7 +14,16 @@ if(MSVC)
     add_compile_options(/FS)
 endif()
 
+# 1. Removed Multimedia since Audio/Video is handled by JUCE and OpenCV
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2)
+
+# 2. Turn on the Qt Compilers BEFORE the executable
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
 add_subdirectory(JUCE)
+set(SFIZZ_USE_SYSTEM_CXXOPTS ON CACHE BOOL "Use system cxxopts for sfizz" FORCE)
 set(SFIZZ_GIT_SUBMODULE_CHECK OFF CACHE BOOL "Disable sfizz's git submodule check in superbuilds" FORCE)
 add_subdirectory(sfizz)
 
@@ -24,12 +33,27 @@ target_sources(Airchestra PRIVATE
     src/main.cpp
     src/Audio/AudioEngine.cpp
     src/Audio/OscillatorVoice.cpp
-    src/App/AppController.cpp
-    src/Input/TerminalUI.cpp
     src/Camera/CameraFeed.cpp
+
+    src/airchestra/AppEngine.cpp
+    src/airchestra/EventLogger.cpp
+
+    src/airchestra/AppEngine.h
+    src/airchestra/ViewState.h
+    src/airchestra/EventLogger.h
+    src/airchestra/VideoReceiver.h
+    
+    src/Core/GlobalState.h
+    src/Audio/AudioEngine.h
+
+    resources.qrc
 )
 
 target_link_libraries(Airchestra PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Quick
+    Qt6::QuickControls2
     juce::juce_core
     juce::juce_audio_devices
     juce::juce_audio_basics

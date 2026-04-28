@@ -34,6 +34,8 @@ public:
     void processDrums(juce::AudioBuffer<float>& buffer, int numSamples);
     void processKeyboard(juce::AudioBuffer<float>& buffer, int numSamples);
     bool isMidiEnabled() const;
+    std::vector<std::pair<std::string, std::string>> getAvailableMidiDevices() const;
+    void openMidiDevice(const std::string& identifier);
 
 private:
     void resetDrumPlaybackState();
@@ -54,7 +56,6 @@ private:
     int loadedKeyboardInstrumentID = -1;
 
     bool wasRightVisible = false;
-    bool wasKeyPressed = false;
-    int lastPlayedKey = -1; // -1 means no key is playing
     bool wasSustainPedalPressed = false;
+    std::array<bool, 128> internalKeyboardState {};
 };
