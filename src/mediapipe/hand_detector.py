@@ -100,7 +100,7 @@ try:
 
                 black_frame = np.zeros((480, 640, 3), dtype=np.uint8)
                 cv2.imwrite(temp_frame_path, black_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
-                os.replace(temp_frame_path, final_frame_path)
+                safe_replace(temp_frame_path, final_frame_path)
                 
             else:
                 # Turn the webcam back on!
