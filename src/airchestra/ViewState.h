@@ -33,6 +33,9 @@ class ViewState : public QObject
 
     Q_PROPERTY(float masterVolume READ masterVolume WRITE setMasterVolume NOTIFY masterVolumeChanged)
 
+    Q_PROPERTY(bool sustainPedal READ sustainPedal WRITE setSustainPedal NOTIFY sustainPedalChanged)
+
+
 public:
     explicit ViewState(QObject* parent = nullptr) : QObject(parent) {}
 
@@ -92,6 +95,12 @@ public:
         if (m_masterVolume != v) { m_masterVolume = v; emit masterVolumeChanged(); }
     }
 
+    bool sustainPedal() const { return m_sustainPedal; }
+    void setSustainPedal(bool v)
+    {
+        if (m_sustainPedal != v) { m_sustainPedal = v; emit sustainPedalChanged(); }
+    }
+
 signals:
     void currentScreenChanged();
     void sessionRunningChanged();
@@ -104,6 +113,8 @@ signals:
     void thereminVolumeFloorChanged();
 
     void masterVolumeChanged();
+    void sustainPedalChanged();
+
 
 private:
     AppScreen screen = AppScreen::Landing;
@@ -118,6 +129,8 @@ private:
 
     float m_masterVolume = 1.0f;
     bool m_mouthKickEnabled = false;
+    bool m_sustainPedal = false;
+
 };
 
 }

@@ -63,6 +63,7 @@ public:
     Q_INVOKABLE void triggerKeyboardNote(int midiNote, int velocity);
     Q_INVOKABLE void releaseKeyboardNote(int midiNote);
     Q_INVOKABLE void adjustKeyboardOctave(int keyboardIndex, int delta);
+    Q_INVOKABLE void setSustainPedal(bool enabled);
 
     bool leftHandVisible() const { return m_leftHandVisible; }
     bool rightHandVisible() const { return m_rightHandVisible; }

@@ -217,6 +217,11 @@ void AppEngine::adjustKeyboardOctave(int keyboardIndex, int delta) {
     }
 }
 
+void AppEngine::setSustainPedal(bool enabled) {
+    globalState->sustainPedal.store(enabled);
+    state.setSustainPedal(enabled);
+}
+
 void AppEngine::refreshTrackedState() {
     if (globalState == nullptr)
         return;
