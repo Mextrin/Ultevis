@@ -30,7 +30,7 @@ if "%1"=="compile" (
 
 if "%1"=="run" (
     set "PATH=C:\Qt\6.11.0\msvc2022_64\bin;!PATH!"
-    set "ULTEVIS_LAUNCH_HAND_DETECTOR=1"
+    set "ULTEVIS_LAUNCH_HAND_DETECTOR=0"
     set "ULTEVIS_HAND_DETECTOR_SCRIPT=!HAND_DETECTOR_SCRIPT!"
 
     echo Running: "!EXE_DIR!"

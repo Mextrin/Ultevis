@@ -29,6 +29,16 @@ final_frame_path = os.path.join(TEMP_DIR, "airchestra_frame.jpg")
 
 requested_mode = "none"
 
+def safe_replace(src, dst, retries=10, delay=0.01):
+    for _ in range(retries):
+        try:
+            os.replace(src, dst)
+            return True
+        except PermissionError:
+            time.sleep(delay)
+    return False
+
+
 def command_listener():
     global requested_mode
     listen_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -189,7 +199,7 @@ try:
         resized_frame = cv2.resize(display_frame, (640, 480))
         
         cv2.imwrite(temp_frame_path, resized_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
-        os.replace(temp_frame_path, final_frame_path)
+        safe_replace(temp_frame_path, final_frame_path)
 
 finally:
     if cap is not None:

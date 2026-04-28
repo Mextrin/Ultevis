@@ -53,7 +53,7 @@ void launchHandDetectorIfRequested(const GlobalState& state)
     pythonProcess->setProcessChannelMode(QProcess::ForwardedChannels);
     
     // Launch Python natively!
-    pythonProcess->start("python3", QStringList() << scriptPath);
+    pythonProcess->start("python", QStringList() << scriptPath);
 }
 
 int main(int argc, char* argv[])
