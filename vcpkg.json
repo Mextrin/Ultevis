@@ -30,6 +30,11 @@
       "features": [
         "opengl3-binding"
       ]
-    }
+    },
+    "cxxopts",
+    "qtbase",
+    "qtdeclarative",
+    "qtsvg",
+    "qttools"
   ]
 }

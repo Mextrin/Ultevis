@@ -3,5 +3,6 @@
 /.vs/*
 /out/*
 /vcpkg/*
+/vcpkg_installed/*
 /src/mediapipe/__pycache__/*
 /Instruments/*

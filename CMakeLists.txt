@@ -23,6 +23,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 add_subdirectory(JUCE)
+set(SFIZZ_USE_SYSTEM_CXXOPTS ON CACHE BOOL "Use system cxxopts for sfizz" FORCE)
 set(SFIZZ_GIT_SUBMODULE_CHECK OFF CACHE BOOL "Disable sfizz's git submodule check in superbuilds" FORCE)
 add_subdirectory(sfizz)
 
