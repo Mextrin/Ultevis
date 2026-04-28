@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Controls
 import "components"
 
 Item {
@@ -397,54 +398,77 @@ Item {
         anchors.topMargin: 12
         z: 30
 
-        Text {
-            text: "VOLUME"
-            font.family: figTreeVariable.name
-            font.pixelSize: 11
-            font.weight: Font.DemiBold
-            font.letterSpacing: 1.5
-            color: "#E07826"
-        }
-
-        SettingsSlider {
-            label: "Min Volume"
-            unit: "%"
-            value: 10
-            from: 0
-            to: 100
-        }
-
-        SettingsSlider {
-            label: "Max Volume"
-            unit: "%"
-            value: 85
-            from: 0
-            to: 100
-        }
-
-        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
 
         Text {
-            text: "GESTURE CONTROL"
-            font.family: figTreeVariable.name
-            font.pixelSize: 11
-            font.weight: Font.DemiBold
-            font.letterSpacing: 1.5
-            color: "#E07826"
-        }
+    text: "MIDI OUTPUT"
+    font.family: figTreeVariable.name
+    font.pixelSize: 11
+    font.weight: Font.DemiBold
+    font.letterSpacing: 1.5
+    color: "#E07826"
+}
 
-        SettingsSlider {
-            label: "Key Sensitivity"
-            unit: "%"
-            value: 65
-            from: 10
-            to: 100
-        }
+ComboBox {
+    id: midiDeviceSelect
+    width: parent.width
+    height: 40
+    model: typeof appEngine !== "undefined" ? appEngine.midiDeviceNames : ["None"]
+    currentIndex: 0
 
-        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
+    Component.onCompleted: {
+        if (typeof appEngine !== "undefined") {
+            let idx = find(appEngine.currentMidiDevice)
+            if (idx !== -1) currentIndex = idx
+        }
+    }
+
+    Connections {
+        target: typeof appEngine !== "undefined" ? appEngine : null
+        function onCurrentMidiDeviceChanged() {
+            let idx = midiDeviceSelect.find(appEngine.currentMidiDevice)
+            if (idx !== -1 && midiDeviceSelect.currentIndex !== idx)
+                midiDeviceSelect.currentIndex = idx
+        }
+    }
+
+    onActivated: function(index) {
+        if (typeof appEngine !== "undefined")
+            appEngine.selectMidiDevice(currentText)
+    }
+
+    background: Rectangle {
+        color: Qt.rgba(1, 1, 1, 0.05)
+        radius: 6
+        border.color: Qt.rgba(1, 1, 1, 0.1)
+    }
+    contentItem: Text {
+        text: midiDeviceSelect.currentText
+        color: "#EBEDF0"
+        font.pixelSize: 14
+        verticalAlignment: Text.AlignVCenter
+        leftPadding: 12
+    }
+}
+
+SettingsSlider {
+    label: "Master Volume"
+    unit: "%"
+    from: 0
+    to: 100
+    stepSize: 1
+    width: parent.width
+    value: typeof appEngine !== "undefined" && appEngine.viewState ? (appEngine.viewState.masterVolume * 100) : 100
+    onValueChanged: {
+        if (typeof appEngine !== "undefined")
+            appEngine.setMasterVolume(value / 100.0)
+    }
+}
+
+Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
+
 
         Text {
-            text: "PLAYBACK"
+            text: "KEYBOARD SETTINGS"
             font.family: figTreeVariable.name
             font.pixelSize: 11
             font.weight: Font.DemiBold
