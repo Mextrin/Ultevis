@@ -383,7 +383,7 @@ Item {
 
     SettingsPanel {
         id: settingsPanel
-        title: "Keyboard Settings"
+        title: "Settings"
         font.family: figTreeVariable.name
 
         anchors.left: parent.left
@@ -450,30 +450,6 @@ Item {
         SettingsToggle {
             label: "Sustain"
             checked: false
-        }
-
-        Item {
-            width: parent.width
-            height: 36
-
-            Text {
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                text: "Velocity Curve"
-                font.family: figTreeVariable.name
-                font.pixelSize: 12
-                font.weight: Font.Medium
-                font.letterSpacing: 0.5
-                color: "#949AA5"
-            }
-
-            TypeSelector {
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                width: 140
-                model: ["Linear", "Exponential", "Logarithmic"]
-                currentIndex: 0
-            }
         }
     }
 }

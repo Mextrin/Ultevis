@@ -38,7 +38,7 @@ Rectangle {
 
             Text {
                 id: titleLabel
-                text: "Drum Settings"
+                text: "Settings"
                 color: "#EBEDF0"
                 font.pixelSize: 15
                 font.weight: Font.Medium
