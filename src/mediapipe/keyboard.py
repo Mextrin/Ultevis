@@ -48,6 +48,11 @@ def _stable_thumb_state(label: str, gesture_name: str, score: float) -> tuple[bo
 def _reset_thumb_history(label: str) -> None:
     _thumb_history.setdefault(label, deque(maxlen=_THUMB_DEBOUNCE_FRAMES)).clear()
 
+# --- State Tracking ---
+# Keep track of which notes are currently being played by each hand
+left_hand_notes = {}  # {note: True}
+right_hand_notes = {} # {note: True}
+# --------------------
 
 def detect_keyboard_hands(detection_result):
     keyboard_payload = {
@@ -161,11 +166,6 @@ def find_key_zone(x: float, y: float) -> KeyboardZone | None:
             return zone
     return None
 
-# --- State Tracking ---
-# Keep track of which notes are currently being played by each hand
-left_hand_notes = {}  # {note: True}
-right_hand_notes = {} # {note: True}
-# --------------------
 
 def detect_key_strokes(detection_result):
     global left_hand_notes, right_hand_notes
@@ -174,10 +174,6 @@ def detect_key_strokes(detection_result):
         "instrument": "keyboard",
         "rightHandVisible": False,
         "leftHandVisible": False,
-        "rightHandX": 0.0,
-        "rightHandY": 0.0,
-        "leftHandX": 0.0,
-        "leftHandY": 0.0,
         "notesOn": [],
         "notesOff": [],
     }
@@ -196,32 +192,38 @@ def detect_key_strokes(detection_result):
                 continue
             processed_labels.add(label)
 
-            # We'll use the index finger tip for hit detection
-            index_tip = hand_landmarks[8]
+            # Define all finger tips
+            finger_tips = {
+                "thumb": hand_landmarks[4],
+                "index": hand_landmarks[8],
+                "middle": hand_landmarks[12],
+                "ring": hand_landmarks[16],
+                "pinky": hand_landmarks[20],
+            }
 
-            display_x = 1.0 - index_tip.x
-            display_y = index_tip.y
-
+            # Set primary hand position using the index finger
+            display_x = 1.0 - finger_tips["index"].x
+            display_y = finger_tips["index"].y
             displayed_hand_positions[label] = (display_x, display_y)
 
-            if label == "Right":
-                keyboard_payload["rightHandVisible"] = True
-                keyboard_payload["rightHandX"] = display_x
-                keyboard_payload["rightHandY"] = display_y
-            else:
-                keyboard_payload["leftHandVisible"] = True
-                keyboard_payload["leftHandX"] = display_x
-                keyboard_payload["leftHandY"] = display_y
+            # Set visibility and finger coordinates in the payload
+            prefix = "right" if label == "Right" else "left"
+            keyboard_payload[f"{prefix}HandVisible"] = True
+            for name, tip in finger_tips.items():
+                keyboard_payload[f"{prefix}_{name}_X"] = 1.0 - tip.x
+                keyboard_payload[f"{prefix}_{name}_Y"] = tip.y
 
-            zone = find_key_zone(display_x, display_y)
-
-            # If a hand is in a zone, mark the note as active for that hand
-            if zone:
-                active_zone_names.add(zone.name)
-                if label == "Right":
-                    current_right_notes[zone.note] = True
-                else:
-                    current_left_notes[zone.note] = True
+            # Check for key presses with each finger
+            for tip in finger_tips.values():
+                mirrored_x = 1.0 - tip.x
+                zone = find_key_zone(mirrored_x, tip.y)
+            
+                if zone:
+                    active_zone_names.add(zone.name)
+                    if label == "Right":
+                        current_right_notes[zone.note] = True
+                    else:
+                        current_left_notes[zone.note] = True
 
     # Determine which notes to turn ON
     new_right_notes = [note for note in current_right_notes if note not in right_hand_notes]
