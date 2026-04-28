@@ -52,6 +52,17 @@ def _reset_thumb_history(label: str) -> None:
 # Keep track of which notes are currently being played by each hand
 left_hand_notes = {}  # {note: True}
 right_hand_notes = {} # {note: True}
+
+# Keep track of the last finger-to-wrist Y-distance to detect a "press"
+last_finger_wrist_dist = {} # {(hand_label, finger_name): distance}
+
+# Threshold for detecting a "press" (finger moving towards wrist)
+# A negative value means the finger is moving closer to the wrist.
+PRESS_DISTANCE_THRESHOLD = -0.015 
+
+# Threshold for detecting a "lift" to allow re-pressing the same key
+# A positive value means the finger is moving away from the wrist.
+LIFT_DISTANCE_THRESHOLD = 0.01
 # --------------------
 
 def detect_keyboard_hands(detection_result):
@@ -168,21 +179,23 @@ def find_key_zone(x: float, y: float) -> KeyboardZone | None:
 
 
 def detect_key_strokes(detection_result):
-    global left_hand_notes, right_hand_notes
+    global left_hand_notes, right_hand_notes, last_finger_wrist_dist
 
     keyboard_payload = {
         "instrument": "keyboard",
         "rightHandVisible": False,
         "leftHandVisible": False,
-        "notesOn": [],
-        "notesOff": [],
+        "notesOn": "",
+        "notesOff": "",
     }
-
+    
+    # This set is now ONLY for visual feedback on the frame of the press
     active_zone_names: set[str] = set()
     displayed_hand_positions: dict[str, tuple[float, float]] = {}
-
+    
     current_left_notes = {}
     current_right_notes = {}
+    current_finger_distances = {}
 
     if detection_result.handedness:
         processed_labels = set()
@@ -192,55 +205,83 @@ def detect_key_strokes(detection_result):
                 continue
             processed_labels.add(label)
 
-            # Define all finger tips
+            wrist_landmark = hand_landmarks[0]
             finger_tips = {
-                "thumb": hand_landmarks[4],
-                "index": hand_landmarks[8],
-                "middle": hand_landmarks[12],
-                "ring": hand_landmarks[16],
-                "pinky": hand_landmarks[20],
+                "thumb": hand_landmarks[4], "index": hand_landmarks[8],
+                "middle": hand_landmarks[12], "ring": hand_landmarks[16], "pinky": hand_landmarks[20],
             }
 
-            # Set primary hand position using the index finger
             display_x = 1.0 - finger_tips["index"].x
             display_y = finger_tips["index"].y
             displayed_hand_positions[label] = (display_x, display_y)
 
-            # Set visibility and finger coordinates in the payload
             prefix = "right" if label == "Right" else "left"
             keyboard_payload[f"{prefix}HandVisible"] = True
             for name, tip in finger_tips.items():
                 keyboard_payload[f"{prefix}_{name}_X"] = 1.0 - tip.x
                 keyboard_payload[f"{prefix}_{name}_Y"] = tip.y
+                
+                finger_id = (label, name)
+                
+                current_dist = tip.y - wrist_landmark.y
+                current_finger_distances[finger_id] = current_dist
+                
+                last_dist = last_finger_wrist_dist.get(finger_id, current_dist)
+                dist_velocity = current_dist - last_dist
 
-            # Check for key presses with each finger
-            for tip in finger_tips.values():
                 mirrored_x = 1.0 - tip.x
                 zone = find_key_zone(mirrored_x, tip.y)
-            
+
+                # Determine if the note for this finger is currently "on"
+                is_note_on = (label == "Right" and zone and zone.note in right_hand_notes) or \
+                             (label == "Left" and zone and zone.note in left_hand_notes)
+
                 if zone:
-                    active_zone_names.add(zone.name)
-                    if label == "Right":
-                        current_right_notes[zone.note] = True
-                    else:
-                        current_left_notes[zone.note] = True
+                    # --- PRESS LOGIC ---
+                    # A "press" happens if the note is OFF and finger moves down,
+                    # OR if the note is ON but the finger lifted and pressed again.
+                    finger_lifted = dist_velocity > LIFT_DISTANCE_THRESHOLD
+                    finger_pressed = dist_velocity < PRESS_DISTANCE_THRESHOLD
+
+                    if (not is_note_on and finger_pressed) or (is_note_on and finger_lifted):
+                        # This condition allows re-triggering after a lift.
+                        # For the next frame, we need to detect a press again.
+                        pass # Let the logic below handle the press
+
+                    if finger_pressed:
+                        # Only add to visuals and audio if it's a new press
+                        if not is_note_on:
+                            active_zone_names.add(zone.name) # Visual feedback
+                            if label == "Right":
+                                current_right_notes[zone.note] = True
+                            else:
+                                current_left_notes[zone.note] = True
+                    
+                    # --- SUSTAIN LOGIC ---
+                    # If the note was already on, keep it on as long as the finger is in the zone.
+                    elif is_note_on:
+                        if label == "Right":
+                            current_right_notes[zone.note] = True
+                        else:
+                            current_left_notes[zone.note] = True
+
+    # Update the last known distances for the next frame
+    last_finger_wrist_dist = current_finger_distances
 
     # Determine which notes to turn ON
     new_right_notes = [note for note in current_right_notes if note not in right_hand_notes]
     new_left_notes = [note for note in current_left_notes if note not in left_hand_notes]
-
-    new_on = new_right_notes + new_left_notes
-    keyboard_payload["notesOn"] = " ".join(map(str, new_on))
+    if new_right_notes or new_left_notes:
+        keyboard_payload["notesOn"] = " ".join(map(str, new_right_notes + new_left_notes))
 
     # Determine which notes to turn OFF
     stopped_right_notes = [note for note in right_hand_notes if note not in current_right_notes]
     stopped_left_notes = [note for note in left_hand_notes if note not in current_left_notes]
-
-    new_off = stopped_right_notes + stopped_left_notes
-    keyboard_payload["notesOff"] = " ".join(map(str, new_off))
+    if stopped_right_notes or stopped_left_notes:
+        keyboard_payload["notesOff"] = " ".join(map(str, stopped_right_notes + stopped_left_notes))
 
     # Update the state for the next frame
     right_hand_notes = current_right_notes
     left_hand_notes = current_left_notes
-
+    
     return keyboard_payload, active_zone_names, displayed_hand_positions
