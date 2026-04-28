@@ -12,7 +12,7 @@ import time # Needed to put the CPU to sleep
 
 from theremin import detect_hands, draw_circle, add_theremin_text, recognizer as theremin_recognizer
 from drums import drum_detect, get_drum_hit_coordinates, recognizer as drum_recognizer
-from keyboard import detect_keyboard_hands
+from keyboard import detect_key_strokes, draw_keyboard_zones, detect_keyboard_hands
 
 UDP_IP = "127.0.0.1"
 UDP_PORT = 5005
@@ -126,11 +126,20 @@ try:
         detected_labels = set()
 
         if CAMERA_MODE == "keyboard":
-            payload = detect_keyboard_hands(recognition_result)
+            # Get the main payload and drawing info from detect_key_strokes
+            payload, active_zone_names, displayed_hand_positions = detect_key_strokes(recognition_result)
+            
+            # Get the pinch information from the other function
+            pinch_payload = detect_keyboard_hands(recognition_result)
+            
+            # Add the pinch info to the main payload, else it will gte overwritten in the next frame and cause missed notes
+            payload['rightPinch'] = pinch_payload.get('rightPinch', False)
+            payload['leftPinch'] = pinch_payload.get('leftPinch', False)
+
         elif INSTRUMENT == 0:
             payload = detect_hands(recognition_result)
         else:
-            payload, active_zones, hand_positions = drum_detect(recognition_result, image)
+            payload, active_zone_names, displayed_hand_positions = drum_detect(recognition_result, image)
             
         sock.sendto(json.dumps(payload).encode(), (UDP_IP, UDP_PORT))
         display_frame = cv2.flip(frame, 1)       
@@ -139,12 +148,19 @@ try:
         frame_height, frame_width = h, w
 
         if CAMERA_MODE == "keyboard":
-            pass
+            # Draw the keyboard zones
+            draw_keyboard_zones(display_frame, active_zone_names)
+            # Draw circles for hand positions
+            for label, position in displayed_hand_positions.items():
+                center_x = int(position[0] * frame_width)
+                center_y = int(position[1] * frame_height)
+                cv2.circle(display_frame, center=(center_x, center_y), radius=10, color=(0, 180, 255), thickness=-1)
         elif INSTRUMENT == 0:
             draw_circle(display_frame, frame_height, frame_width, recognition_result)
             add_theremin_text(display_frame, payload)
         else:
-            get_drum_hit_coordinates(display_frame, frame_height, frame_width, active_zones, hand_positions)
+            # The drum drawing function is called get_drum_hit_coordinates, let's keep it consistent
+            get_drum_hit_coordinates(display_frame, frame_height, frame_width, active_zone_names, displayed_hand_positions)
 
             left_gesture_text = "None"
             right_gesture_text = "None"
