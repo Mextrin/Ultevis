@@ -12,7 +12,7 @@ import time # Needed to put the CPU to sleep
 
 from theremin import detect_hands, draw_circle, add_theremin_text, recognizer as theremin_recognizer
 from drums import drum_detect, get_drum_hit_coordinates, recognizer as drum_recognizer
-from keyboard import detect_key_strokes, draw_keyboard_zones, detect_keyboard_hands
+from keyboard import detect_key_strokes, draw_keyboard_zones, detect_keyboard_hands, recognizer as keyboard_recognizer
 
 UDP_IP = "127.0.0.1"
 UDP_PORT = 5005
@@ -110,7 +110,10 @@ try:
                     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 10000)
                     
                 INSTRUMENT = 1 if CAMERA_MODE == "drums" else 0
-                recognizer = drum_recognizer if INSTRUMENT == 1 else theremin_recognizer
+                if CAMERA_MODE == "keyboard":
+                    recognizer = keyboard_recognizer
+                else:
+                    recognizer = drum_recognizer if INSTRUMENT == 1 else theremin_recognizer
 
         # If we are in 'none' mode, put the CPU to sleep for a fraction of a second and skip the AI
         if CAMERA_MODE == "none" or cap is None:
@@ -126,9 +129,11 @@ try:
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
         
-        if INSTRUMENT == 0: 
+        if CAMERA_MODE == "keyboard":
+            recognition_result = recognizer.recognize_for_video(image, current_timestamp_ms)
+        elif INSTRUMENT == 0:
             recognition_result = recognizer.detect_for_video(image, current_timestamp_ms)
-        else: 
+        else:
             recognition_result = recognizer.recognize(image)
 
         active_zone_names: set[str] = set()
@@ -139,12 +144,26 @@ try:
             # Get the main payload and drawing info from detect_key_strokes
             payload, active_zone_names, displayed_hand_positions = detect_key_strokes(recognition_result)
             
-            # Get the pinch information from the other function
-            pinch_payload = detect_keyboard_hands(recognition_result)
+            # Get display-space hand positions plus gesture information for the QML overlay.
+            gesture_payload = detect_keyboard_hands(recognition_result)
             
-            # Add the pinch info to the main payload, else it will get overwritten in the next frame and cause missed notes
-            payload['rightPinch'] = pinch_payload.get('rightPinch', False)
-            payload['leftPinch'] = pinch_payload.get('leftPinch', False)
+            # Add the hand/gesture info to the main payload, else it will get overwritten
+            # in the next frame and cause missed QML hit-tests.
+            for key in (
+                "rightHandVisible",
+                "leftHandVisible",
+                "rightHandX",
+                "rightHandY",
+                "leftHandX",
+                "leftHandY",
+                "rightPinch",
+                "leftPinch",
+                "rightThumbUp",
+                "rightThumbDown",
+                "leftThumbUp",
+                "leftThumbDown",
+            ):
+                payload[key] = gesture_payload.get(key, payload.get(key, False))
 
         elif INSTRUMENT == 0:
             payload = detect_hands(recognition_result)

@@ -11,6 +11,8 @@ Item {
     readonly property bool engineReady: typeof appEngine !== "undefined"
     readonly property int k1Octave: engineReady ? appEngine.topKeyboardOctave : 3
     readonly property int k2Octave: engineReady ? appEngine.bottomKeyboardOctave : 5
+    property int counterFlashKeyboard: 0
+    property int counterFlashDelta: 0
 
     function handInsideItem(item, x, y) {
         if (!item || cameraViewport.width <= 0 || cameraViewport.height <= 0)
@@ -34,19 +36,45 @@ Item {
         return leftHandInside(item) || rightHandInside(item)
     }
 
-    function anyPinchInside(item) {
+    function anyThumbUpInside(item) {
         if (settingsPanel.open)
             return false
 
-        return (engineReady && appEngine.leftHandVisible && appEngine.leftPinch
+        return (engineReady && appEngine.leftHandVisible && appEngine.leftThumbUp
                 && handInsideItem(item, appEngine.leftHandX, appEngine.leftHandY))
-            || (engineReady && appEngine.rightHandVisible && appEngine.rightPinch
+            || (engineReady && appEngine.rightHandVisible && appEngine.rightThumbUp
+                && handInsideItem(item, appEngine.rightHandX, appEngine.rightHandY))
+    }
+
+    function anyThumbDownInside(item) {
+        if (settingsPanel.open)
+            return false
+
+        return (engineReady && appEngine.leftHandVisible && appEngine.leftThumbDown
+                && handInsideItem(item, appEngine.leftHandX, appEngine.leftHandY))
+            || (engineReady && appEngine.rightHandVisible && appEngine.rightThumbDown
                 && handInsideItem(item, appEngine.rightHandX, appEngine.rightHandY))
     }
 
     function adjustKeyboardOctave(keyboardIndex, delta) {
         if (engineReady)
             appEngine.adjustKeyboardOctave(keyboardIndex, delta)
+    }
+
+    function flashOctaveCounter(keyboardIndex, delta) {
+        counterFlashKeyboard = keyboardIndex
+        counterFlashDelta = delta
+        counterFlashTimer.restart()
+    }
+
+    Timer {
+        id: counterFlashTimer
+        interval: 420
+        repeat: false
+        onTriggered: {
+            root.counterFlashKeyboard = 0
+            root.counterFlashDelta = 0
+        }
     }
 
     FontLoader {
@@ -114,7 +142,7 @@ Item {
                 Row {
                     id: octaveControls
                     width: parent.width
-                    height: Math.max(112, Math.min(150, parent.height * 0.22))
+                    height: Math.max(58, Math.min(82, parent.height * 0.12))
                     spacing: 0
 
                     OctaveGroup {
@@ -137,12 +165,14 @@ Item {
                 KeyboardZone {
                     width: parent.width
                     height: (parent.height - octaveControls.height) / 2
+                    keyboardIndex: 1
                     label: "Keyboard Octave 1"
                 }
 
                 KeyboardZone {
                     width: parent.width
                     height: (parent.height - octaveControls.height) / 2
+                    keyboardIndex: 2
                     label: "Keyboard Octave 2"
                 }
             }
@@ -154,111 +184,48 @@ Item {
         property int keyboardIndex: 1
         property string title: "K1 Octave"
         property int octaveValue: 3
+        readonly property int flashDelta: root.counterFlashKeyboard === keyboardIndex ? root.counterFlashDelta : 0
 
         Rectangle {
             anchors.fill: parent
-            color: Qt.rgba(0.015, 0.018, 0.024, 0.34)
+            color: group.flashDelta > 0 ? Qt.rgba(0.12, 0.72, 0.36, 0.42)
+                  : group.flashDelta < 0 ? Qt.rgba(0.9, 0.16, 0.16, 0.42)
+                  : Qt.rgba(0.015, 0.018, 0.024, 0.34)
             border.width: 1
-            border.color: Qt.rgba(1, 1, 1, 0.32)
+            border.color: group.flashDelta > 0 ? "#2FE174"
+                        : group.flashDelta < 0 ? "#FF4D4D"
+                        : Qt.rgba(1, 1, 1, 0.32)
+
+            Behavior on color { ColorAnimation { duration: 130 } }
+            Behavior on border.color { ColorAnimation { duration: 130 } }
         }
 
-        Column {
+        Item {
             anchors.fill: parent
-            spacing: 0
 
-            Item {
-                width: parent.width
-                height: Math.max(44, parent.height * 0.44)
-
-                Text {
-                    anchors.centerIn: parent
-                    text: group.title + " " + group.octaveValue
-                    font.family: figTreeVariable.name
-                    font.pixelSize: Math.max(20, Math.min(34, parent.height * 0.48))
-                    font.weight: Font.Medium
-                    color: "#EBEDF0"
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
+            Text {
+                anchors.centerIn: parent
+                text: group.title + " " + group.octaveValue
+                font.family: figTreeVariable.name
+                font.pixelSize: Math.max(20, Math.min(34, parent.height * 0.48))
+                font.weight: Font.Medium
+                color: "#EBEDF0"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
             }
-
-            Row {
-                width: parent.width
-                height: parent.height - y
-                spacing: 0
-
-                OctaveButton {
-                    width: parent.width / 2
-                    height: parent.height
-                    keyboardIndex: group.keyboardIndex
-                    delta: 1
-                    label: "Up"
-                }
-
-                OctaveButton {
-                    width: parent.width / 2
-                    height: parent.height
-                    keyboardIndex: group.keyboardIndex
-                    delta: -1
-                    label: "Down"
-                }
-            }
-        }
-    }
-
-    component OctaveButton: Rectangle {
-        id: control
-        property int keyboardIndex: 1
-        property int delta: 1
-        property string label: "Up"
-        property bool handHover: root.anyHandInside(control)
-        property bool pinchHover: root.anyPinchInside(control)
-        property bool pinchArmed: true
-
-        color: pinchHover ? Qt.rgba(0.878, 0.478, 0.149, 0.36)
-                          : handHover || mouseArea.containsMouse
-                            ? Qt.rgba(0.878, 0.478, 0.149, 0.18)
-                            : Qt.rgba(1, 1, 1, 0.045)
-        border.width: 1
-        border.color: pinchHover ? "#E07A26"
-                                  : handHover || mouseArea.containsMouse
-                                    ? Qt.rgba(0.878, 0.478, 0.149, 0.72)
-                                    : Qt.rgba(1, 1, 1, 0.30)
-
-        Behavior on color { ColorAnimation { duration: 120 } }
-        Behavior on border.color { ColorAnimation { duration: 120 } }
-
-        onPinchHoverChanged: {
-            if (pinchHover && pinchArmed) {
-                pinchArmed = false
-                root.adjustKeyboardOctave(keyboardIndex, delta)
-            } else if (!pinchHover) {
-                pinchArmed = true
-            }
-        }
-
-        Text {
-            anchors.centerIn: parent
-            text: control.label
-            font.family: figTreeVariable.name
-            font.pixelSize: Math.max(18, Math.min(30, parent.height * 0.42))
-            font.weight: Font.Medium
-            color: "#EBEDF0"
-        }
-
-        MouseArea {
-            id: mouseArea
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: root.adjustKeyboardOctave(control.keyboardIndex, control.delta)
         }
     }
 
     component KeyboardZone: Rectangle {
         id: zone
+        property int keyboardIndex: 1
         property string label: "Keyboard Octave"
         property bool active: root.anyHandInside(zone)
+        property bool thumbUpHover: root.anyThumbUpInside(zone)
+        property bool thumbDownHover: root.anyThumbDownInside(zone)
+        property bool octaveGestureActive: thumbUpHover || thumbDownHover
+        property int octaveGestureDelta: thumbUpHover ? 1 : (thumbDownHover ? -1 : 0)
+        property bool gestureLocked: false
 
         color: active ? Qt.rgba(0.878, 0.478, 0.149, 0.23)
                       : Qt.rgba(1, 1, 1, 0.035)
@@ -268,6 +235,29 @@ Item {
         Behavior on color { ColorAnimation { duration: 140 } }
         Behavior on border.color { ColorAnimation { duration: 140 } }
         Behavior on border.width { NumberAnimation { duration: 140 } }
+
+        onOctaveGestureDeltaChanged: {
+            if (octaveGestureDelta !== 0) {
+                gestureReleaseTimer.stop()
+                if (!gestureLocked) {
+                    gestureLocked = true
+                    root.flashOctaveCounter(keyboardIndex, octaveGestureDelta)
+                    root.adjustKeyboardOctave(keyboardIndex, octaveGestureDelta)
+                }
+            } else {
+                gestureReleaseTimer.restart()
+            }
+        }
+
+        Timer {
+            id: gestureReleaseTimer
+            interval: 500
+            repeat: false
+            onTriggered: {
+                if (!zone.octaveGestureActive)
+                    zone.gestureLocked = false
+            }
+        }
 
         Text {
             anchors.centerIn: parent

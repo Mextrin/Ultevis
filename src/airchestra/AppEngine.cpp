@@ -197,7 +197,7 @@ void AppEngine::adjustKeyboardOctave(int keyboardIndex, int delta) {
 
     if (keyboardIndex == 1) {
         const int current = globalState->topKeyboardOctave.load();
-        const int next = qBound(0, current + delta, 8);
+        const int next = qBound(1, current + delta, 8);
         if (next == current)
             return;
 
@@ -208,7 +208,7 @@ void AppEngine::adjustKeyboardOctave(int keyboardIndex, int delta) {
 
     if (keyboardIndex == 2) {
         const int current = globalState->bottomKeyboardOctave.load();
-        const int next = qBound(0, current + delta, 8);
+        const int next = qBound(1, current + delta, 8);
         if (next == current)
             return;
 
@@ -238,6 +238,10 @@ void AppEngine::refreshTrackedState() {
     const qreal nextRightHandY = globalState->rightHandY.load();
     const bool nextLeftPinch = globalState->leftPinch.load();
     const bool nextRightPinch = globalState->rightPinch.load();
+    const bool nextLeftThumbUp = globalState->leftThumbUp.load();
+    const bool nextLeftThumbDown = globalState->leftThumbDown.load();
+    const bool nextRightThumbUp = globalState->rightThumbUp.load();
+    const bool nextRightThumbDown = globalState->rightThumbDown.load();
 
     const bool handChanged =
         m_leftHandVisible != nextLeftHandVisible ||
@@ -247,7 +251,11 @@ void AppEngine::refreshTrackedState() {
         m_rightHandX != nextRightHandX ||
         m_rightHandY != nextRightHandY ||
         m_leftPinch != nextLeftPinch ||
-        m_rightPinch != nextRightPinch;
+        m_rightPinch != nextRightPinch ||
+        m_leftThumbUp != nextLeftThumbUp ||
+        m_leftThumbDown != nextLeftThumbDown ||
+        m_rightThumbUp != nextRightThumbUp ||
+        m_rightThumbDown != nextRightThumbDown;
 
     m_leftHandVisible = nextLeftHandVisible;
     m_rightHandVisible = nextRightHandVisible;
@@ -257,6 +265,10 @@ void AppEngine::refreshTrackedState() {
     m_rightHandY = nextRightHandY;
     m_leftPinch = nextLeftPinch;
     m_rightPinch = nextRightPinch;
+    m_leftThumbUp = nextLeftThumbUp;
+    m_leftThumbDown = nextLeftThumbDown;
+    m_rightThumbUp = nextRightThumbUp;
+    m_rightThumbDown = nextRightThumbDown;
 
     if (handChanged)
         emit handStateChanged();
