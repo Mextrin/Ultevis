@@ -59,6 +59,7 @@ public:
     Q_INVOKABLE void setThereminVolumeFloor(float v);
 
     Q_INVOKABLE void triggerDrumHit(int midiNote, int velocity);
+    Q_INVOKABLE void setMouthKickEnabled(bool enabled);
     Q_INVOKABLE void triggerKeyboardNote(int midiNote, int velocity);
     Q_INVOKABLE void releaseKeyboardNote(int midiNote);
     Q_INVOKABLE void adjustKeyboardOctave(int keyboardIndex, int delta);
