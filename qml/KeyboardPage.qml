@@ -449,7 +449,12 @@ Item {
 
         SettingsToggle {
             label: "Sustain"
-            checked: false
+            checked: typeof appEngine !== "undefined" && appEngine.viewState ? appEngine.viewState.sustainPedal : false
+            onCheckedChanged: {
+                if (typeof appEngine !== "undefined") {
+                    appEngine.setSustainPedal(checked)
+                }
+            }
         }
     }
 }
