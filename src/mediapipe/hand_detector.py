@@ -167,34 +167,10 @@ try:
                 cv2.circle(display_frame, center=(center_x, center_y), radius=10, color=(0, 180, 255), thickness=-1)
         elif INSTRUMENT == 0:
             draw_circle(display_frame, frame_height, frame_width, recognition_result)
-            add_theremin_text(display_frame, payload)
+            # commented out add_theremin_text(display_frame, payload)
         else:
             # The drum drawing function is called get_drum_hit_coordinates, let's keep it consistent
             get_drum_hit_coordinates(display_frame, frame_height, frame_width, active_zone_names, displayed_hand_positions)
-
-            left_gesture_text = "None"
-            right_gesture_text = "None"
-            left_coords = "(X: 0.00, Y: 0.00)"
-            right_coords = "(X: 0.00, Y: 0.00)"
-
-            if hasattr(recognition_result, 'gestures') and recognition_result.gestures and hasattr(recognition_result, 'hand_landmarks'):
-                for gesture_info, hand_info, landmarks in zip(recognition_result.gestures, recognition_result.handedness, recognition_result.hand_landmarks):
-                    if gesture_info and hand_info and landmarks:
-                        gesture_name = gesture_info[0].category_name
-                        hand_label = hand_info[0].category_name
-                        norm_x = 1.0 - landmarks[9].x
-                        norm_y = landmarks[9].y
-                        coord_text = f"(X: {norm_x:.2f}, Y: {norm_y:.2f})"
-                        
-                        if hand_label == "Left":
-                            left_gesture_text = gesture_name
-                            left_coords = coord_text
-                        elif hand_label == "Right":
-                            right_gesture_text = gesture_name
-                            right_coords = coord_text
-
-            cv2.putText(display_frame, f"Left Hand: {left_gesture_text} {left_coords}", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 3, cv2.LINE_AA)
-            cv2.putText(display_frame, f"Right Hand: {right_gesture_text} {right_coords}", (20, 90), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 3, cv2.LINE_AA)
 
         resized_frame = cv2.resize(display_frame, (640, 480))
         
