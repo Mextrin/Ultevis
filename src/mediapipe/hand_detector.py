@@ -132,7 +132,7 @@ try:
             # Get the pinch information from the other function
             pinch_payload = detect_keyboard_hands(recognition_result)
             
-            # Add the pinch info to the main payload, else it will gte overwritten in the next frame and cause missed notes
+            # Add the pinch info to the main payload, else it will get overwritten in the next frame and cause missed notes
             payload['rightPinch'] = pinch_payload.get('rightPinch', False)
             payload['leftPinch'] = pinch_payload.get('leftPinch', False)
 
