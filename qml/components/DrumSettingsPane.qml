@@ -142,6 +142,17 @@ Rectangle {
             }
         }
 
+        SettingsToggle {
+            label: "Mouth Kick"
+            Layout.fillWidth: true
+            checked: typeof appEngine !== "undefined" && appEngine.viewState ? appEngine.viewState.mouthKickEnabled : false
+            onCheckedChanged: {
+                if (typeof appEngine !== "undefined") {
+                    appEngine.setMouthKickEnabled(checked)
+                }
+            }
+        }
+
         // Separator Line
         Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
     }

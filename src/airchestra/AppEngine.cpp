@@ -142,8 +142,12 @@ void AppEngine::selectMidiDevice(const QString& displayName) {
 
 void AppEngine::setMasterVolume(float v) {
     globalState->masterVolume.store(qBound(0.0f, v, 1.0f));
-
     state.setMasterVolume(v);
+}
+
+void AppEngine::setMouthKickEnabled(bool enabled) {
+    globalState->mouthKickEnable.store(enabled);
+    state.setMouthKickEnabled(enabled);
 }
 
 void AppEngine::setThereminWaveform(const QString& wave) {

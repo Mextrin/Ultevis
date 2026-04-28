@@ -24,6 +24,8 @@ class ViewState : public QObject
     Q_PROPERTY(bool sessionRunning READ sessionRunning NOTIFY sessionRunningChanged)
     Q_PROPERTY(QString appStatus READ appStatus NOTIFY appStatusChanged)
     Q_PROPERTY(bool midiEnabled READ midiEnabled WRITE setMidiEnabled NOTIFY midiEnabledChanged)
+    Q_PROPERTY(bool mouthKickEnabled READ mouthKickEnabled WRITE setMouthKickEnabled NOTIFY mouthKickEnabledChanged)
+
 
     Q_PROPERTY(int thereminCenterNote READ thereminCenterNote WRITE setThereminCenterNote NOTIFY thereminCenterNoteChanged)
     Q_PROPERTY(int thereminSemitoneRangeOneSide READ thereminSemitoneRangeOneSide WRITE setThereminSemitoneRangeOneSide NOTIFY thereminSemitoneRangeOneSideChanged)
@@ -59,6 +61,12 @@ public:
         if (midi != v) { midi = v; emit midiEnabledChanged(); }
     }
 
+    bool mouthKickEnabled() const { return m_mouthKickEnabled; }
+    void setMouthKickEnabled(bool v)
+    {
+        if (m_mouthKickEnabled != v) { m_mouthKickEnabled = v; emit mouthKickEnabledChanged(); }
+    }
+
     // --- GETTERS & SETTERS FOR THEREMIN ---
     int thereminCenterNote() const { return m_thereminCenterNote; }
     void setThereminCenterNote(int v)
@@ -89,6 +97,7 @@ signals:
     void sessionRunningChanged();
     void appStatusChanged();
     void midiEnabledChanged();
+    void mouthKickEnabledChanged();
 
     void thereminCenterNoteChanged();
     void thereminSemitoneRangeOneSideChanged();
@@ -108,6 +117,7 @@ private:
     float m_thereminVolumeFloor = 0.0f;  // 0% Volume Floor
 
     float m_masterVolume = 1.0f;
+    bool m_mouthKickEnabled = false;
 };
 
 }
