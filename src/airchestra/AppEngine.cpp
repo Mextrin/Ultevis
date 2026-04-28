@@ -222,6 +222,10 @@ void AppEngine::setSustainPedal(bool enabled) {
     state.setSustainPedal(enabled);
 }
 
+void AppEngine::setKeyboardInstrument(int instrumentID) {
+    audioEngine->loadKeyboardSound(instrumentID);
+}
+
 void AppEngine::refreshTrackedState() {
     if (globalState == nullptr)
         return;

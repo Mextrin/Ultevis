@@ -368,6 +368,11 @@ Item {
             width: 210
             model: ["Grand Piano", "Organ", "Flute", "Harp", "Violin"]
             currentIndex: 0
+            onCurrentIndexChanged: {
+                if (typeof appEngine !== "undefined") {
+                    appEngine.setKeyboardInstrument(currentIndex)
+                }
+            }
         }
     }
 
