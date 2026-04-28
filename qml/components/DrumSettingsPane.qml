@@ -141,6 +141,17 @@ Rectangle {
                 }
             }
         }
+        // Separator Line
+        Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
+
+        Text {
+            text: "DRUMS SETTINGS"
+            font.family: titleLabel.font.family
+            font.pixelSize: 11
+            font.weight: Font.DemiBold
+            font.letterSpacing: 1.5
+            color: "#E07826"
+        }
 
         SettingsToggle {
             label: "Mouth Kick"
@@ -153,7 +164,6 @@ Rectangle {
             }
         }
 
-        // Separator Line
-        Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
+        
     }
 }
