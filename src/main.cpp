@@ -34,8 +34,6 @@ void launchHandDetectorIfRequested(const GlobalState& state)
         ? "drums"
         : "theremin";
 
-    // Create the process and parent it to the main application (qApp).
-    // This guarantees macOS will aggressively murder the Python script when you close the UI!
     if (!pythonProcess) {
         pythonProcess = new QProcess(qApp);
     }
@@ -52,40 +50,39 @@ void launchHandDetectorIfRequested(const GlobalState& state)
 
     pythonProcess->setProcessChannelMode(QProcess::ForwardedChannels);
     
-    // Launch Python natively!
+    // Launch Python natively
     pythonProcess->start("python", QStringList() << scriptPath);
 }
 
 int main(int argc, char* argv[])
 {
-    // 1. Boot Qt FIRST (King of the Main Thread)
+    //BOOT QT
     QGuiApplication app(argc, argv);
     app.setApplicationName("Airchestra");
     app.setApplicationVersion("0.2.0");
     QQuickStyle::setStyle("Basic");
 
-    // 2. Boot JUCE (Piggybacks on Qt's Apple RunLoop for CoreMIDI safety)
+    //BOOT JUCE
     juce::ScopedJuceInitialiser_GUI juceInit;
 
-    // 3. Boot the Audio & Camera Backend
+    //BOOT AUDIO + CAMERA BACKEND
     GlobalState globalState;
     AudioEngineConfig audioConfig;
     HeadlessAudioEngine audioEngine(&globalState, audioConfig);
 
-    // Start Python & UDP Listener in the background
+    //START PYTHON AND UDP LISTENER
     launchHandDetectorIfRequested(globalState);
     std::thread udpThread([&globalState]() {
         startCameraFeed(&globalState);
     });
     udpThread.detach();
 
-    // 4. Boot the UI Engine and pass the backend pointers to it!
+    //BOOT UI ENGINE
     airchestra::AppEngine engine(&globalState, &audioEngine);
 
     QQmlApplicationEngine qmlEngine;
     qmlEngine.rootContext()->setContextProperty("appEngine", &engine);
 
-    // --- NEW: Register the Camera Streamer ---
     auto* cameraProvider = new airchestra::CameraImageProvider();
     qmlEngine.addImageProvider("camera", cameraProvider);
     airchestra::VideoReceiver receiver(cameraProvider);

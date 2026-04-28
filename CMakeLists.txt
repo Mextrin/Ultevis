@@ -37,13 +37,11 @@ target_sources(Airchestra PRIVATE
     src/airchestra/AppEngine.cpp
     src/airchestra/EventLogger.cpp
 
-    # --- CRITICAL FIX: AUTOMOC needs to see these headers! ---
     src/airchestra/AppEngine.h
     src/airchestra/ViewState.h
     src/airchestra/EventLogger.h
     src/airchestra/VideoReceiver.h
     
-    # (Optional but good practice) Let CMake see your backend headers too
     src/Core/GlobalState.h
     src/Audio/AudioEngine.h
 
@@ -55,7 +53,6 @@ target_link_libraries(Airchestra PRIVATE
     Qt6::Gui
     Qt6::Quick
     Qt6::QuickControls2
-    # Removed Qt6::Multimedia from here as well
     juce::juce_core
     juce::juce_audio_devices
     juce::juce_audio_basics

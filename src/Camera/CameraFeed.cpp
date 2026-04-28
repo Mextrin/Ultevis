@@ -16,7 +16,7 @@
 
 #include "Core/GlobalState.h"
 
-// Minimal JSON field parser — no library needed for this simple payload
+// Minimal JSON field parser 
 static std::string parseValue(const std::string& json, const std::string& key) {
     auto pos = json.find("\"" + key + "\":");
     if (pos == std::string::npos) return {};

@@ -370,18 +370,16 @@ void HeadlessAudioEngine::processKeyboard(juce::AudioBuffer<float>& buffer, int 
     for (int i = 0; i < 128; ++i) {
         bool isPressed = globalState->keyboardState[i].load();
         
-        // If GlobalState differs from our internal memory, it's a new hit/release!
+        // If GlobalState different from internal memory, it is a new press/release
         if (isPressed != internalKeyboardState[i]) {
             internalKeyboardState[i] = isPressed; // Sync memory
             
             if (isPressed) {
-                // Play Note! (Defaulting to 100 velocity)
                 keyboardSynth.noteOn(0, i, 100); 
                 if (midiOut != nullptr) {
                     midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, i, (juce::uint8)100));
                 }
             } else {
-                // Release Note!
                 keyboardSynth.noteOff(0, i, 0);
                 if (midiOut != nullptr) {
                     midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, i, (juce::uint8)0));
@@ -395,7 +393,7 @@ void HeadlessAudioEngine::processKeyboard(juce::AudioBuffer<float>& buffer, int 
 }
 
 // Main real-time audio callback
-// Clears output buffer, dispatches processing based on selected instrument
+// Clears output buffer, processing based on selected instrument
 void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
     const float* const*, int,
     float* const* outputChannelData, int numOutputChannels,
