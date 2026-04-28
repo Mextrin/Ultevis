@@ -5,6 +5,33 @@ set VCPKG_ROOT=%~dp0vcpkg
 set VCPKG_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake
 
 if "%1"=="build-all" (
+    call :build-all
+    if errorlevel 1 exit /b 1
+)
+if "%1"=="compile" (
+    call :compile-app
+    if errorlevel 1 exit /b 1
+)
+if "%1"=="run" (
+    call :run-app
+)
+if "%1"=="compile-and-run" (
+    call :compile-app
+    if errorlevel 1 exit /b 1
+    call :run-app
+)
+if "%1"=="clean" (
+    call :clean-all 
+)
+if "%1"=="clean-build-run" (
+    call :clean-all
+    call :build-all
+    if errorlevel 1 exit /b 1
+    call :run-app
+)
+exit
+
+:build-all
     git submodule update --init --recursive
 
     if not exist ./vcpkg (
@@ -16,34 +43,27 @@ if "%1"=="build-all" (
     )
 
     "%VCPKG_ROOT%\vcpkg.exe" install --triplet x64-windows
+    if errorlevel 1 exit /b 1
     cmake -B %BUILD_DIR% -DCMAKE_TOOLCHAIN_FILE="%VCPKG_TOOLCHAIN_FILE%" -DVCPKG_TARGET_TRIPLET=x64-windows
+    if errorlevel 1 exit /b 1
+    call :compile-app
+exit /b
+
+:compile-app
+    if not exist "%BUILD_DIR%\CMakeCache.txt" (
+        echo Build directory is not configured. Run build.bat build-all first.
+        exit /b 1
+    )
     cmake --build %BUILD_DIR%
+    if errorlevel 1 exit /b 1
     call :copy-qt-platform-plugin
-)
-if "%1"=="compile" cmake --build %BUILD_DIR%
-if "%1"=="run" (
+exit /b
+
+:run-app
     set "ULTEVIS_LAUNCH_HAND_DETECTOR=1"
     set "ULTEVIS_HAND_DETECTOR_SCRIPT=%~dp0src\mediapipe\hand_detector.py"
     "./%EXE_DIR%"
-)
-if "%1"=="compile-and-run" (
-    cmake --build %BUILD_DIR%
-    set "ULTEVIS_LAUNCH_HAND_DETECTOR=1"
-    set "ULTEVIS_HAND_DETECTOR_SCRIPT=%~dp0src\mediapipe\hand_detector.py"
-    "./%EXE_DIR%"
-)
-if "%1"=="clean" (
-    call :clean-all 
-)
-if "%1"=="clean-build-run" (
-    call :rename-and-delete "%BUILD_DIR%"
-    cmake -B %BUILD_DIR% -DCMAKE_TOOLCHAIN_FILE="%VCPKG_TOOLCHAIN_FILE%" -DVCPKG_TARGET_TRIPLET=x64-windows
-    cmake --build %BUILD_DIR%
-    set "ULTEVIS_LAUNCH_HAND_DETECTOR=1"
-    set "ULTEVIS_HAND_DETECTOR_SCRIPT=%~dp0src\mediapipe\hand_detector.py"
-    "./%EXE_DIR%"
-)
-exit
+exit /b
 
 :clean-all
     call :rename-and-delete "%BUILD_DIR%"
@@ -67,13 +87,18 @@ exit /b
 
 :copy-qt-platform-plugin
     set "QT_WINDOWS_PLUGIN=%~dp0vcpkg_installed\x64-windows\debug\Qt6\plugins\platforms\qwindowsd.dll"
+    set "QT_IMAGEFORMATS_DIR=%~dp0vcpkg_installed\x64-windows\debug\Qt6\plugins\imageformats"
     set "QT_QML_DIR=%~dp0vcpkg_installed\x64-windows\debug\Qt6\qml"
     set "QT_DEBUG_BIN=%~dp0vcpkg_installed\x64-windows\debug\bin"
     for %%F in ("%EXE_DIR%") do set "APP_OUTPUT_DIR=%%~dpF"
     if not exist "%APP_OUTPUT_DIR%platforms" mkdir "%APP_OUTPUT_DIR%platforms"
+    if not exist "%APP_OUTPUT_DIR%imageformats" mkdir "%APP_OUTPUT_DIR%imageformats"
     copy /Y "%QT_WINDOWS_PLUGIN%" "%APP_OUTPUT_DIR%platforms\qwindowsd.dll"
+    xcopy /E /I /Y "%QT_IMAGEFORMATS_DIR%" "%APP_OUTPUT_DIR%imageformats"
     xcopy /E /I /Y "%QT_QML_DIR%" "%APP_OUTPUT_DIR%qml"
     copy /Y "%QT_DEBUG_BIN%\Qt6*d.dll" "%APP_OUTPUT_DIR%"
+    copy /Y "%QT_DEBUG_BIN%\jpeg62.dll" "%APP_OUTPUT_DIR%"
+    copy /Y "%QT_DEBUG_BIN%\turbojpeg.dll" "%APP_OUTPUT_DIR%"
     > "%APP_OUTPUT_DIR%qt.conf" echo [Paths]
     >> "%APP_OUTPUT_DIR%qt.conf" echo Plugins = .
     >> "%APP_OUTPUT_DIR%qt.conf" echo Qml2Imports = qml
