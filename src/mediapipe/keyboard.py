@@ -58,11 +58,11 @@ last_finger_wrist_dist = {} # {(hand_label, finger_name): distance}
 
 # Threshold for detecting a "press" (finger moving towards wrist)
 # A negative value means the finger is moving closer to the wrist.
-PRESS_DISTANCE_THRESHOLD = -0.015 
+PRESS_DISTANCE_THRESHOLD = 0.015 
 
 # Threshold for detecting a "lift" to allow re-pressing the same key
 # A positive value means the finger is moving away from the wrist.
-LIFT_DISTANCE_THRESHOLD = 0.01
+LIFT_DISTANCE_THRESHOLD = -0.01
 # --------------------
 
 def detect_keyboard_hands(detection_result):
@@ -237,33 +237,25 @@ def detect_key_strokes(detection_result):
                              (label == "Left" and zone and zone.note in left_hand_notes)
 
                 if zone:
-                    # --- PRESS LOGIC ---
-                    # A "press" happens if the note is OFF and finger moves down,
-                    # OR if the note is ON but the finger lifted and pressed again.
-                    finger_lifted = dist_velocity > LIFT_DISTANCE_THRESHOLD
-                    finger_pressed = dist_velocity < PRESS_DISTANCE_THRESHOLD
+                    #press
+                    finger_pressed = dist_velocity > PRESS_DISTANCE_THRESHOLD
+                    finger_lifted = dist_velocity < LIFT_DISTANCE_THRESHOLD
 
-                    if (not is_note_on and finger_pressed) or (is_note_on and finger_lifted):
-                        # This condition allows re-triggering after a lift.
-                        # For the next frame, we need to detect a press again.
-                        pass # Let the logic below handle the press
-
-                    if finger_pressed:
-                        # Only add to visuals and audio if it's a new press
-                        if not is_note_on:
-                            active_zone_names.add(zone.name) # Visual feedback
+                    if not is_note_on and finger_pressed:
+                            active_zone_names.add(zone.name)
                             if label == "Right":
                                 current_right_notes[zone.note] = True
                             else:
                                 current_left_notes[zone.note] = True
                     
-                    # --- SUSTAIN LOGIC ---
-                    # If the note was already on, keep it on as long as the finger is in the zone.
+                    #sustain while note on
                     elif is_note_on:
-                        if label == "Right":
-                            current_right_notes[zone.note] = True
-                        else:
-                            current_left_notes[zone.note] = True
+                        if not finger_lifted:
+                            active_zone_names.add(zone.name)
+                            if label == "Right":
+                                current_right_notes[zone.note] = True
+                            else:
+                                current_left_notes[zone.note] = True
 
     # Update the last known distances for the next frame
     last_finger_wrist_dist = current_finger_distances
