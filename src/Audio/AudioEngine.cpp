@@ -229,7 +229,19 @@ void HeadlessAudioEngine::loadKeyboardSound(int keyboardInstrumentID)
 
     std::cout << "Loading keyboard SFZ: " << sfzToLoad << std::endl;
 
-    bool loaded = keyboardSynth.loadSfzFile(sfzToLoad.toStdString());
+    juce::File sfzFile(sfzToLoad);
+    juce::String content = sfzFile.loadFileAsString();
+
+    //inject sustain values into sfz files for violin, flute, organ
+    if (keyboardInstrumentID == 1 || keyboardInstrumentID == 2 || keyboardInstrumentID == 4) {
+        juce::String patch = "\nampeg_decay=4.0\nampeg_sustain=0\n";
+        content = content.replace("<global>", "<global>" + patch)
+                         .replace("<group>", "<group>" + patch);
+    }
+
+    // Load from memory using the absolute path so sfizz can find the .wav folders
+    bool loaded = keyboardSynth.loadSfzString(sfzFile.getFullPathName().toStdString(), content.toStdString());
+
     if (!loaded) {
         std::cerr << "ERROR: Failed to load SFZ: " << sfzToLoad << std::endl;
         return;
