@@ -66,10 +66,6 @@ public:
    std::atomic<bool> leftHandVisible  { false };
    std::atomic<bool> rightPinch { false };
    std::atomic<bool> leftPinch  { false };
-   std::atomic<bool> rightThumbUp { false };
-   std::atomic<bool> rightThumbDown { false };
-   std::atomic<bool> leftThumbUp { false };
-   std::atomic<bool> leftThumbDown { false };
    std::atomic<Waveform> currentWaveform { Waveform::Sine };
    std::atomic<int> thereminSemitoneRangeOneSide { 24 }; //one octave up, one octave down
    std::atomic<int> thereminCenterNote { 60 }; // 60 = C4
@@ -88,7 +84,7 @@ public:
 
    // --DRUM STATES--
    std::atomic<bool> mouthKickEnable { false }; 
-   std::atomic<bool> snareLeverDown { false }; //false = normal snare
+   std::atomic<bool> snareLeverDown { false }; //false = normal snare (currently not used)
 
    // --- KEYBOARD STATE ---
    std::array<std::atomic<bool>, 128> keyboardState {};
@@ -96,9 +92,13 @@ public:
    std::atomic<bool> sustainPedal { false };
    std::atomic<int> topKeyboardOctave { 3 }; 
    std::atomic<int> bottomKeyboardOctave { 5 };
+   std::atomic<bool> rightThumbUp { false }; //for octave switching
+   std::atomic<bool> rightThumbDown { false };
+   std::atomic<bool> leftThumbUp { false };
+   std::atomic<bool> leftThumbDown { false };
 
    // --Routing and instrument selection--
-   std::atomic<bool> routeToInternalAudio { true };
+   std::atomic<bool> routeToInternalAudio { true }; //currently not used
    std::atomic<bool> routeToMidiOut       { true };
    std::atomic<float> masterVolume        { 1.0f }; // 0-1
    std::atomic<ActiveInstrument> currentInstrument {ActiveInstrument::Theremin};
