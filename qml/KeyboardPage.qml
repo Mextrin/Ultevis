@@ -351,20 +351,20 @@ Item {
             color: "#E07826"
         }
 
-        TypeSelector {
-            id: keyboardTypeSelector
+        KeyboardDropdownImages {
+            id: keyboardDropdownImages
             anchors.right: parent.right
             anchors.rightMargin: 20
             anchors.verticalCenter: parent.verticalCenter
             width: 210
-            model: ["Grand Piano", "Organ", "Flute", "Harp", "Violin"]
-            currentIndex: 0
-            onCurrentIndexChanged: {
+            onChanged: function(key) {
                 if (typeof appEngine !== "undefined") {
-                    appEngine.setKeyboardInstrument(currentIndex)
+                    const index = ["grand_piano", "organ", "flute", "harp", "violin"].indexOf(key)
+                    appEngine.setKeyboardInstrument(index)
                 }
             }
         }
+
     }
 
     MouseArea {
