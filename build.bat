@@ -1,7 +1,6 @@
 @echo off
 set BUILD_DIR=build
-set EXE_DIR=build/Airchestra_artefacts/Release/Airchestra.exe 
-:: change exe dir to support release version
+set EXE_DIR=build/Airchestra_artefacts/Release/Airchestra.exe
 set VCPKG_ROOT=%~dp0vcpkg
 set VCPKG_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake
 rem Use a short buildtrees path to avoid Windows MAX_PATH (260 chars) failures
@@ -93,10 +92,11 @@ exit /b
         echo Build directory is not configured. Run build.bat build-all first.
         exit /b 1
     )
-    cmake --build %BUILD_DIR% --config release
-    :: add --config release
+    rem Visual Studio is multi-config; pick Release explicitly to match EXE_DIR.
+    cmake --build %BUILD_DIR% --config Release
     if errorlevel 1 exit /b 1
     call :copy-qt-platform-plugin
+    if errorlevel 1 exit /b 1
 exit /b
 
 :run-app
@@ -127,20 +127,28 @@ exit /b
 exit /b
 
 :copy-qt-platform-plugin
-    ::use release paths (removed debug folders from paths)
-    set "QT_WINDOWS_PLUGIN=%~dp0vcpkg_installed\x64-windows\plugins\platforms\qwindows.dll"
-    set "QT_IMAGEFORMATS_DIR=%~dp0vcpkg_installed\x64-windows\plugins\imageformats"
-    set "QT_QML_DIR=%~dp0vcpkg_installed\x64-windows\qml"
+    rem Release-configuration paths. In vcpkg's Qt layout, plugins live under
+    rem `<triplet>\Qt6\plugins\...` and QML imports under `<triplet>\Qt6\qml`.
+    set "QT_PLATFORMS_DIR=%~dp0vcpkg_installed\x64-windows\Qt6\plugins\platforms"
+    set "QT_IMAGEFORMATS_DIR=%~dp0vcpkg_installed\x64-windows\Qt6\plugins\imageformats"
+    set "QT_QML_DIR=%~dp0vcpkg_installed\x64-windows\Qt6\qml"
     set "QT_RELEASE_BIN=%~dp0vcpkg_installed\x64-windows\bin"
     for %%F in ("%EXE_DIR%") do set "APP_OUTPUT_DIR=%%~dpF"
-    if not exist "%APP_OUTPUT_DIR%platforms" mkdir "%APP_OUTPUT_DIR%platforms"
-    if not exist "%APP_OUTPUT_DIR%imageformats" mkdir "%APP_OUTPUT_DIR%imageformats"
-    copy /Y "%QT_WINDOWS_PLUGIN%" "%APP_OUTPUT_DIR%platforms\qwindowsd.dll"
-    xcopy /E /I /Y "%QT_IMAGEFORMATS_DIR%" "%APP_OUTPUT_DIR%imageformats"
-    xcopy /E /I /Y "%QT_QML_DIR%" "%APP_OUTPUT_DIR%qml"
-    copy /Y "%QT_RELEASE_BIN%\Qt6*.dll" "%APP_OUTPUT_DIR%"
-    copy /Y "%QT_RELEASE_BIN%\jpeg62.dll" "%APP_OUTPUT_DIR%"
-    copy /Y "%QT_RELEASE_BIN%\turbojpeg.dll" "%APP_OUTPUT_DIR%"
+    if not exist "%APP_OUTPUT_DIR%" (
+        echo [copy-qt] Output directory does not exist: %APP_OUTPUT_DIR%
+        exit /b 1
+    )
+    if not exist "%QT_PLATFORMS_DIR%\qwindows.dll" (
+        echo [copy-qt] Missing Qt platform plugin: %QT_PLATFORMS_DIR%\qwindows.dll
+        echo [copy-qt] Re-run `build.bat build-all` to install Qt via vcpkg.
+        exit /b 1
+    )
+    xcopy /E /I /Y /Q "%QT_PLATFORMS_DIR%"    "%APP_OUTPUT_DIR%platforms"    >nul || exit /b 1
+    xcopy /E /I /Y /Q "%QT_IMAGEFORMATS_DIR%" "%APP_OUTPUT_DIR%imageformats" >nul || exit /b 1
+    xcopy /E /I /Y /Q "%QT_QML_DIR%"          "%APP_OUTPUT_DIR%qml"          >nul || exit /b 1
+    copy /Y "%QT_RELEASE_BIN%\Qt6*.dll"   "%APP_OUTPUT_DIR%" >nul
+    copy /Y "%QT_RELEASE_BIN%\jpeg62.dll" "%APP_OUTPUT_DIR%" >nul
+    copy /Y "%QT_RELEASE_BIN%\turbojpeg.dll" "%APP_OUTPUT_DIR%" >nul
     > "%APP_OUTPUT_DIR%qt.conf" echo [Paths]
     >> "%APP_OUTPUT_DIR%qt.conf" echo Plugins = .
     >> "%APP_OUTPUT_DIR%qt.conf" echo Qml2Imports = qml
