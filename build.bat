@@ -1,6 +1,6 @@
 @echo off
 set BUILD_DIR=build
-set EXE_DIR=build/Airchestra_artefacts/Debug/Airchestra.exe 
+set EXE_DIR=build/Airchestra_artefacts/Release/Airchestra.exe 
 :: change exe dir to support release version
 set VCPKG_ROOT=%~dp0vcpkg
 set VCPKG_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake
@@ -81,7 +81,7 @@ exit /b
         echo Build directory is not configured. Run build.bat build-all first.
         exit /b 1
     )
-    cmake --build %BUILD_DIR%
+    cmake --build %BUILD_DIR% --config release
     :: add --config release
     if errorlevel 1 exit /b 1
     call :copy-qt-platform-plugin
@@ -114,20 +114,20 @@ exit /b
 exit /b
 
 :copy-qt-platform-plugin
-    ::use release paths
-    set "QT_WINDOWS_PLUGIN=%~dp0vcpkg_installed\x64-windows\debug\Qt6\plugins\platforms\qwindowsd.dll"
-    set "QT_IMAGEFORMATS_DIR=%~dp0vcpkg_installed\x64-windows\debug\Qt6\plugins\imageformats"
-    set "QT_QML_DIR=%~dp0vcpkg_installed\x64-windows\debug\Qt6\qml"
-    set "QT_DEBUG_BIN=%~dp0vcpkg_installed\x64-windows\debug\bin"
+    ::use release paths (removed debug folders from paths)
+    set "QT_WINDOWS_PLUGIN=%~dp0vcpkg_installed\x64-windows\plugins\platforms\qwindows.dll"
+    set "QT_IMAGEFORMATS_DIR=%~dp0vcpkg_installed\x64-windows\plugins\imageformats"
+    set "QT_QML_DIR=%~dp0vcpkg_installed\x64-windows\qml"
+    set "QT_RELEASE_BIN=%~dp0vcpkg_installed\x64-windows\bin"
     for %%F in ("%EXE_DIR%") do set "APP_OUTPUT_DIR=%%~dpF"
     if not exist "%APP_OUTPUT_DIR%platforms" mkdir "%APP_OUTPUT_DIR%platforms"
     if not exist "%APP_OUTPUT_DIR%imageformats" mkdir "%APP_OUTPUT_DIR%imageformats"
     copy /Y "%QT_WINDOWS_PLUGIN%" "%APP_OUTPUT_DIR%platforms\qwindowsd.dll"
     xcopy /E /I /Y "%QT_IMAGEFORMATS_DIR%" "%APP_OUTPUT_DIR%imageformats"
     xcopy /E /I /Y "%QT_QML_DIR%" "%APP_OUTPUT_DIR%qml"
-    copy /Y "%QT_DEBUG_BIN%\Qt6*d.dll" "%APP_OUTPUT_DIR%"
-    copy /Y "%QT_DEBUG_BIN%\jpeg62.dll" "%APP_OUTPUT_DIR%"
-    copy /Y "%QT_DEBUG_BIN%\turbojpeg.dll" "%APP_OUTPUT_DIR%"
+    copy /Y "%QT_RELEASE_BIN%\Qt6*.dll" "%APP_OUTPUT_DIR%"
+    copy /Y "%QT_RELEASE_BIN%\jpeg62.dll" "%APP_OUTPUT_DIR%"
+    copy /Y "%QT_RELEASE_BIN%\turbojpeg.dll" "%APP_OUTPUT_DIR%"
     > "%APP_OUTPUT_DIR%qt.conf" echo [Paths]
     >> "%APP_OUTPUT_DIR%qt.conf" echo Plugins = .
     >> "%APP_OUTPUT_DIR%qt.conf" echo Qml2Imports = qml
