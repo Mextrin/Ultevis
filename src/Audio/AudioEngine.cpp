@@ -172,7 +172,6 @@ void HeadlessAudioEngine::loadDrumSound(const juce::String& sfzPath)
         return;
     }
 
-    // Clear stale trigger state before changing kit
     resetDrumPlaybackState();
 
     std::cout << "Loading drum SFZ: " << sfzPath << std::endl;
@@ -224,7 +223,6 @@ void HeadlessAudioEngine::loadKeyboardSound(int keyboardInstrumentID)
         return;
     }
 
-    // Clear stale keyboard state before changing patch
     resetKeyboardPlaybackState();
 
     std::cout << "Loading keyboard SFZ: " << sfzToLoad << std::endl;
