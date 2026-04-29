@@ -66,10 +66,6 @@ public:
    std::atomic<bool> leftHandVisible  { false };
    std::atomic<bool> rightPinch { false };
    std::atomic<bool> leftPinch  { false };
-   std::atomic<bool> rightThumbUp { false };
-   std::atomic<bool> rightThumbDown { false };
-   std::atomic<bool> leftThumbUp { false };
-   std::atomic<bool> leftThumbDown { false };
    std::atomic<Waveform> currentWaveform { Waveform::Sine };
    std::atomic<int> thereminSemitoneRangeOneSide { 24 }; //one octave up, one octave down
    std::atomic<int> thereminCenterNote { 60 }; // 60 = C4
@@ -96,6 +92,10 @@ public:
    std::atomic<bool> sustainPedal { false };
    std::atomic<int> topKeyboardOctave { 3 }; 
    std::atomic<int> bottomKeyboardOctave { 5 };
+   std::atomic<bool> rightThumbUp { false };
+   std::atomic<bool> rightThumbDown { false };
+   std::atomic<bool> leftThumbUp { false };
+   std::atomic<bool> leftThumbDown { false };
 
    // --Routing and instrument selection--
    std::atomic<bool> routeToInternalAudio { true };
