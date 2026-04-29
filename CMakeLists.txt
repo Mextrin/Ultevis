@@ -14,17 +14,18 @@ if(MSVC)
     add_compile_options(/FS)
 endif()
 
-# 1. Removed Multimedia since Audio/Video is handled by JUCE and OpenCV
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2)
 
-# 2. Turn on the Qt Compilers BEFORE the executable
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
+set(SFIZZ_TESTS OFF CACHE BOOL "" FORCE)
+set(SFIZZ_JACK OFF CACHE BOOL "" FORCE)
+set(SFIZZ_RENDER OFF CACHE BOOL "" FORCE)
+set(SFIZZ_SHARED OFF CACHE BOOL "" FORCE)
+
 add_subdirectory(JUCE)
-set(SFIZZ_USE_SYSTEM_CXXOPTS ON CACHE BOOL "Use system cxxopts for sfizz" FORCE)
-set(SFIZZ_GIT_SUBMODULE_CHECK OFF CACHE BOOL "Disable sfizz's git submodule check in superbuilds" FORCE)
 add_subdirectory(sfizz)
 
 juce_add_console_app(Airchestra)
