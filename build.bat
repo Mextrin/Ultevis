@@ -3,6 +3,9 @@ set BUILD_DIR=build
 set EXE_DIR=build/Airchestra_artefacts/Debug/Airchestra.exe
 set VCPKG_ROOT=%~dp0vcpkg
 set VCPKG_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake
+rem Use a short buildtrees path to avoid Windows MAX_PATH (260 chars) failures
+rem when building qtdeclarative (fluentwinui3 plugin generates very long .moc paths).
+set VCPKG_BUILDTREES_ROOT=C:\vcbt
 
 if "%~1"=="" (
     echo No build command provided.
@@ -58,7 +61,9 @@ exit /b 1
 exit /b
 
 :build-all
-    git submodule update --init --recursive
+    rem Initialize only the project submodules. `vcpkg` is fetched manually below
+    rem (it isn't in .gitmodules), so we skip the global recursive update.
+    git submodule update --init --recursive JUCE sfizz
 
     if not exist ./vcpkg (
         git clone https://github.com/microsoft/vcpkg ./vcpkg
@@ -68,9 +73,16 @@ exit /b
         cd ..
     )
 
-    "%VCPKG_ROOT%\vcpkg.exe" install --triplet x64-windows
+    if not exist "%VCPKG_BUILDTREES_ROOT%" mkdir "%VCPKG_BUILDTREES_ROOT%"
+    rem CMake's vcpkg manifest mode also runs `vcpkg install`, so pass the same
+    rem buildtrees root via VCPKG_INSTALL_OPTIONS to avoid Windows MAX_PATH issues.
+    rem Use forward slashes so CMake doesn't choke on backslash escapes.
+    set "VCPKG_BUILDTREES_ROOT_FWD=%VCPKG_BUILDTREES_ROOT:\=/%"
+    set "VCPKG_INSTALLED_DIR_FWD=%~dp0vcpkg_installed"
+    set "VCPKG_INSTALLED_DIR_FWD=%VCPKG_INSTALLED_DIR_FWD:\=/%"
+    "%VCPKG_ROOT%\vcpkg.exe" install --triplet x64-windows --x-buildtrees-root="%VCPKG_BUILDTREES_ROOT%"
     if errorlevel 1 exit /b 1
-    cmake -B %BUILD_DIR% -DCMAKE_TOOLCHAIN_FILE="%VCPKG_TOOLCHAIN_FILE%" -DVCPKG_TARGET_TRIPLET=x64-windows
+    cmake -B %BUILD_DIR% -DCMAKE_TOOLCHAIN_FILE="%VCPKG_TOOLCHAIN_FILE%" -DVCPKG_TARGET_TRIPLET=x64-windows "-DVCPKG_INSTALL_OPTIONS=--x-buildtrees-root=%VCPKG_BUILDTREES_ROOT_FWD%" "-DVCPKG_INSTALLED_DIR=%VCPKG_INSTALLED_DIR_FWD%"
     if errorlevel 1 exit /b 1
     call :compile-app
 exit /b
@@ -95,6 +107,7 @@ exit /b
     call :rename-and-delete "%BUILD_DIR%"
     call :rename-and-delete "vcpkg"
     call :rename-and-delete "vcpkg_installed"
+    call :rename-and-delete "%VCPKG_BUILDTREES_ROOT%"
 exit /b
 
 :rename-and-delete
