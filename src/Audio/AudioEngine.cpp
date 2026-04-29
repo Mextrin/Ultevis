@@ -432,5 +432,5 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
     }
 
     const float masterGain = juce::jlimit(0.0f, 1.0f, globalState->masterVolume.load());
-    buffer.applyGain(masterGain * 0.3f);
+    buffer.applyGain(masterGain);
 }
