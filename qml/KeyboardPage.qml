@@ -224,8 +224,7 @@ Item {
         property bool thumbUpHover: root.anyThumbUpInside(zone)
         property bool thumbDownHover: root.anyThumbDownInside(zone)
         property bool octaveGestureActive: thumbUpHover || thumbDownHover
-        property int octaveGestureDelta: thumbUpHover ? 1 : (thumbDownHover ? -1 : 0)
-        property bool gestureLocked: false
+        property int octaveGestureDelta: thumbUpHover === thumbDownHover ? 0 : (thumbUpHover ? 1 : -1)
 
         color: active ? Qt.rgba(0.878, 0.478, 0.149, 0.23)
                       : Qt.rgba(1, 1, 1, 0.035)
@@ -236,26 +235,18 @@ Item {
         Behavior on border.color { ColorAnimation { duration: 140 } }
         Behavior on border.width { NumberAnimation { duration: 140 } }
 
-        onOctaveGestureDeltaChanged: {
-            if (octaveGestureDelta !== 0) {
-                gestureReleaseTimer.stop()
-                if (!gestureLocked) {
-                    gestureLocked = true
-                    root.flashOctaveCounter(keyboardIndex, octaveGestureDelta)
-                    root.adjustKeyboardOctave(keyboardIndex, octaveGestureDelta)
-                }
-            } else {
-                gestureReleaseTimer.restart()
-            }
+        function triggerOctaveChange(delta) {
+            if (delta === 0)
+                return
+
+            root.flashOctaveCounter(keyboardIndex, delta)
+            root.adjustKeyboardOctave(keyboardIndex, delta)
         }
 
-        Timer {
-            id: gestureReleaseTimer
-            interval: 500
-            repeat: false
-            onTriggered: {
-                if (!zone.octaveGestureActive)
-                    zone.gestureLocked = false
+        OctaveGestureHoldController {
+            inputDelta: zone.octaveGestureDelta
+            onOctaveChange: function(delta) {
+                zone.triggerOctaveChange(delta)
             }
         }
 

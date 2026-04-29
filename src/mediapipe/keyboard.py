@@ -1,10 +1,10 @@
 import mediapipe as mp
 import cv2
-from collections import deque
 from pathlib import Path
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 from mediapipe.tasks.python.vision import RunningMode
+from keyboard_gestures import ThumbGestureTracker
 from keyboard_utils import KeyboardZone, PINCH_THRESHOLD, KEYBOARD_ZONES
 
 
@@ -19,34 +19,11 @@ _keyboard_gesture_options = vision.GestureRecognizerOptions(
     num_hands=2,
     min_hand_detection_confidence=0.5,
     min_tracking_confidence=0.5,
-    canned_gesture_classifier_options=_ClassifierOptions(score_threshold=0.55),
+    canned_gesture_classifier_options=_ClassifierOptions(score_threshold=0.35),
 )
 recognizer = vision.GestureRecognizer.create_from_options(_keyboard_gesture_options)
 
-# Per-hand debounce: require N consecutive frames classifying the same thumb gesture
-# before we flip the boolean. Stops single-frame misclassifications from bumping octaves.
-_THUMB_DEBOUNCE_FRAMES = 3
-_THUMB_MIN_SCORE = 0.6
-_thumb_history: dict[str, deque] = {
-    "Left": deque(maxlen=_THUMB_DEBOUNCE_FRAMES),
-    "Right": deque(maxlen=_THUMB_DEBOUNCE_FRAMES),
-}
-
-
-def _stable_thumb_state(label: str, gesture_name: str, score: float) -> tuple[bool, bool]:
-    history = _thumb_history.setdefault(label, deque(maxlen=_THUMB_DEBOUNCE_FRAMES))
-    tag = gesture_name if score >= _THUMB_MIN_SCORE and gesture_name in ("Thumb_Up", "Thumb_Down") else "_"
-    history.append(tag)
-    if len(history) < _THUMB_DEBOUNCE_FRAMES:
-        return False, False
-    first = history[0]
-    if any(item != first for item in history):
-        return False, False
-    return first == "Thumb_Up", first == "Thumb_Down"
-
-
-def _reset_thumb_history(label: str) -> None:
-    _thumb_history.setdefault(label, deque(maxlen=_THUMB_DEBOUNCE_FRAMES)).clear()
+_thumb_tracker = ThumbGestureTracker()
 
 # --- State Tracking ---
 # Keep track of which notes are currently being played by each hand
@@ -83,8 +60,7 @@ def detect_keyboard_hands(detection_result):
     }
 
     if not detection_result.handedness:
-        for label in ("Left", "Right"):
-            _reset_thumb_history(label)
+        _thumb_tracker.reset_all(("Left", "Right"))
         return keyboard_payload
 
     gestures_per_hand = getattr(detection_result, "gestures", None) or []
@@ -105,13 +81,10 @@ def detect_keyboard_hands(detection_result):
         pinch_distance = ((thumb_tip.x - index_tip.x) ** 2 + (thumb_tip.y - index_tip.y) ** 2) ** 0.5
         is_pinching = pinch_distance < PINCH_THRESHOLD
 
-        gesture_name = ""
-        gesture_score = 0.0
+        gesture_categories = []
         if idx < len(gestures_per_hand) and gestures_per_hand[idx]:
-            top = gestures_per_hand[idx][0]
-            gesture_name = top.category_name or ""
-            gesture_score = float(top.score or 0.0)
-        thumb_up, thumb_down = _stable_thumb_state(label, gesture_name, gesture_score)
+            gesture_categories = gestures_per_hand[idx]
+        thumb_up, thumb_down = _thumb_tracker.update(label, gesture_categories)
 
         hand_center_x = sum(landmark.x for landmark in hand_landmarks) / len(hand_landmarks)
         hand_center_y = sum(landmark.y for landmark in hand_landmarks) / len(hand_landmarks)
@@ -139,7 +112,7 @@ def detect_keyboard_hands(detection_result):
     # has to re-confirm a gesture from scratch instead of triggering on stale state.
     for label in ("Left", "Right"):
         if label not in seen_labels:
-            _reset_thumb_history(label)
+            _thumb_tracker.reset(label)
 
     return keyboard_payload
 

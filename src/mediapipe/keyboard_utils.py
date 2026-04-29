@@ -1,22 +1,33 @@
 from dataclasses import dataclass
 PINCH_THRESHOLD = 0.05
 
-# Key MIDI notes (C4 = 60)
-# Top Octave (C5-B5)
-TOP_OCTAVE_NOTES = {
-    "C+": 72, "C#+": 73, "D+": 74, "D#+": 75, "E+": 76, "F+": 77, "F#+": 78,
-    "G+": 79, "G#+": 80, "A+": 81, "A#+": 82, "B+": 83, "C++": 84
-}
-
-# Bottom Octave (C4-B4)
-BOTTOM_OCTAVE_NOTES = {
-    "C-": 60, "C#-": 61, "D-": 62, "D#-": 63, "E-": 64, "F-": 65, "F#-": 66,
-    "G-": 67, "G#-": 68, "A-": 69, "A#-": 70, "B-": 71, "C--": 72
-}
-
-# Define the layout for the keyboard zones
-WHITE_KEY_WIDTH = 1.0 / 8
+# Define the layout for the keyboard zones.
+WHITE_KEYS_PER_KEYBOARD = 10
+WHITE_KEY_WIDTH = 1.0 / WHITE_KEYS_PER_KEYBOARD
 BLACK_KEY_WIDTH = WHITE_KEY_WIDTH * 0.6
+
+WHITE_KEY_STEPS = (
+    ("C", 0),
+    ("D", 2),
+    ("E", 4),
+    ("F", 5),
+    ("G", 7),
+    ("A", 9),
+    ("B", 11),
+    ("C2", 12),
+    ("D2", 14),
+    ("E2", 16),
+)
+
+BLACK_KEY_STEPS = (
+    ("C#", 1, 1),
+    ("D#", 3, 2),
+    ("F#", 6, 4),
+    ("G#", 8, 5),
+    ("A#", 10, 6),
+    ("C#2", 13, 8),
+    ("D#2", 15, 9),
+)
 
 # Top Octave
 TOP_OCTAVE_Y_START = 0.12
@@ -49,38 +60,48 @@ class KeyboardZone:
             int(self.bottom * height),
         )
 
-KEYBOARD_ZONES = (
-    # --- Top Octave ---
-    # White Keys
-    KeyboardZone("C+", TOP_OCTAVE_NOTES["C+"], 0, TOP_OCTAVE_Y_START, WHITE_KEY_WIDTH, TOP_OCTAVE_WHITE_Y_END),
-    KeyboardZone("D+", TOP_OCTAVE_NOTES["D+"], WHITE_KEY_WIDTH, TOP_OCTAVE_Y_START, WHITE_KEY_WIDTH * 2, TOP_OCTAVE_WHITE_Y_END),
-    KeyboardZone("E+", TOP_OCTAVE_NOTES["E+"], WHITE_KEY_WIDTH * 2, TOP_OCTAVE_Y_START, WHITE_KEY_WIDTH * 3, TOP_OCTAVE_WHITE_Y_END),
-    KeyboardZone("F+", TOP_OCTAVE_NOTES["F+"], WHITE_KEY_WIDTH * 3, TOP_OCTAVE_Y_START, WHITE_KEY_WIDTH * 4, TOP_OCTAVE_WHITE_Y_END),
-    KeyboardZone("G+", TOP_OCTAVE_NOTES["G+"], WHITE_KEY_WIDTH * 4, TOP_OCTAVE_Y_START, WHITE_KEY_WIDTH * 5, TOP_OCTAVE_WHITE_Y_END),
-    KeyboardZone("A+", TOP_OCTAVE_NOTES["A+"], WHITE_KEY_WIDTH * 5, TOP_OCTAVE_Y_START, WHITE_KEY_WIDTH * 6, TOP_OCTAVE_WHITE_Y_END),
-    KeyboardZone("B+", TOP_OCTAVE_NOTES["B+"], WHITE_KEY_WIDTH * 6, TOP_OCTAVE_Y_START, WHITE_KEY_WIDTH * 7, TOP_OCTAVE_WHITE_Y_END),
-    KeyboardZone("C++", TOP_OCTAVE_NOTES["C++"], WHITE_KEY_WIDTH * 7, TOP_OCTAVE_Y_START, 1.0, TOP_OCTAVE_WHITE_Y_END),  # C6 (optional extension)
-    # Black Keys
-    KeyboardZone("C#+", TOP_OCTAVE_NOTES["C#+"], WHITE_KEY_WIDTH - (BLACK_KEY_WIDTH / 2), TOP_OCTAVE_Y_START, WHITE_KEY_WIDTH + (BLACK_KEY_WIDTH / 2), TOP_OCTAVE_BLACK_Y_END),
-    KeyboardZone("D#+", TOP_OCTAVE_NOTES["D#+"], (WHITE_KEY_WIDTH * 2) - (BLACK_KEY_WIDTH / 2), TOP_OCTAVE_Y_START, (WHITE_KEY_WIDTH * 2) + (BLACK_KEY_WIDTH / 2), TOP_OCTAVE_BLACK_Y_END),
-    KeyboardZone("F#+", TOP_OCTAVE_NOTES["F#+"], (WHITE_KEY_WIDTH * 4) - (BLACK_KEY_WIDTH / 2), TOP_OCTAVE_Y_START, (WHITE_KEY_WIDTH * 4) + (BLACK_KEY_WIDTH / 2), TOP_OCTAVE_BLACK_Y_END),
-    KeyboardZone("G#+", TOP_OCTAVE_NOTES["G#+"], (WHITE_KEY_WIDTH * 5) - (BLACK_KEY_WIDTH / 2), TOP_OCTAVE_Y_START, (WHITE_KEY_WIDTH * 5) + (BLACK_KEY_WIDTH / 2), TOP_OCTAVE_BLACK_Y_END),
-    KeyboardZone("A#+", TOP_OCTAVE_NOTES["A#+"], (WHITE_KEY_WIDTH * 6) - (BLACK_KEY_WIDTH / 2), TOP_OCTAVE_Y_START, (WHITE_KEY_WIDTH * 6) + (BLACK_KEY_WIDTH / 2), TOP_OCTAVE_BLACK_Y_END),
+def _zone_name(note_name: str, suffix: str) -> str:
+    return f"{note_name}{suffix}"
 
-    # --- Bottom Octave ---
-    # White Keys
-    KeyboardZone("C-", BOTTOM_OCTAVE_NOTES["C-"], 0, BOTTOM_OCTAVE_Y_START, WHITE_KEY_WIDTH, BOTTOM_OCTAVE_WHITE_Y_END),
-    KeyboardZone("D-", BOTTOM_OCTAVE_NOTES["D-"], WHITE_KEY_WIDTH, BOTTOM_OCTAVE_Y_START, WHITE_KEY_WIDTH * 2, BOTTOM_OCTAVE_WHITE_Y_END),
-    KeyboardZone("E-", BOTTOM_OCTAVE_NOTES["E-"], WHITE_KEY_WIDTH * 2, BOTTOM_OCTAVE_Y_START, WHITE_KEY_WIDTH * 3, BOTTOM_OCTAVE_WHITE_Y_END),
-    KeyboardZone("F-", BOTTOM_OCTAVE_NOTES["F-"], WHITE_KEY_WIDTH * 3, BOTTOM_OCTAVE_Y_START, WHITE_KEY_WIDTH * 4, BOTTOM_OCTAVE_WHITE_Y_END),
-    KeyboardZone("G-", BOTTOM_OCTAVE_NOTES["G-"], WHITE_KEY_WIDTH * 4, BOTTOM_OCTAVE_Y_START, WHITE_KEY_WIDTH * 5, BOTTOM_OCTAVE_WHITE_Y_END),
-    KeyboardZone("A-", BOTTOM_OCTAVE_NOTES["A-"], WHITE_KEY_WIDTH * 5, BOTTOM_OCTAVE_Y_START, WHITE_KEY_WIDTH * 6, BOTTOM_OCTAVE_WHITE_Y_END),
-    KeyboardZone("B-", BOTTOM_OCTAVE_NOTES["B-"], WHITE_KEY_WIDTH * 6, BOTTOM_OCTAVE_Y_START, WHITE_KEY_WIDTH * 7, BOTTOM_OCTAVE_WHITE_Y_END),
-    KeyboardZone("C--", BOTTOM_OCTAVE_NOTES["C--"], WHITE_KEY_WIDTH * 7, BOTTOM_OCTAVE_Y_START, 1.0, BOTTOM_OCTAVE_WHITE_Y_END),  # C5 (optional extension)
-    # Black Keys
-    KeyboardZone("C#-", BOTTOM_OCTAVE_NOTES["C#-"], WHITE_KEY_WIDTH - (BLACK_KEY_WIDTH / 2), BOTTOM_OCTAVE_Y_START, WHITE_KEY_WIDTH + (BLACK_KEY_WIDTH / 2), BOTTOM_OCTAVE_BLACK_Y_END),
-    KeyboardZone("D#-", BOTTOM_OCTAVE_NOTES["D#-"], (WHITE_KEY_WIDTH * 2) - (BLACK_KEY_WIDTH / 2), BOTTOM_OCTAVE_Y_START, (WHITE_KEY_WIDTH * 2) + (BLACK_KEY_WIDTH / 2), BOTTOM_OCTAVE_BLACK_Y_END),
-    KeyboardZone("F#-", BOTTOM_OCTAVE_NOTES["F#-"], (WHITE_KEY_WIDTH * 4) - (BLACK_KEY_WIDTH / 2), BOTTOM_OCTAVE_Y_START, (WHITE_KEY_WIDTH * 4) + (BLACK_KEY_WIDTH / 2), BOTTOM_OCTAVE_BLACK_Y_END),
-    KeyboardZone("G#-", BOTTOM_OCTAVE_NOTES["G#-"], (WHITE_KEY_WIDTH * 5) - (BLACK_KEY_WIDTH / 2), BOTTOM_OCTAVE_Y_START, (WHITE_KEY_WIDTH * 5) + (BLACK_KEY_WIDTH / 2), BOTTOM_OCTAVE_BLACK_Y_END),
-    KeyboardZone("A#-", BOTTOM_OCTAVE_NOTES["A#-"], (WHITE_KEY_WIDTH * 6) - (BLACK_KEY_WIDTH / 2), BOTTOM_OCTAVE_Y_START, (WHITE_KEY_WIDTH * 6) + (BLACK_KEY_WIDTH / 2), BOTTOM_OCTAVE_BLACK_Y_END),
+
+def _build_keyboard_zones(
+    suffix: str,
+    base_note: int,
+    y_start: float,
+    white_y_end: float,
+    black_y_end: float,
+) -> tuple[KeyboardZone, ...]:
+    zones: list[KeyboardZone] = []
+
+    for index, (note_name, semitone_offset) in enumerate(WHITE_KEY_STEPS):
+        zones.append(
+            KeyboardZone(
+                _zone_name(note_name, suffix),
+                base_note + semitone_offset,
+                WHITE_KEY_WIDTH * index,
+                y_start,
+                WHITE_KEY_WIDTH * (index + 1),
+                white_y_end,
+            )
+        )
+
+    for note_name, semitone_offset, boundary_index in BLACK_KEY_STEPS:
+        center_x = WHITE_KEY_WIDTH * boundary_index
+        zones.append(
+            KeyboardZone(
+                _zone_name(note_name, suffix),
+                base_note + semitone_offset,
+                center_x - (BLACK_KEY_WIDTH / 2),
+                y_start,
+                center_x + (BLACK_KEY_WIDTH / 2),
+                black_y_end,
+            )
+        )
+
+    return tuple(zones)
+
+
+KEYBOARD_ZONES = (
+    *_build_keyboard_zones("+", 72, TOP_OCTAVE_Y_START, TOP_OCTAVE_WHITE_Y_END, TOP_OCTAVE_BLACK_Y_END),
+    *_build_keyboard_zones("-", 60, BOTTOM_OCTAVE_Y_START, BOTTOM_OCTAVE_WHITE_Y_END, BOTTOM_OCTAVE_BLACK_Y_END),
 )

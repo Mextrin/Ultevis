@@ -18,6 +18,7 @@
         <file>qml/components/SettingsSlider.qml</file>
         <file>qml/components/SettingsToggle.qml</file>
         <file>qml/components/TypeSelector.qml</file>
+        <file>qml/components/OctaveGestureHoldController.qml</file>
         <file>assets/icons/piano.svg</file>
         <file>assets/icons/theremin.svg</file>
         <file>assets/icons/drums.svg</file>
