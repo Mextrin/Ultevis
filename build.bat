@@ -1,6 +1,7 @@
 @echo off
 set BUILD_DIR=build
-set EXE_DIR=build/Airchestra_artefacts/Debug/Airchestra.exe
+set EXE_DIR=build/Airchestra_artefacts/Debug/Airchestra.exe 
+:: change exe dir to support release version
 set VCPKG_ROOT=%~dp0vcpkg
 set VCPKG_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake
 
@@ -81,6 +82,7 @@ exit /b
         exit /b 1
     )
     cmake --build %BUILD_DIR%
+    :: add --config release
     if errorlevel 1 exit /b 1
     call :copy-qt-platform-plugin
 exit /b
@@ -112,6 +114,7 @@ exit /b
 exit /b
 
 :copy-qt-platform-plugin
+    ::use release paths
     set "QT_WINDOWS_PLUGIN=%~dp0vcpkg_installed\x64-windows\debug\Qt6\plugins\platforms\qwindowsd.dll"
     set "QT_IMAGEFORMATS_DIR=%~dp0vcpkg_installed\x64-windows\debug\Qt6\plugins\imageformats"
     set "QT_QML_DIR=%~dp0vcpkg_installed\x64-windows\debug\Qt6\qml"

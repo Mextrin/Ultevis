@@ -2,7 +2,7 @@
 set -euo pipefail
 
 BUILD_DIR="build"
-BUILD_CONFIG="Debug"
+BUILD_CONFIG="Release"
 EXE_PATH="${BUILD_DIR}/Airchestra_artefacts/${BUILD_CONFIG}/Airchestra"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HAND_DETECTOR_SCRIPT="${SCRIPT_DIR}/src/mediapipe/hand_detector.py"

@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
 project(Airchestra VERSION 1.0.0)
 
+set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose Release to make audio fast" FORCE)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -23,9 +25,12 @@ set(CMAKE_AUTOUIC ON)
 set(SFIZZ_TESTS OFF CACHE BOOL "" FORCE)
 set(SFIZZ_JACK OFF CACHE BOOL "" FORCE)
 set(SFIZZ_RENDER OFF CACHE BOOL "" FORCE)
+set(SFIZZ_BENCHMARKS OFF CACHE BOOL "" FORCE)
 
+# Allow sfizz to build as a shared DLL on Windows to avoid /MT vs /MD runtime conflicts
 if(NOT MSVC)
     set(SFIZZ_SHARED OFF CACHE BOOL "" FORCE)
+    set(SFIZZ_SHARED_LIBRARY OFF CACHE BOOL "" FORCE)
 endif()
 
 add_subdirectory(JUCE)
