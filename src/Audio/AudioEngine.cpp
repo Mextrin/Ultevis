@@ -60,6 +60,8 @@ HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr, const AudioEngin
     setup.useDefaultInputChannels = false;
     setup.useDefaultOutputChannels = true;
 
+    deviceManager.setAudioDeviceSetup(setup, true);
+
     deviceManager.addAudioCallback(this);
 }
 
@@ -110,12 +112,14 @@ void HeadlessAudioEngine::audioDeviceAboutToStart(juce::AudioIODevice* device)
         std::lock_guard<std::mutex> lock(drumSynthMutex);
         drumSynth.setSampleRate(device->getCurrentSampleRate());
         drumSynth.setSamplesPerBlock(device->getCurrentBufferSizeSamples());
+        drumSynth.setNumVoices(12); //limit drum voices
     }
 
     {
         std::lock_guard<std::mutex> lock(keyboardSynthMutex);
         keyboardSynth.setSampleRate(device->getCurrentSampleRate());
         keyboardSynth.setSamplesPerBlock(device->getCurrentBufferSizeSamples());
+        keyboardSynth.setNumVoices(16); //limit piano voices
     }
 }
 
@@ -172,7 +176,6 @@ void HeadlessAudioEngine::loadDrumSound(const juce::String& sfzPath)
         return;
     }
 
-    // Clear stale trigger state before changing kit
     resetDrumPlaybackState();
 
     std::cout << "Loading drum SFZ: " << sfzPath << std::endl;
@@ -224,12 +227,23 @@ void HeadlessAudioEngine::loadKeyboardSound(int keyboardInstrumentID)
         return;
     }
 
-    // Clear stale keyboard state before changing patch
     resetKeyboardPlaybackState();
 
     std::cout << "Loading keyboard SFZ: " << sfzToLoad << std::endl;
 
-    bool loaded = keyboardSynth.loadSfzFile(sfzToLoad.toStdString());
+    juce::File sfzFile(sfzToLoad);
+    juce::String content = sfzFile.loadFileAsString();
+
+    //inject sustain values into sfz files for violin, flute, organ
+    if (keyboardInstrumentID == 1 || keyboardInstrumentID == 2 || keyboardInstrumentID == 4) {
+        juce::String patch = "\nampeg_decay=4.0\nampeg_sustain=0\n";
+        content = content.replace("<global>", "<global>" + patch)
+                         .replace("<group>", "<group>" + patch);
+    }
+
+    // Load from memory using the absolute path so sfizz can find the .wav folders
+    bool loaded = keyboardSynth.loadSfzString(sfzFile.getFullPathName().toStdString(), content.toStdString());
+
     if (!loaded) {
         std::cerr << "ERROR: Failed to load SFZ: " << sfzToLoad << std::endl;
         return;
@@ -418,5 +432,5 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
     }
 
     const float masterGain = juce::jlimit(0.0f, 1.0f, globalState->masterVolume.load());
-    buffer.applyGain(masterGain);
+    buffer.applyGain(masterGain * 0.3f);
 }
