@@ -351,7 +351,7 @@ Item {
             color: "#E07826"
         }
 
-        TypeSelector {
+        KeyboardDropdownImages {
             id: keyboardTypeSelector
             anchors.right: parent.right
             anchors.rightMargin: 20

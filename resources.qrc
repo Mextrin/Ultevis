@@ -28,5 +28,11 @@
         <file>assets/icons/airchestra-logo@2x.png</file>
         <file>assets/icons/Air.svg</file>
         <file>assets/icons/Chestra.svg</file>
+        <file>assets/icons/grand_piano.svg</file>
+        <file>assets/icons/organ.svg</file>
+        <file>assets/icons/flute.svg</file>
+        <file>assets/icons/harp.svg</file>
+        <file>assets/icons/violin.svg</file>
+        <file>qml/components/KeyboardDropdownImages.qml</file>
     </qresource>
 </RCC>
