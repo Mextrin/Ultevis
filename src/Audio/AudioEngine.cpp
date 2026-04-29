@@ -60,6 +60,8 @@ HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr, const AudioEngin
     setup.useDefaultInputChannels = false;
     setup.useDefaultOutputChannels = true;
 
+    deviceManager.setAudioDeviceSetup(setup, true);
+
     deviceManager.addAudioCallback(this);
 }
 
@@ -110,12 +112,14 @@ void HeadlessAudioEngine::audioDeviceAboutToStart(juce::AudioIODevice* device)
         std::lock_guard<std::mutex> lock(drumSynthMutex);
         drumSynth.setSampleRate(device->getCurrentSampleRate());
         drumSynth.setSamplesPerBlock(device->getCurrentBufferSizeSamples());
+        drumSynth.setNumVoices(12); //limit drum voices
     }
 
     {
         std::lock_guard<std::mutex> lock(keyboardSynthMutex);
         keyboardSynth.setSampleRate(device->getCurrentSampleRate());
         keyboardSynth.setSamplesPerBlock(device->getCurrentBufferSizeSamples());
+        keyboardSynth.setNumVoices(16); //limit piano voices
     }
 }
 
@@ -428,5 +432,5 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
     }
 
     const float masterGain = juce::jlimit(0.0f, 1.0f, globalState->masterVolume.load());
-    buffer.applyGain(masterGain);
+    buffer.applyGain(masterGain * 0.3f);
 }
