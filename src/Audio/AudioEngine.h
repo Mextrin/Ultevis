@@ -15,7 +15,9 @@ struct AudioEngineConfig
     int midiDeviceIndex = -1;
 };
 
-class HeadlessAudioEngine : public juce::AudioIODeviceCallback
+class HeadlessAudioEngine : public juce::AudioIODeviceCallback,
+                            public juce::ChangeListener,
+                            public juce::Timer
 {
 public:
     HeadlessAudioEngine(GlobalState* statePtr, const AudioEngineConfig& config);
@@ -40,6 +42,8 @@ public:
 private:
     void resetDrumPlaybackState();
     void resetKeyboardPlaybackState();
+    void changeListenerCallback(juce::ChangeBroadcaster* source) override;
+    void timerCallback() override;
 
 private:
     juce::AudioDeviceManager deviceManager;

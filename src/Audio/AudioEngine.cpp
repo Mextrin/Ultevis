@@ -358,6 +358,26 @@ void HeadlessAudioEngine::processDrums(juce::AudioBuffer<float>& buffer, int num
     drumSynth.renderBlock(outChannels, numSamples);
 }
 
+void HeadlessAudioEngine::changeListenerCallback(juce::ChangeBroadcaster*)
+{
+    startTimer(1000); // debounce — wait 500ms for macOS to settle on new default device
+}
+
+void HeadlessAudioEngine::timerCallback()
+{
+    stopTimer();
+
+    deviceManager.closeAudioDevice();
+    deviceManager.initialise(0, 2, nullptr, true);
+
+    juce::AudioDeviceManager::AudioDeviceSetup setup;
+    deviceManager.getAudioDeviceSetup(setup);
+    setup.bufferSize = 256;
+    setup.sampleRate = 44100.0;
+    setup.useDefaultOutputChannels = true;
+    deviceManager.setAudioDeviceSetup(setup, true);
+}
+
 // Processes the keyboard
 void HeadlessAudioEngine::processKeyboard(juce::AudioBuffer<float>& buffer, int numSamples)
 {
