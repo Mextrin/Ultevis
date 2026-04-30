@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import Qt5Compat.GraphicalEffects
 
 Item {
     id: root
@@ -55,10 +54,6 @@ Item {
                 height: 20
                 fillMode: Image.PreserveAspectFit
                 anchors.verticalCenter: parent.verticalCenter
-                layer.enabled: true
-                layer.effect: ColorOverlay {
-                    color: "#EBEDF0"
-                }
             }
 
             Text {
@@ -130,11 +125,6 @@ Item {
                             height: 20
                             fillMode: Image.PreserveAspectFit
                             anchors.verticalCenter: parent.verticalCenter
-                            layer.enabled: true
-                            layer.effect: ColorOverlay {
-                                color: optionHover.containsMouse || root.value === modelData.key
-                                       ? "#E07A26" : "#EBEDF0"
-                            }
                         }
 
                         Text {
