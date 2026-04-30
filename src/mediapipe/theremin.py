@@ -2,7 +2,8 @@ import cv2
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
-from mediapipe.tasks.python.vision import RunningMode 
+from mediapipe.tasks.python.vision import RunningMode
+from collections import deque
 import socket
 import json
 from pathlib import Path
@@ -16,6 +17,27 @@ if not MODEL_PATH.exists():
 hand_base_options = python.BaseOptions(model_asset_path=str(MODEL_PATH))
 options = vision.HandLandmarkerOptions(base_options=hand_base_options,running_mode=RunningMode.VIDEO,num_hands=2)
 recognizer = vision.HandLandmarker.create_from_options(options)
+
+_TRAIL_LENGTH = 50
+_TRAIL_MAX_THICKNESS = 10
+# (B, G, R)
+_RIGHT_TRAIL_COLOR = (0, 165, 255)   # orange
+_LEFT_TRAIL_COLOR  = (0, 165, 255)   # orange
+
+_left_trail:  deque[tuple[int, int]] = deque(maxlen=_TRAIL_LENGTH)
+_right_trail: deque[tuple[int, int]] = deque(maxlen=_TRAIL_LENGTH)
+
+# If a hand jumps further than this in one frame it's a label-swap glitch, not real movement
+_MAX_TRAIL_JUMP_PX = 80
+
+
+def _append_trail(trail: deque, pt: tuple[int, int]) -> None:
+    if trail:
+        dx = pt[0] - trail[-1][0]
+        dy = pt[1] - trail[-1][1]
+        if dx * dx + dy * dy > _MAX_TRAIL_JUMP_PX ** 2:
+            trail.clear()
+    trail.append(pt)
 
 
 def detect_hands(detection_result): 
@@ -62,23 +84,53 @@ def detect_hands(detection_result):
     return theremin_payload
    
 
-def draw_circle (display_frame,frame_height, frame_width, detection_result):    
-    # Draw circles after display_frame is created
+def _draw_trail(frame, trail: deque, color: tuple[int, int, int]) -> None:
+    points = list(trail)
+    if len(points) < 2:
+        return
+    overlay = frame.copy()
+    n = len(points)
+    for i in range(1, n):
+        alpha = i / n  # 0 = oldest, 1 = newest
+        thickness = max(1, int(alpha * _TRAIL_MAX_THICKNESS))
+        cv2.line(overlay, points[i - 1], points[i], color, thickness, lineType=cv2.LINE_AA)
+    cv2.addWeighted(overlay, 0.6, frame, 0.4, 0, frame)
+
+
+def draw_circle(display_frame, frame_height, frame_width, detection_result):
+    seen_labels: set[str] = set()
+
     if detection_result.handedness:
-        for i, (hand_landmarks, handedness) in enumerate(zip(
+        for hand_landmarks, handedness in zip(
             detection_result.hand_landmarks, detection_result.handedness
-        )):
+        ):
             label = handedness[0].category_name
+            seen_labels.add(label)
             thumb_tip = hand_landmarks[4]
             index_tip = hand_landmarks[8]
 
+            center_x = int((1 - index_tip.x) * frame_width)
+            center_y = int(index_tip.y * frame_height)
+            pt = (center_x, center_y)
+
+            trail = _right_trail if label == "Right" else _left_trail
+            _append_trail(trail, pt)
+
             distance = ((thumb_tip.x - index_tip.x)**2 + (thumb_tip.y - index_tip.y)**2)**0.5
             PINCH_THRESHOLD = 0.05
-
             if distance < PINCH_THRESHOLD:
-                center_x = int((1 - index_tip.x) * frame_width)  # Flip x coordinate
-                center_y = int(index_tip.y * frame_height)
-                cv2.circle(display_frame, center=(center_x, center_y), radius=20, color=(0, 255, 0), thickness=-1)
+                color = _RIGHT_TRAIL_COLOR if label == "Right" else _LEFT_TRAIL_COLOR
+                cv2.circle(display_frame, center=pt, radius=20, color=color, thickness=-1)
+
+    # Clear trails for hands that left the frame
+    if "Right" not in seen_labels:
+        _right_trail.clear()
+    if "Left" not in seen_labels:
+        _left_trail.clear()
+
+    # Draw trails beneath the circles
+    _draw_trail(display_frame, _right_trail, _RIGHT_TRAIL_COLOR)
+    _draw_trail(display_frame, _left_trail, _LEFT_TRAIL_COLOR)
 
 
 
