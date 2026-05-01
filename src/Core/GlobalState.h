@@ -90,8 +90,8 @@ public:
    std::array<std::atomic<bool>, 128> keyboardState {};
    std::atomic<KeyboardSound> currentKeyboardInstrument { KeyboardSound::GrandPiano };
    std::atomic<bool> sustainPedal { false };
-   std::atomic<int> topKeyboardOctave { 3 }; 
-   std::atomic<int> bottomKeyboardOctave { 5 };
+   std::atomic<int> topKeyboardOctave { 5 };
+   std::atomic<int> bottomKeyboardOctave { 4 };
    std::atomic<bool> rightThumbUp { false };
    std::atomic<bool> rightThumbDown { false };
    std::atomic<bool> leftThumbUp { false };

@@ -26,9 +26,11 @@ recognizer = vision.GestureRecognizer.create_from_options(_keyboard_gesture_opti
 _thumb_tracker = ThumbGestureTracker()
 
 # --- State Tracking ---
-# Keep track of which notes are currently being played by each hand
-left_hand_notes = {}  # {note: True}
-right_hand_notes = {} # {note: True}
+# Keep track of which notes are currently being played by each hand, split by keyboard
+right_hand_top_notes = {}
+right_hand_bottom_notes = {}
+left_hand_top_notes = {}
+left_hand_bottom_notes = {}
 
 # Keep track of the last finger-to-wrist Y-distance to detect a "press"
 last_finger_wrist_dist = {} # {(hand_label, finger_name): distance}
@@ -152,22 +154,26 @@ def find_key_zone(x: float, y: float) -> KeyboardZone | None:
 
 
 def detect_key_strokes(detection_result):
-    global left_hand_notes, right_hand_notes, last_finger_wrist_dist
+    global right_hand_top_notes, right_hand_bottom_notes, left_hand_top_notes, left_hand_bottom_notes, last_finger_wrist_dist
 
     keyboard_payload = {
         "instrument": "keyboard",
         "rightHandVisible": False,
         "leftHandVisible": False,
-        "notesOn": "",
-        "notesOff": "",
+        "topNotesOn": "",
+        "topNotesOff": "",
+        "bottomNotesOn": "",
+        "bottomNotesOff": "",
     }
     
     # This set is now ONLY for visual feedback on the frame of the press
     active_zone_names: set[str] = set()
     displayed_hand_positions: dict[str, tuple[float, float]] = {}
     
-    current_left_notes = {}
-    current_right_notes = {}
+    current_right_top_notes = {}
+    current_right_bottom_notes = {}
+    current_left_top_notes = {}
+    current_left_bottom_notes = {}
     current_finger_distances = {}
 
     if detection_result.handedness:
@@ -206,8 +212,9 @@ def detect_key_strokes(detection_result):
                 zone = find_key_zone(mirrored_x, tip.y)
 
                 # Determine if the note for this finger is currently "on"
-                is_note_on = (label == "Right" and zone and zone.note in right_hand_notes) or \
-                             (label == "Left" and zone and zone.note in left_hand_notes)
+                is_top = zone.name.endswith("+") if zone else False
+                is_note_on = (label == "Right" and zone and zone.note in (right_hand_top_notes if is_top else right_hand_bottom_notes)) or \
+                             (label == "Left"  and zone and zone.note in (left_hand_top_notes  if is_top else left_hand_bottom_notes))
 
                 if zone:
                     #press
@@ -217,36 +224,42 @@ def detect_key_strokes(detection_result):
                     if not is_note_on and finger_pressed:
                             active_zone_names.add(zone.name)
                             if label == "Right":
-                                current_right_notes[zone.note] = True
+                                (current_right_top_notes if is_top else current_right_bottom_notes)[zone.note] = True
                             else:
-                                current_left_notes[zone.note] = True
+                                (current_left_top_notes if is_top else current_left_bottom_notes)[zone.note] = True
                     
                     #sustain while note on
                     elif is_note_on:
                         if not finger_lifted:
                             active_zone_names.add(zone.name)
                             if label == "Right":
-                                current_right_notes[zone.note] = True
+                                (current_right_top_notes if is_top else current_right_bottom_notes)[zone.note] = True
                             else:
-                                current_left_notes[zone.note] = True
+                                (current_left_top_notes if is_top else current_left_bottom_notes)[zone.note] = True
 
     # Update the last known distances for the next frame
     last_finger_wrist_dist = current_finger_distances
 
     # Determine which notes to turn ON
-    new_right_notes = [note for note in current_right_notes if note not in right_hand_notes]
-    new_left_notes = [note for note in current_left_notes if note not in left_hand_notes]
-    if new_right_notes or new_left_notes:
-        keyboard_payload["notesOn"] = " ".join(map(str, new_right_notes + new_left_notes))
+    top_on    = [n for n in current_right_top_notes    if n not in right_hand_top_notes] + \
+                [n for n in current_left_top_notes     if n not in left_hand_top_notes]
+    bottom_on = [n for n in current_right_bottom_notes if n not in right_hand_bottom_notes] + \
+                [n for n in current_left_bottom_notes  if n not in left_hand_bottom_notes]
+    if top_on:    keyboard_payload["topNotesOn"]    = " ".join(map(str, top_on))
+    if bottom_on: keyboard_payload["bottomNotesOn"] = " ".join(map(str, bottom_on))
 
     # Determine which notes to turn OFF
-    stopped_right_notes = [note for note in right_hand_notes if note not in current_right_notes]
-    stopped_left_notes = [note for note in left_hand_notes if note not in current_left_notes]
-    if stopped_right_notes or stopped_left_notes:
-        keyboard_payload["notesOff"] = " ".join(map(str, stopped_right_notes + stopped_left_notes))
+    top_off    = [n for n in right_hand_top_notes    if n not in current_right_top_notes] + \
+                 [n for n in left_hand_top_notes     if n not in current_left_top_notes]
+    bottom_off = [n for n in right_hand_bottom_notes if n not in current_right_bottom_notes] + \
+                 [n for n in left_hand_bottom_notes  if n not in current_left_bottom_notes]
+    if top_off:    keyboard_payload["topNotesOff"]    = " ".join(map(str, top_off))
+    if bottom_off: keyboard_payload["bottomNotesOff"] = " ".join(map(str, bottom_off))
 
-    # Update the state for the next frame
-    right_hand_notes = current_right_notes
-    left_hand_notes = current_left_notes
+    # Update state for next frame
+    right_hand_top_notes    = current_right_top_notes
+    right_hand_bottom_notes = current_right_bottom_notes
+    left_hand_top_notes     = current_left_top_notes
+    left_hand_bottom_notes  = current_left_bottom_notes
     
     return keyboard_payload, active_zone_names, displayed_hand_positions

@@ -105,24 +105,29 @@ void startCameraFeed(GlobalState* state) {
         state->leftDrumVelocity.store(parseInt(json, "leftDrumVelocity", state->leftDrumVelocity.load()));
         state->rightDrumVelocity.store(parseInt(json, "rightDrumVelocity", state->rightDrumVelocity.load()));
 
-        auto updateNotes = [&](const std::string& key, bool isPressed) {
-            std::string noteStr = parseValue(json, key);
-            // Clean the string by stripping quotes
-            noteStr.erase(std::remove(noteStr.begin(), noteStr.end(), '\"'), noteStr.end());
-            
-            std::stringstream ss(noteStr);
-            std::string noteItem;
-            while (std::getline(ss, noteItem, ' ')) {
-                if (!noteItem.empty()) {
-                    int note = std::stoi(noteItem);
-                    if (note >= 0 && note < 128) {
-                        state->keyboardState[note].store(isPressed);
+        auto updateNotes = [&](const std::string& key, bool isPressed, int defaultOctave, int currentOctave) {
+                std::string noteStr = parseValue(json, key);
+                noteStr.erase(std::remove(noteStr.begin(), noteStr.end(), '\"'), noteStr.end());
+
+                int semitoneShift = (currentOctave - defaultOctave) * 12;
+
+                std::stringstream ss(noteStr);
+                std::string noteItem;
+                while (std::getline(ss, noteItem, ' ')) {
+                    if (!noteItem.empty()) {
+                        int note = std::stoi(noteItem) + semitoneShift;
+                        if (note >= 0 && note < 128)
+                            state->keyboardState[note].store(isPressed);
                     }
                 }
-            }
         };
-        updateNotes("notesOn", true);
-        updateNotes("notesOff", false);
+
+            int topOctave    = state->topKeyboardOctave.load();
+            int bottomOctave = state->bottomKeyboardOctave.load();
+            updateNotes("topNotesOn",     true,  5, topOctave);
+            updateNotes("topNotesOff",    false, 5, topOctave);
+            updateNotes("bottomNotesOn",  true,  4, bottomOctave);
+            updateNotes("bottomNotesOff", false, 4, bottomOctave);
     }
 
     state->cameraSessionActive.store(false);
