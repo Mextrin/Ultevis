@@ -1,3 +1,4 @@
+import os
 import mediapipe as mp
 import cv2
 from pathlib import Path
@@ -6,6 +7,8 @@ from mediapipe.tasks.python import vision
 from mediapipe.tasks.python.vision import RunningMode
 from keyboard_gestures import ThumbGestureTracker
 from keyboard_utils import KeyboardZone, PINCH_THRESHOLD, KEYBOARD_ZONES
+
+_DEBUG_KEYBOARD = os.environ.get("ULTEVIS_DEBUG_KEYBOARD") is not None
 
 
 _GESTURE_MODEL_PATH = Path(__file__).with_name("gesture_recognizer.task")
@@ -32,16 +35,18 @@ right_hand_bottom_notes = {}
 left_hand_top_notes = {}
 left_hand_bottom_notes = {}
 
-# Keep track of the last finger-to-wrist Y-distance to detect a "press"
-last_finger_wrist_dist = {} # {(hand_label, finger_name): distance}
+# Last finger-to-wrist Y-distance (tip.y - wrist.y) for curl / secondary hit cues.
+last_finger_wrist_dist = {}  # {(hand_label, finger_name): distance}
+# Previous fingertip Y (MediaPipe: Y grows downward) for strike detection.
+last_fingertip_y = {}  # {(hand_label, finger_name): float}
+# After a hit, we sustain the note until the finger leaves the key zone (or changes key).
+finger_key_engaged = {}  # {(hand_label, finger_name): bool}
+last_zone_name_per_finger = {}  # {(hand_label, finger_name): str | None}
 
-# Threshold for detecting a "press" (finger moving towards wrist)
-# A negative value means the finger is moving closer to the wrist.
-PRESS_DISTANCE_THRESHOLD = 0.015 
-
-# Threshold for detecting a "lift" to allow re-pressing the same key
-# A positive value means the finger is moving away from the wrist.
-LIFT_DISTANCE_THRESHOLD = -0.01
+# Min downward tip motion per frame (normalized) to count as a "hit" vs hover.
+STRIKE_DOWN_VELOCITY = 0.0055
+# Finger curling toward wrist: (last_dist - current_dist) must exceed this (positive = closer).
+CURL_TOWARD_WRIST_DELTA = 0.012
 # --------------------
 
 def detect_keyboard_hands(detection_result):
@@ -154,7 +159,8 @@ def find_key_zone(x: float, y: float) -> KeyboardZone | None:
 
 
 def detect_key_strokes(detection_result):
-    global right_hand_top_notes, right_hand_bottom_notes, left_hand_top_notes, left_hand_bottom_notes, last_finger_wrist_dist
+    global right_hand_top_notes, right_hand_bottom_notes, left_hand_top_notes, left_hand_bottom_notes
+    global last_finger_wrist_dist, finger_key_engaged, last_fingertip_y, last_zone_name_per_finger
 
     keyboard_payload = {
         "instrument": "keyboard",
@@ -177,6 +183,7 @@ def detect_key_strokes(detection_result):
     current_finger_distances = {}
 
     if detection_result.handedness:
+        touched_finger_ids: set[tuple[str, str]] = set()
         processed_labels = set()
         for hand_landmarks, handedness in zip(detection_result.hand_landmarks, detection_result.handedness):
             label = handedness[0].category_name
@@ -201,41 +208,58 @@ def detect_key_strokes(detection_result):
                 keyboard_payload[f"{prefix}_{name}_Y"] = tip.y
                 
                 finger_id = (label, name)
-                
+                touched_finger_ids.add(finger_id)
+
                 current_dist = tip.y - wrist_landmark.y
                 current_finger_distances[finger_id] = current_dist
-                
+
                 last_dist = last_finger_wrist_dist.get(finger_id, current_dist)
-                dist_velocity = current_dist - last_dist
+                curl_hit = (last_dist - current_dist) >= CURL_TOWARD_WRIST_DELTA
+
+                prev_y = last_fingertip_y.get(finger_id, tip.y)
+                delta_y = tip.y - prev_y
+                strike_down = delta_y >= STRIKE_DOWN_VELOCITY
 
                 mirrored_x = 1.0 - tip.x
                 zone = find_key_zone(mirrored_x, tip.y)
 
-                # Determine if the note for this finger is currently "on"
-                is_top = zone.name.endswith("+") if zone else False
-                is_note_on = (label == "Right" and zone and zone.note in (right_hand_top_notes if is_top else right_hand_bottom_notes)) or \
-                             (label == "Left"  and zone and zone.note in (left_hand_top_notes  if is_top else left_hand_bottom_notes))
+                prev_zone_name = last_zone_name_per_finger.get(finger_id)
+                zone_name = zone.name if zone else None
+                if zone_name != prev_zone_name:
+                    finger_key_engaged[finger_id] = False
 
-                if zone:
-                    #press
-                    finger_pressed = dist_velocity > PRESS_DISTANCE_THRESHOLD
-                    finger_lifted = dist_velocity < LIFT_DISTANCE_THRESHOLD
+                if zone is None:
+                    finger_key_engaged[finger_id] = False
+                else:
+                    engaged = finger_key_engaged.get(finger_id, False)
+                    if not engaged and (strike_down or curl_hit):
+                        finger_key_engaged[finger_id] = True
+                        engaged = True
 
-                    if not is_note_on and finger_pressed:
-                            active_zone_names.add(zone.name)
-                            if label == "Right":
-                                (current_right_top_notes if is_top else current_right_bottom_notes)[zone.note] = True
-                            else:
-                                (current_left_top_notes if is_top else current_left_bottom_notes)[zone.note] = True
-                    
-                    #sustain while note on
-                    elif is_note_on:
-                        if not finger_lifted:
-                            active_zone_names.add(zone.name)
-                            if label == "Right":
-                                (current_right_top_notes if is_top else current_right_bottom_notes)[zone.note] = True
-                            else:
-                                (current_left_top_notes if is_top else current_left_bottom_notes)[zone.note] = True
+                    if engaged:
+                        is_top = zone.name.endswith("+")
+                        if label == "Right":
+                            (current_right_top_notes if is_top else current_right_bottom_notes)[zone.note] = True
+                        else:
+                            (current_left_top_notes if is_top else current_left_bottom_notes)[zone.note] = True
+                        active_zone_names.add(zone.name)
+
+                last_zone_name_per_finger[finger_id] = zone_name
+                last_fingertip_y[finger_id] = tip.y
+
+        for fid in list(finger_key_engaged.keys()):
+            if fid not in touched_finger_ids:
+                finger_key_engaged.pop(fid, None)
+        for fid in list(last_fingertip_y.keys()):
+            if fid not in touched_finger_ids:
+                last_fingertip_y.pop(fid, None)
+        for fid in list(last_zone_name_per_finger.keys()):
+            if fid not in touched_finger_ids:
+                last_zone_name_per_finger.pop(fid, None)
+    else:
+        finger_key_engaged.clear()
+        last_fingertip_y.clear()
+        last_zone_name_per_finger.clear()
 
     # Update the last known distances for the next frame
     last_finger_wrist_dist = current_finger_distances
@@ -245,16 +269,28 @@ def detect_key_strokes(detection_result):
                 [n for n in current_left_top_notes     if n not in left_hand_top_notes]
     bottom_on = [n for n in current_right_bottom_notes if n not in right_hand_bottom_notes] + \
                 [n for n in current_left_bottom_notes  if n not in left_hand_bottom_notes]
-    if top_on:    keyboard_payload["topNotesOn"]    = " ".join(map(str, top_on))
-    if bottom_on: keyboard_payload["bottomNotesOn"] = " ".join(map(str, bottom_on))
+    if top_on:
+        keyboard_payload["topNotesOn"] = " ".join(map(str, top_on))
+        if _DEBUG_KEYBOARD:
+            print(f"[keyboard] topNotesOn {keyboard_payload['topNotesOn']}", flush=True)
+    if bottom_on:
+        keyboard_payload["bottomNotesOn"] = " ".join(map(str, bottom_on))
+        if _DEBUG_KEYBOARD:
+            print(f"[keyboard] bottomNotesOn {keyboard_payload['bottomNotesOn']}", flush=True)
 
     # Determine which notes to turn OFF
     top_off    = [n for n in right_hand_top_notes    if n not in current_right_top_notes] + \
                  [n for n in left_hand_top_notes     if n not in current_left_top_notes]
     bottom_off = [n for n in right_hand_bottom_notes if n not in current_right_bottom_notes] + \
                  [n for n in left_hand_bottom_notes  if n not in current_left_bottom_notes]
-    if top_off:    keyboard_payload["topNotesOff"]    = " ".join(map(str, top_off))
-    if bottom_off: keyboard_payload["bottomNotesOff"] = " ".join(map(str, bottom_off))
+    if top_off:
+        keyboard_payload["topNotesOff"] = " ".join(map(str, top_off))
+        if _DEBUG_KEYBOARD:
+            print(f"[keyboard] topNotesOff {keyboard_payload['topNotesOff']}", flush=True)
+    if bottom_off:
+        keyboard_payload["bottomNotesOff"] = " ".join(map(str, bottom_off))
+        if _DEBUG_KEYBOARD:
+            print(f"[keyboard] bottomNotesOff {keyboard_payload['bottomNotesOff']}", flush=True)
 
     # Update state for next frame
     right_hand_top_notes    = current_right_top_notes

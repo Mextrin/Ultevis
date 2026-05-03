@@ -5,10 +5,17 @@
 #include "AudioEngine.h"
 #include <iostream>
 #include <cmath>
+#include <cstdlib>
 #include "GuitarChords.h"
 
 namespace
 {
+    bool keyboardDebugEnabled()
+    {
+        static const bool enabled = std::getenv("ULTEVIS_DEBUG_KEYBOARD") != nullptr;
+        return enabled;
+    }
+
     // Translates custom SM Drums notes back into standard General MIDI
     int translateSMtoGM(int smNote) 
     {
@@ -217,36 +224,54 @@ void HeadlessAudioEngine::loadKeyboardSound(int keyboardInstrumentID)
         return;
     }
 
+    juce::File sfzFile = juce::File::isAbsolutePath(sfzToLoad)
+        ? juce::File(sfzToLoad)
+        : juce::File::getCurrentWorkingDirectory().getChildFile(sfzToLoad);
+
     std::lock_guard<std::mutex> lock(keyboardSynthMutex);
 
     // Avoid reloading the same keyboard patch repeatedly
     if (loadedKeyboardInstrumentID == keyboardInstrumentID) {
         std::cout << "Keyboard SFZ already loaded, skipping reload: "
-                  << sfzToLoad << std::endl;
+                  << sfzFile.getFullPathName() << std::endl;
         resetKeyboardPlaybackState();
         return;
     }
 
     resetKeyboardPlaybackState();
 
-    std::cout << "Loading keyboard SFZ: " << sfzToLoad << std::endl;
+    if (!sfzFile.existsAsFile()) {
+        std::cerr << "ERROR: SFZ file not found: "
+                  << sfzFile.getFullPathName() << std::endl;
+        return;
+    }
 
-    juce::File sfzFile(sfzToLoad);
-    juce::String content = sfzFile.loadFileAsString();
+    const std::string absoluteSfzPath = sfzFile.getFullPathName().toStdString();
+    std::cout << "Loading keyboard SFZ: " << absoluteSfzPath << std::endl;
+
+    bool loaded = false;
 
     //inject sustain values into sfz files for violin, flute, organ
     if (keyboardInstrumentID == 1 || keyboardInstrumentID == 2 || keyboardInstrumentID == 4) {
+        juce::String content = sfzFile.loadFileAsString();
         juce::String patch = "\nampeg_decay=4.0\nampeg_sustain=0\n";
         content = content.replace("<global>", "<global>" + patch)
                          .replace("<group>", "<group>" + patch);
+        loaded = keyboardSynth.loadSfzString(absoluteSfzPath, content.toStdString());
+    } else {
+        loaded = keyboardSynth.loadSfzFile(absoluteSfzPath);
     }
 
-    // Load from memory using the absolute path so sfizz can find the .wav folders
-    bool loaded = keyboardSynth.loadSfzString(sfzFile.getFullPathName().toStdString(), content.toStdString());
-
     if (!loaded) {
-        std::cerr << "ERROR: Failed to load SFZ: " << sfzToLoad << std::endl;
+        std::cerr << "ERROR: Failed to load SFZ: " << absoluteSfzPath << std::endl;
         return;
+    }
+
+    const int regionCount = keyboardSynth.getNumRegions();
+    std::cout << "Loaded keyboard SFZ with " << regionCount << " regions" << std::endl;
+    if (regionCount == 0) {
+        std::cerr << "WARNING: Keyboard SFZ has zero regions: "
+                  << absoluteSfzPath << std::endl;
     }
 
     loadedKeyboardInstrumentID = keyboardInstrumentID;
@@ -402,6 +427,7 @@ void HeadlessAudioEngine::processKeyboard(juce::AudioBuffer<float>& buffer, int 
 
         wasSustainPedalPressed = isPedalPressed;
     }
+    const bool debugKeyboard = keyboardDebugEnabled();
     for (int i = 0; i < 128; ++i) {
         bool isPressed = globalState->keyboardState[i].load();
         
@@ -414,11 +440,15 @@ void HeadlessAudioEngine::processKeyboard(juce::AudioBuffer<float>& buffer, int 
                 if (midiOut != nullptr) {
                     midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, i, (juce::uint8)100));
                 }
+                if (debugKeyboard)
+                    std::cout << "[keyboard] noteOn " << i << std::endl;
             } else {
                 keyboardSynth.noteOff(0, i, 0);
                 if (midiOut != nullptr) {
                     midiOut->sendMessageNow(juce::MidiMessage::noteOff(1, i, (juce::uint8)0));
                 }
+                if (debugKeyboard)
+                    std::cout << "[keyboard] noteOff " << i << std::endl;
             }
         }
     }

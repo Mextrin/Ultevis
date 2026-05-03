@@ -2,6 +2,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <QIcon>
 #include <thread>
 #include <cstdlib>
 #include <string>
@@ -60,6 +61,7 @@ int main(int argc, char* argv[])
     QGuiApplication app(argc, argv);
     app.setApplicationName("Airchestra");
     app.setApplicationVersion("0.2.0");
+    app.setWindowIcon(QIcon(":/assets/icons/app-icon.png"));
     QQuickStyle::setStyle("Basic");
 
     //BOOT JUCE
