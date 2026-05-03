@@ -7,6 +7,7 @@ from collections import deque
 import socket
 import json
 from pathlib import Path
+import numpy as np # Make sure to add this import at the top of your file
 
 
 # Create hand detector with new API
@@ -19,10 +20,10 @@ options = vision.HandLandmarkerOptions(base_options=hand_base_options,running_mo
 recognizer = vision.HandLandmarker.create_from_options(options)
 
 _TRAIL_LENGTH = 50
-_TRAIL_MAX_THICKNESS = 10
+_TRAIL_MAX_THICKNESS = 20
 # (B, G, R)
-_RIGHT_TRAIL_COLOR = (0, 165, 255)   # orange
-_LEFT_TRAIL_COLOR  = (0, 165, 255)   # orange
+_RIGHT_TRAIL_COLOR = (20, 100, 255)   # orange
+_LEFT_TRAIL_COLOR  = (20, 100, 255)   # orange
 
 _left_trail:  deque[tuple[int, int]] = deque(maxlen=_TRAIL_LENGTH)
 _right_trail: deque[tuple[int, int]] = deque(maxlen=_TRAIL_LENGTH)
@@ -88,13 +89,30 @@ def _draw_trail(frame, trail: deque, color: tuple[int, int, int]) -> None:
     points = list(trail)
     if len(points) < 2:
         return
-    overlay = frame.copy()
+
+    h, w = frame.shape[:2]
+    # Create blank, black overlays for drawing the effects
+    glow_overlay = np.zeros((h, w, 3), dtype=np.uint8)
+    
     n = len(points)
     for i in range(1, n):
         alpha = i / n  # 0 = oldest, 1 = newest
-        thickness = max(1, int(alpha * _TRAIL_MAX_THICKNESS))
-        cv2.line(overlay, points[i - 1], points[i], color, thickness, lineType=cv2.LINE_AA)
-    cv2.addWeighted(overlay, 0.6, frame, 0.4, 0, frame)
+        
+        # 1. Draw the thick "glow" line
+        glow_thickness = max(2, int(alpha * _TRAIL_MAX_THICKNESS * 1.5))
+        cv2.line(glow_overlay, points[i - 1], points[i], color, glow_thickness, lineType=cv2.LINE_AA)
+        
+        # 2. Draw the thin, bright "core" line directly on top of the glow
+        core_thickness = max(1, int(alpha * _TRAIL_MAX_THICKNESS * 0.4))
+        core_color = tuple(min(255, c + 150) for c in color) 
+        cv2.line(glow_overlay, points[i - 1], points[i], core_color, core_thickness, lineType=cv2.LINE_AA)
+
+    # 3. Apply Gaussian Blur to the combined glow/core overlay
+    blur_kernel_size = max(1, int(_TRAIL_MAX_THICKNESS * 0.5) | 1) 
+    blurred_glow = cv2.GaussianBlur(glow_overlay, (blur_kernel_size, blur_kernel_size), 0)
+
+    # 4. Add the blurred effect layer to the original frame
+    cv2.add(frame, blurred_glow, dst=frame)
 
 
 def draw_circle(display_frame, frame_height, frame_width, detection_result):
