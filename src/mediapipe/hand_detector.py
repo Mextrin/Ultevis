@@ -1,4 +1,5 @@
 import os
+import sys
 import cv2
 import mediapipe as mp
 from mediapipe.tasks import python
@@ -38,6 +39,20 @@ def safe_replace(src, dst, retries=10, delay=0.01):
             time.sleep(delay)
     return False
 
+def open_camera_safely():
+    if sys.platform == "win32":
+        capture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    else:
+        capture = cv2.VideoCapture(0)
+        
+    if not capture.isOpened():
+        raise RuntimeError("Unable to open webcam at index 0.")
+        
+    capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    capture.set(cv2.CAP_PROP_FPS, 30)
+    return capture
 
 def command_listener():
     global requested_mode
@@ -59,13 +74,7 @@ listener_thread.start()
 INSTRUMENT = 1 if CAMERA_MODE == "drums" else 0
 recognizer = drum_recognizer if INSTRUMENT == 1 else theremin_recognizer
 
-# Only open the camera if we aren't starting in 'none' mode
-cap = cv2.VideoCapture(0) if CAMERA_MODE != "none" else None
-if cap and not cap.isOpened():
-    raise RuntimeError("Unable to open webcam at index 0.")
-elif cap:
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 10000)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 10000)
+cap = open_camera_safely() if CAMERA_MODE != "none" else None
 
 frame_counter = 0
 
@@ -105,9 +114,7 @@ try:
             else:
                 # Turn the webcam back on!
                 if cap is None:
-                    cap = cv2.VideoCapture(0)
-                    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 10000)
-                    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 10000)
+                    cap = open_camera_safely()
                     
                 INSTRUMENT = 1 if CAMERA_MODE == "drums" else 0
                 if CAMERA_MODE == "keyboard":
@@ -193,7 +200,7 @@ try:
 
         resized_frame = cv2.resize(display_frame, (640, 480))
         
-        cv2.imwrite(temp_frame_path, resized_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
+        cv2.imwrite(temp_frame_path, resized_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
         safe_replace(temp_frame_path, final_frame_path)
 
 finally:
