@@ -9,7 +9,7 @@ import socket
 import json
 import tempfile
 import threading
-import time # Needed to put the CPU to sleep
+import time
 
 from theremin import detect_hands, draw_circle, add_theremin_text, recognizer as theremin_recognizer
 from drums import drum_detect, get_drum_hit_coordinates, recognizer as drum_recognizer
@@ -18,7 +18,6 @@ from keyboard import detect_key_strokes, draw_keyboard_zones, detect_keyboard_ha
 UDP_IP = "127.0.0.1"
 UDP_PORT = 5005
 
-# Force the app to start with the camera off, ignoring any old environment variables
 CAMERA_MODE = "none"
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -43,15 +42,16 @@ def open_camera_safely():
     if sys.platform == "win32":
         capture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     else:
         capture = cv2.VideoCapture(0)
+        capture.set(cv2.CAP_PROP_FRAME_WIDTH, 10000)
+        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 10000)
         
     if not capture.isOpened():
         raise RuntimeError("Unable to open webcam at index 0.")
         
-    capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-    capture.set(cv2.CAP_PROP_FPS, 30)
     return capture
 
 def command_listener():
@@ -76,10 +76,7 @@ recognizer = drum_recognizer if INSTRUMENT == 1 else theremin_recognizer
 
 cap = open_camera_safely() if CAMERA_MODE != "none" else None
 
-frame_counter = 0
-
 try:
-    # --- THE FIX: Change to `while True` so the script stays alive even when the camera is off ---
     while True:
         if CAMERA_MODE != requested_mode:
             CAMERA_MODE = requested_mode
@@ -112,7 +109,6 @@ try:
                 safe_replace(temp_frame_path, final_frame_path)
                 
             else:
-                # Turn the webcam back on!
                 if cap is None:
                     cap = open_camera_safely()
                     
@@ -122,7 +118,6 @@ try:
                 else:
                     recognizer = drum_recognizer if INSTRUMENT == 1 else theremin_recognizer
 
-        # If we are in 'none' mode, put the CPU to sleep for a fraction of a second and skip the AI
         if CAMERA_MODE == "none" or cap is None:
             time.sleep(0.05)
             continue
@@ -193,14 +188,12 @@ try:
                 cv2.circle(display_frame, center=(center_x, center_y), radius=10, color=(0, 180, 255), thickness=-1)
         elif INSTRUMENT == 0:
             draw_circle(display_frame, frame_height, frame_width, recognition_result)
-            # commented out add_theremin_text(display_frame, payload)
         else:
-            # The drum drawing function is called get_drum_hit_coordinates, let's keep it consistent
             get_drum_hit_coordinates(display_frame, frame_height, frame_width, active_zone_names, displayed_hand_positions)
 
         resized_frame = cv2.resize(display_frame, (640, 480))
         
-        cv2.imwrite(temp_frame_path, resized_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
+        cv2.imwrite(temp_frame_path, resized_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
         safe_replace(temp_frame_path, final_frame_path)
 
 finally:
