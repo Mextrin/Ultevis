@@ -16,8 +16,19 @@
 
 namespace {
     void sendCommandToPython(const std::string& mode, bool quit = false) {
-        int sock = socket(AF_INET, SOCK_DGRAM, 0);
-        if (sock < 0) return;
+        #ifdef _WIN32
+            static bool wsa_initialized = false;
+            if (!wsa_initialized) {
+                WSADATA wsa_data;
+                WSAStartup(MAKEWORD(2, 2), &wsa_data);
+                wsa_initialized = true;
+            }
+            SOCKET sock = socket(AF_INET, SOCK_DGRAM, 0);
+            if (sock == INVALID_SOCKET) return;
+        #else
+            int sock = socket(AF_INET, SOCK_DGRAM, 0);
+            if (sock < 0) return;
+        #endif
 
         sockaddr_in addr{};
         addr.sin_family = AF_INET;
@@ -25,6 +36,7 @@ namespace {
         addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
         std::string json = "{\"mode\": \"" + mode + "\", \"quit\": " + (quit ? "true" : "false") + "}";
+        
         sendto(sock, json.c_str(), json.length(), 0, (sockaddr*)&addr, sizeof(addr));
 
         #ifdef _WIN32
