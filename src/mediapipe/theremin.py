@@ -4,10 +4,7 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 from mediapipe.tasks.python.vision import RunningMode
 from collections import deque
-import socket
-import json
 from pathlib import Path
-import numpy as np # Make sure to add this import at the top of your file
 
 
 # Create hand detector with new API
@@ -90,25 +87,25 @@ def _draw_trail(frame, trail: deque, color: tuple[int, int, int]) -> None:
     if len(points) < 2:
         return
 
-    h, w = frame.shape[:2]
-    # Create blank, black overlays for drawing the effects
-    glow_overlay = np.zeros((h, w, 3), dtype=np.uint8)
-    
+    # Create a blank, black overlay by copying the frame structure and zeroing it out.
+    glow_overlay = frame.copy()
+    glow_overlay[:] = 0  # Set all pixels to black
+
     n = len(points)
     for i in range(1, n):
         alpha = i / n  # 0 = oldest, 1 = newest
-        
+
         # 1. Draw the thick "glow" line
         glow_thickness = max(2, int(alpha * _TRAIL_MAX_THICKNESS * 1.5))
         cv2.line(glow_overlay, points[i - 1], points[i], color, glow_thickness, lineType=cv2.LINE_AA)
-        
+
         # 2. Draw the thin, bright "core" line directly on top of the glow
         core_thickness = max(1, int(alpha * _TRAIL_MAX_THICKNESS * 0.4))
-        core_color = tuple(min(255, c + 150) for c in color) 
+        core_color = tuple(min(255, c + 150) for c in color)
         cv2.line(glow_overlay, points[i - 1], points[i], core_color, core_thickness, lineType=cv2.LINE_AA)
 
     # 3. Apply Gaussian Blur to the combined glow/core overlay
-    blur_kernel_size = max(1, int(_TRAIL_MAX_THICKNESS * 0.5) | 1) 
+    blur_kernel_size = max(1, int(_TRAIL_MAX_THICKNESS * 0.5) | 1)
     blurred_glow = cv2.GaussianBlur(glow_overlay, (blur_kernel_size, blur_kernel_size), 0)
 
     # 4. Add the blurred effect layer to the original frame
