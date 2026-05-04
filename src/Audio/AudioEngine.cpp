@@ -106,6 +106,13 @@ void HeadlessAudioEngine::audioDeviceAboutToStart(juce::AudioIODevice* device)
         keyboardSynth.setSamplesPerBlock(device->getCurrentBufferSizeSamples());
         keyboardSynth.setNumVoices(16); //limit piano voices
     }
+
+    {
+        std::lock_guard<std::mutex> lock(guitarSynthMutex);
+        guitarSynth.setSampleRate(device->getCurrentSampleRate());
+        guitarSynth.setSamplesPerBlock(device->getCurrentBufferSizeSamples());
+        guitarSynth.setNumVoices(24);
+    }
 }
 
 void HeadlessAudioEngine::audioDeviceStopped()
@@ -134,6 +141,9 @@ void HeadlessAudioEngine::audioDeviceIOCallbackWithContext(
         case ActiveInstrument::Keyboard:
             processKeyboard(buffer, numSamples);
             break;
+        case ActiveInstrument::Guitar:
+            processGuitar(buffer, numSamples);
+        break;
     }
 
     const float masterGain = juce::jlimit(0.0f, 1.0f, globalState->masterVolume.load());
