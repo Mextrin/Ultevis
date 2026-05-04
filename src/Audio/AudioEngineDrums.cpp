@@ -4,18 +4,25 @@
 namespace
 {
     // Translates custom SM Drums notes back into standard General MIDI
-    int translateSMtoGM(int smNote) 
+    int translateSMtoGM(int smNote)
     {
-        switch(smNote) 
+        switch (smNote)
         {
             case 43: return 41; // Floor Tom: translates SM 43 to GM 41
             case 48: return 47; // High Tom: translates SM 50 to GM 48
             case 54: return 49; // Crash Cymbal: translates SM 54 to GM 49
             case 60: return 51; // Ride Cymbal: translates SM 60 to GM 51
-            
+
             // Kick (36), Snare (38), and Hi-Hats (42, 46), Low Tom (45) are already GM standard
-            default: return smNote; 
+            default: return smNote;
         }
+    }
+
+    int scaleDrumVelocity(int rawHit, int masterPercent)
+    {
+        const int p = juce::jlimit(0, 100, masterPercent);
+        const int r = juce::jlimit(0, 127, rawHit);
+        return juce::jlimit(0, 127, static_cast<int>((static_cast<long long>(r) * p + 50) / 100));
     }
 }
 
@@ -30,8 +37,8 @@ void HeadlessAudioEngine::resetDrumPlaybackState()
     globalState->mouthKickHit.store(false);
     globalState->leftDrumType.store(36);
     globalState->rightDrumType.store(38);
-    globalState->leftDrumVelocity.store(100);
-    globalState->rightDrumVelocity.store(100);
+    globalState->leftDrumHitVelocity.store(100);
+    globalState->rightDrumHitVelocity.store(100);
 }
 
 // Loads drum SFZ instrument into drumSynth
@@ -73,22 +80,30 @@ void HeadlessAudioEngine::processDrums(juce::AudioBuffer<float>& buffer, int num
 
     if (globalState->leftDrumHit.exchange(false)) {
         const int leftNote = globalState->leftDrumType.load();
-        const int leftVelocity = globalState->leftDrumVelocity.load();
-        int standardLeftGMNote = translateSMtoGM(leftNote);
+        const int rawLeftVel = globalState->leftDrumHitVelocity.load();
+        const int masterLeft = globalState->leftDrumVelocity.load();
+        const int leftVelocity = scaleDrumVelocity(rawLeftVel, masterLeft);
+        if (leftVelocity > 0) {
+            int standardLeftGMNote = translateSMtoGM(leftNote);
 
-        drumSynth.noteOn(0, leftNote, leftVelocity);
-        if (midiOut != nullptr)
-            midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, standardLeftGMNote, (juce::uint8)leftVelocity));
+            drumSynth.noteOn(0, leftNote, leftVelocity);
+            if (midiOut != nullptr)
+                midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, standardLeftGMNote, (juce::uint8)leftVelocity));
+        }
     }
 
     if (globalState->rightDrumHit.exchange(false)) {
         const int rightNote = globalState->rightDrumType.load();
-        const int rightVelocity = globalState->rightDrumVelocity.load();
-        int standardRightGMNote = translateSMtoGM(rightNote);
+        const int rawRightVel = globalState->rightDrumHitVelocity.load();
+        const int masterRight = globalState->rightDrumVelocity.load();
+        const int rightVelocity = scaleDrumVelocity(rawRightVel, masterRight);
+        if (rightVelocity > 0) {
+            int standardRightGMNote = translateSMtoGM(rightNote);
 
-        drumSynth.noteOn(0, rightNote, rightVelocity);
-        if (midiOut != nullptr)
-            midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, standardRightGMNote, (juce::uint8)rightVelocity));
+            drumSynth.noteOn(0, rightNote, rightVelocity);
+            if (midiOut != nullptr)
+                midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, standardRightGMNote, (juce::uint8)rightVelocity));
+        }
     }
 
     if (globalState->mouthKickHit.exchange(false) && globalState->mouthKickEnable.load()) {

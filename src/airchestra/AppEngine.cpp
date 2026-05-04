@@ -205,6 +205,18 @@ void AppEngine::setMasterVolume(float v) {
     state.setMasterVolume(v);
 }
 
+void AppEngine::setLeftDrumVelocity(int v) {
+    const int clamped = qBound(0, v, 100);
+    globalState->leftDrumVelocity.store(clamped);
+    state.setLeftDrumVelocity(clamped);
+}
+
+void AppEngine::setRightDrumVelocity(int v) {
+    const int clamped = qBound(0, v, 100);
+    globalState->rightDrumVelocity.store(clamped);
+    state.setRightDrumVelocity(clamped);
+}
+
 void AppEngine::setMouthKickEnabled(bool enabled) {
     globalState->mouthKickEnable.store(enabled);
     state.setMouthKickEnabled(enabled);
@@ -235,7 +247,7 @@ void AppEngine::setThereminVolumeFloor(float v) {
 
 void AppEngine::triggerDrumHit(int midiNote, int velocity) {
     globalState->rightDrumType.store(midiNote);
-    globalState->rightDrumVelocity.store(qBound(0, velocity, 127));
+    globalState->rightDrumHitVelocity.store(qBound(0, velocity, 127));
     globalState->rightDrumHit.store(true);
 }
 

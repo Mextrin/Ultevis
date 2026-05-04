@@ -33,6 +33,9 @@ class ViewState : public QObject
 
     Q_PROPERTY(float masterVolume READ masterVolume WRITE setMasterVolume NOTIFY masterVolumeChanged)
 
+    Q_PROPERTY(int leftDrumVelocity READ leftDrumVelocity WRITE setLeftDrumVelocity NOTIFY leftDrumVelocityChanged)
+    Q_PROPERTY(int rightDrumVelocity READ rightDrumVelocity WRITE setRightDrumVelocity NOTIFY rightDrumVelocityChanged)
+
     Q_PROPERTY(bool sustainPedal READ sustainPedal WRITE setSustainPedal NOTIFY sustainPedalChanged)
 
 
@@ -95,6 +98,18 @@ public:
         if (m_masterVolume != v) { m_masterVolume = v; emit masterVolumeChanged(); }
     }
 
+    int leftDrumVelocity() const { return m_leftDrumVelocity; }
+    void setLeftDrumVelocity(int v)
+    {
+        if (m_leftDrumVelocity != v) { m_leftDrumVelocity = v; emit leftDrumVelocityChanged(); }
+    }
+
+    int rightDrumVelocity() const { return m_rightDrumVelocity; }
+    void setRightDrumVelocity(int v)
+    {
+        if (m_rightDrumVelocity != v) { m_rightDrumVelocity = v; emit rightDrumVelocityChanged(); }
+    }
+
     bool sustainPedal() const { return m_sustainPedal; }
     void setSustainPedal(bool v)
     {
@@ -113,6 +128,8 @@ signals:
     void thereminVolumeFloorChanged();
 
     void masterVolumeChanged();
+    void leftDrumVelocityChanged();
+    void rightDrumVelocityChanged();
     void sustainPedalChanged();
 
 
@@ -128,6 +145,8 @@ private:
     float m_thereminVolumeFloor = 0.0f;  // 0% Volume Floor
 
     float m_masterVolume = 1.0f;
+    int m_leftDrumVelocity = 100;
+    int m_rightDrumVelocity = 100;
     bool m_mouthKickEnabled = false;
     bool m_sustainPedal = false;
 
