@@ -61,29 +61,58 @@ void HeadlessAudioEngine::processGuitar(juce::AudioBuffer<float>& buffer, int nu
 
     std::lock_guard<std::mutex> lock(guitarSynthMutex);
 
+    static int pendingNotes[6] = { -1, -1, -1, -1, -1, -1 };
+    static int pendingVelocity = 100;
+    static int nextStringIndex = 0;
+    static int samplesUntilNextString = 0;
+    static bool strumInProgress = false;
+
+    constexpr int stringDelaySamples = 900; // ~20 ms at 44.1 kHz
+
     if (globalState->guitarStrumHit.exchange(false)) {
         const int* chord = airchestra::getGuitarChord(
             globalState->currentGuitarRoot.load(),
             globalState->currentGuitarQuality.load()
         );
 
-        const int velocity = globalState->guitarVelocity.load();
+        for (int i = 0; i < 6; ++i)
+            pendingNotes[i] = chord[i];
 
-        for (int i = 0; i < 6; ++i) {
-            const int note = chord[i];
-            if (note < 0)
-                continue;
+        pendingVelocity = globalState->guitarVelocity.load();
 
-            guitarSynth.noteOn(0, note, velocity);
+        nextStringIndex = 0;
+        samplesUntilNextString = 0;
+        strumInProgress = true;
+    }
 
-            if (midiOut != nullptr) {
-                midiOut->sendMessageNow(
-                    juce::MidiMessage::noteOn(1, note, (juce::uint8)velocity)
-                );
+    if (strumInProgress) {
+        int samplesProcessed = 0;
+
+        while (samplesProcessed < numSamples && nextStringIndex < 6) {
+            if (samplesUntilNextString <= 0) {
+                const int note = pendingNotes[nextStringIndex];
+
+                if (note >= 0) {
+                    guitarSynth.noteOn(0, note, pendingVelocity);
+
+                    if (midiOut != nullptr) {
+                        midiOut->sendMessageNow(
+                            juce::MidiMessage::noteOn(1, note, (juce::uint8)pendingVelocity)
+                        );
+                    }
+                }
+
+                nextStringIndex++;
+                samplesUntilNextString = stringDelaySamples;
             }
+
+            const int advance = juce::jmin(samplesUntilNextString, numSamples - samplesProcessed);
+            samplesUntilNextString -= advance;
+            samplesProcessed += advance;
         }
 
-        guitarChordActive = true;
+        if (nextStringIndex >= 6)
+            strumInProgress = false;
     }
 
     float* outChannels[] = {
