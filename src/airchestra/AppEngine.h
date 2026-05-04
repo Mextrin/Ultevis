@@ -72,6 +72,9 @@ public:
     Q_INVOKABLE void setSustainPedal(bool enabled);
     Q_INVOKABLE void setKeyboardInstrument(int instrumentID);
 
+    Q_INVOKABLE void setGuitarSound(int soundID);
+    Q_INVOKABLE void triggerGuitarStrum(int velocity);
+
 
     bool leftHandVisible() const { return m_leftHandVisible; }
     bool rightHandVisible() const { return m_rightHandVisible; }

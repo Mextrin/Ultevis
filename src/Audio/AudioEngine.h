@@ -37,6 +37,7 @@ public:
     // --- Instrument loading ---
     void loadDrumSound(const juce::String& sfzPath);
     void loadKeyboardSound(int keyboardInstrumentID);
+    void loadGuitarSound(int guitarSoundID);
 
     // --- MIDI ---
     bool isMidiEnabled() const;
@@ -48,10 +49,12 @@ private:
     void processTheremin(juce::AudioBuffer<float>& buffer, int numSamples);
     void processDrums(juce::AudioBuffer<float>& buffer, int numSamples);
     void processKeyboard(juce::AudioBuffer<float>& buffer, int numSamples);
+    void processGuitar(juce::AudioBuffer<float>& buffer, int numSamples);
 
     // --- State reset ---
     void resetDrumPlaybackState();
     void resetKeyboardPlaybackState();
+    void resetGuitarPlaybackState();
 
     // --- Device management ---
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
@@ -64,15 +67,20 @@ private:
     juce::Synthesiser synth;
     sfz::Sfizz drumSynth;
     sfz::Sfizz keyboardSynth;
+    sfz::Sfizz guitarSynth;
 
     std::unique_ptr<juce::MidiOutput> midiOut;
 
     std::mutex drumSynthMutex;
     std::mutex keyboardSynthMutex;
+    std::mutex guitarSynthMutex;
 
     juce::String loadedDrumSfzPath;
+    juce::String loadedGuitarSfzPath;
     int loadedKeyboardInstrumentID = -1;
+    int loadedGuitarSoundID = -1;
 
+    bool guitarChordActive = false;
     bool wasRightVisible = false;
     bool wasSustainPedalPressed = false;
     bool isReinitializing = false;

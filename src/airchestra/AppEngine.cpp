@@ -113,7 +113,55 @@ void AppEngine::selectInstrument(const QString &name) {
         globalState->currentKeyboardInstrument.store(KeyboardSound::GrandPiano);
         audioEngine->loadKeyboardSound(0);
         sendCommandToPython("keyboard");
-    } 
+    }
+    else if (name == QStringLiteral("guitar")) {
+        globalState->currentInstrument.store(ActiveInstrument::Guitar);
+        globalState->currentGuitarSound.store(GuitarSound::CleanElectric);
+
+        audioEngine->loadGuitarSound(0);
+
+        // simple rotating test progression
+        static int chordIndex = 0;
+
+        switch (chordIndex % 6) {
+            case 0: // C major
+                globalState->currentGuitarRoot.store(GuitarChordRoot::E);
+                globalState->currentGuitarQuality.store(GuitarChordQuality::Minor);
+                break;
+
+            case 1: // G major
+                globalState->currentGuitarRoot.store(GuitarChordRoot::G);
+                globalState->currentGuitarQuality.store(GuitarChordQuality::Major);
+                break;
+
+            case 2: // A minor
+                globalState->currentGuitarRoot.store(GuitarChordRoot::A);
+                globalState->currentGuitarQuality.store(GuitarChordQuality::Minor);
+                break;
+
+            case 3: // F major
+                globalState->currentGuitarRoot.store(GuitarChordRoot::F);
+                globalState->currentGuitarQuality.store(GuitarChordQuality::Major);
+                break;
+
+            case 4: // D minor
+                globalState->currentGuitarRoot.store(GuitarChordRoot::D);
+                globalState->currentGuitarQuality.store(GuitarChordQuality::Minor);
+                break;
+
+            case 5: // G7
+                globalState->currentGuitarRoot.store(GuitarChordRoot::G);
+                globalState->currentGuitarQuality.store(GuitarChordQuality::Dom7);
+                break;
+        }
+
+        chordIndex++;
+
+        globalState->guitarVelocity.store(110);
+        globalState->guitarStrumHit.store(true);
+
+        sendCommandToPython("guitar");
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -344,6 +392,16 @@ void AppEngine::refreshTrackedState() {
 
     if (octavesChanged)
         emit keyboardOctavesChanged();
+}
+
+void AppEngine::setGuitarSound(int soundID) {
+    globalState->currentGuitarSound.store(static_cast<GuitarSound>(soundID));
+    audioEngine->loadGuitarSound(soundID);
+}
+
+void AppEngine::triggerGuitarStrum(int velocity) {
+    globalState->guitarVelocity.store(qBound(0, velocity, 127));
+    globalState->guitarStrumHit.store(true);
 }
 
 } // namespace airchestra
