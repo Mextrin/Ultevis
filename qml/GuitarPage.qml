@@ -16,21 +16,28 @@ Item {
         color: "#101218"
     }
 
-    // Webcam placeholder
-    Rectangle {
+    // --- Live Camera Feed ---
+    Item {
         anchors.top: header.bottom
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        color: "#0A0C10"
 
-        Text {
-            anchors.centerIn: parent
-            text: "Camera Feed"
-            font.pixelSize: 18
-            font.weight: Font.Light
-            font.letterSpacing: 2
-            color: Qt.rgba(1, 1, 1, 0.15)
+        Image {
+            id: cameraFeed
+            anchors.fill: parent
+            fillMode: Image.PreserveAspectFit
+            source: "image://camera/feed"
+            cache: false // Forces the UI to keep pulling the newest frame
+
+            Timer {
+                interval: 33 // 30 FPS refresh rate
+                running: true
+                repeat: true
+                onTriggered: {
+                    cameraFeed.source = "image://camera/feed?id=" + Math.random()
+                }
+            }
         }
     }
 
