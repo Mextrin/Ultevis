@@ -141,6 +141,39 @@ Rectangle {
                 }
             }
         }
+
+        SettingsSlider {
+            label: "Left Hand Master Velocity"
+            unit: "%"
+            from: 0
+            to: 100
+            stepSize: 1
+            Layout.fillWidth: true
+
+            value: typeof appEngine !== "undefined" && appEngine.viewState ? appEngine.viewState.leftDrumVelocity : 100
+
+            onValueChanged: {
+                if (typeof appEngine !== "undefined")
+                    appEngine.setLeftDrumVelocity(Math.round(value))
+            }
+        }
+
+        SettingsSlider {
+            label: "Right Hand Master Velocity"
+            unit: "%"
+            from: 0
+            to: 100
+            stepSize: 1
+            Layout.fillWidth: true
+
+            value: typeof appEngine !== "undefined" && appEngine.viewState ? appEngine.viewState.rightDrumVelocity : 100
+
+            onValueChanged: {
+                if (typeof appEngine !== "undefined")
+                    appEngine.setRightDrumVelocity(Math.round(value))
+            }
+        }
+
         // Separator Line
         Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
 

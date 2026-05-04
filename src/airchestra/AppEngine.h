@@ -57,6 +57,8 @@ public:
     QString getCurrentMidiDevice() const { return m_currentMidiDevice; }
 
     Q_INVOKABLE void setMasterVolume(float v);
+    Q_INVOKABLE void setLeftDrumVelocity(int v);
+    Q_INVOKABLE void setRightDrumVelocity(int v);
     Q_INVOKABLE void setThereminWaveform(const QString& wave);
     Q_INVOKABLE void setThereminSemitoneRangeOneSide(int semitones);
     Q_INVOKABLE void setThereminCenterNote(int midiNote);
