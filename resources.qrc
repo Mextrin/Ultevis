@@ -35,6 +35,8 @@
         <file>assets/icons/flute.svg</file>
         <file>assets/icons/harp.svg</file>
         <file>assets/icons/violin.svg</file>
+        <file>assets/drums/drum.png</file>
+        <file>assets/drums/cymbal.png</file>
         <file>qml/components/KeyboardDropdownImages.qml</file>
     </qresource>
 </RCC>

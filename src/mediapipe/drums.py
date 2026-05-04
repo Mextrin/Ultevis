@@ -31,7 +31,25 @@ class DrumZone:
     bottom: float
 
     def contains(self, x: float, y: float) -> bool:
-        return self.left <= x <= self.right and self.top <= y <= self.bottom
+        center_x = (self.left + self.right) / 2.0
+        center_y = (self.top + self.bottom) / 2.0
+        raw_radius_x = (self.right - self.left) / 2.0
+        raw_radius_y = (self.bottom - self.top) / 2.0
+
+        if self.name == "Kick":
+            radius_x = raw_radius_x
+            radius_y = raw_radius_y
+        else:
+            radius = min(raw_radius_x, raw_radius_y)
+            radius_x = radius
+            radius_y = radius
+
+        if radius_x <= 0.0 or radius_y <= 0.0:
+            return False
+
+        dx = (x - center_x) / radius_x
+        dy = (y - center_y) / radius_y
+        return (dx * dx) + (dy * dy) <= 1.0
 
     def pixel_rect(self, width: int, height: int) -> tuple[int, int, int, int]:
         return (
@@ -98,32 +116,7 @@ def find_zone(x: float, y: float) -> DrumZone | None:
 
 
 def draw_drum_zones(frame, active_zone_names: set[str]) -> None:
-    overlay = frame.copy()
-    height, width = frame.shape[:2]
-
-    for zone in DRUM_ZONES:
-        left, top, right, bottom = zone.pixel_rect(width, height)
-        is_active = zone.name in active_zone_names
-        fill_color = (0, 120, 255) if is_active else (45, 45, 45)
-        cv2.rectangle(overlay, (left, top), (right, bottom), fill_color, -1)
-
-    cv2.addWeighted(overlay, 0.18, frame, 0.82, 0.0, frame)
-
-    for zone in DRUM_ZONES:
-        left, top, right, bottom = zone.pixel_rect(width, height)
-        is_active = zone.name in active_zone_names
-        border_color = (0, 180, 255) if is_active else (110, 110, 110)
-
-        cv2.rectangle(frame, (left, top), (right, bottom), border_color, 2)
-        cv2.putText(
-            frame,
-            zone.name,
-            (left + 12, bottom - 12),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.55,
-            border_color,
-            2,
-        )
+    return
 
 
 def detect_mouth_open(mp_image, was_open: bool) -> bool:
@@ -177,6 +170,8 @@ def drum_detect(recognition_result, mp_image=None):
         "rightHandY": 0.0,
         "leftHandX": 0.0,
         "leftHandY": 0.0,
+        "rightPinch": False,
+        "leftPinch": False,
         "leftDrumHit": False,
         "leftDrumType": 38,
         "rightDrumHit": False,
@@ -219,10 +214,12 @@ def drum_detect(recognition_result, mp_image=None):
                 drum_payload["rightHandVisible"] = True
                 drum_payload["rightHandX"] = display_x
                 drum_payload["rightHandY"] = display_y
+                drum_payload["rightPinch"] = pinch
             else:
                 drum_payload["leftHandVisible"] = True
                 drum_payload["leftHandX"] = display_x
                 drum_payload["leftHandY"] = display_y
+                drum_payload["leftPinch"] = pinch
 
             zone = find_zone(display_x, display_y)
 
@@ -264,16 +261,4 @@ def get_drum_hit_coordinates(
     active_zone_names,
     displayed_hand_positions,
 ):
-    draw_drum_zones(display_frame, active_zone_names)
-
-    for _, position in displayed_hand_positions.items():
-        center_x = int(position[0] * frame_width)
-        center_y = int(position[1] * frame_height)
-
-        cv2.circle(
-            display_frame,
-            center=(center_x, center_y),
-            radius=10,
-            color=(0, 180, 255),
-            thickness=-1,
-        )
+    return
