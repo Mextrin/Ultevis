@@ -10,7 +10,7 @@ ApplicationWindow {
     height: 800
     minimumWidth: 960
     minimumHeight: 600
-    visibility: true
+    visible: true
     title: "Airchestra"
     color: "#101218"
 
