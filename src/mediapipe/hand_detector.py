@@ -76,6 +76,8 @@ recognizer = drum_recognizer if INSTRUMENT == 1 else theremin_recognizer
 
 cap = open_camera_safely() if CAMERA_MODE != "none" else None
 
+last_timestamp_ms = -1
+
 try:
     while True:
         if CAMERA_MODE != requested_mode:
@@ -128,8 +130,13 @@ try:
 
         current_timestamp_ms = int(time.time() * 1000)
 
+        if current_timestamp_ms <= last_timestamp_ms:
+            continue
+        last_timestamp_ms = current_timestamp_ms
+
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+
+        image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame.copy())
         
         if CAMERA_MODE == "keyboard":
             recognition_result = recognizer.recognize_for_video(image, current_timestamp_ms)
