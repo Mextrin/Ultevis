@@ -42,8 +42,16 @@ juce_add_console_app(Airchestra)
 
 target_sources(Airchestra PRIVATE 
     src/main.cpp
+
     src/Audio/AudioEngine.cpp
+    src/Audio/AudioEngineMidi.cpp
+    src/Audio/AudioEngineTheremin.cpp
+    src/Audio/AudioEngineDrums.cpp
+    src/Audio/AudioEngineKeyboard.cpp
+    src/Audio/AudioEngineDevice.cpp
+    src/Audio/AudioEngineGuitar.cpp
     src/Audio/OscillatorVoice.cpp
+
     src/Camera/CameraFeed.cpp
 
     src/airchestra/AppEngine.cpp

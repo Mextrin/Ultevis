@@ -26,6 +26,7 @@ public:
     HeadlessAudioEngine(GlobalState* statePtr, const AudioEngineConfig& config);
     ~HeadlessAudioEngine() override;
 
+    // --- Audio lifecycle ---
     void audioDeviceAboutToStart(juce::AudioIODevice* device) override;
     void audioDeviceStopped() override;
     void audioDeviceIOCallbackWithContext(
@@ -33,27 +34,37 @@ public:
         float* const* outputChannelData, int numOutputChannels,
         int numSamples, const juce::AudioIODeviceCallbackContext& context) override;
 
+    // --- Instrument loading ---
     void loadDrumSound(const juce::String& sfzPath);
     void loadKeyboardSound(int keyboardInstrumentID);
-    void processTheremin(juce::AudioBuffer<float>& buffer, int numSamples);
-    void processDrums(juce::AudioBuffer<float>& buffer, int numSamples);
-    void processKeyboard(juce::AudioBuffer<float>& buffer, int numSamples);
+
+    // --- MIDI ---
     bool isMidiEnabled() const;
     std::vector<std::pair<std::string, std::string>> getAvailableMidiDevices() const;
     void openMidiDevice(const std::string& identifier);
 
 private:
+    // --- Processing (split across cpp files) ---
+    void processTheremin(juce::AudioBuffer<float>& buffer, int numSamples);
+    void processDrums(juce::AudioBuffer<float>& buffer, int numSamples);
+    void processKeyboard(juce::AudioBuffer<float>& buffer, int numSamples);
+
+    // --- State reset ---
     void resetDrumPlaybackState();
     void resetKeyboardPlaybackState();
+
+    // --- Device management ---
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
     void timerCallback() override;
 
 private:
     juce::AudioDeviceManager deviceManager;
     GlobalState* globalState = nullptr;
+
     juce::Synthesiser synth;
     sfz::Sfizz drumSynth;
     sfz::Sfizz keyboardSynth;
+
     std::unique_ptr<juce::MidiOutput> midiOut;
 
     std::mutex drumSynthMutex;
@@ -65,5 +76,6 @@ private:
     bool wasRightVisible = false;
     bool wasSustainPedalPressed = false;
     bool isReinitializing = false;
+
     std::array<bool, 128> internalKeyboardState {};
 };
