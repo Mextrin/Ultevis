@@ -102,9 +102,6 @@ void startCameraFeed(GlobalState* state) {
         state->mouthKickHit.store(parseBool(json, "mouthKickHit"));
         state->leftDrumType.store(parseInt(json, "leftDrumType", state->leftDrumType.load()));
         state->rightDrumType.store(parseInt(json, "rightDrumType", state->rightDrumType.load()));
-        state->leftDrumHitVelocity.store(parseInt(json, "leftDrumVelocity", state->leftDrumHitVelocity.load()));
-        state->rightDrumHitVelocity.store(parseInt(json, "rightDrumVelocity", state->rightDrumHitVelocity.load()));
-
         auto updateNotes = [&](const std::string& key, bool isPressed, int defaultOctave, int currentOctave) {
                 std::string noteStr = parseValue(json, key);
                 noteStr.erase(std::remove(noteStr.begin(), noteStr.end(), '\"'), noteStr.end());

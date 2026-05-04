@@ -198,8 +198,8 @@ void AppEngine::setThereminVolumeFloor(float v) {
 }
 
 void AppEngine::triggerDrumHit(int midiNote, int velocity) {
+    (void)velocity;
     globalState->rightDrumType.store(midiNote);
-    globalState->rightDrumHitVelocity.store(qBound(0, velocity, 127));
     globalState->rightDrumHit.store(true);
 }
 

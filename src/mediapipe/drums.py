@@ -7,8 +7,7 @@ from mediapipe.tasks.python.vision import face_landmarker as face_landmarker_mod
 from dataclasses import dataclass
 from pathlib import Path
 
-PINCH_THRESHOLD = 0.05
-DEFAULT_DRUM_VELOCITY = 110
+PINCH_THRESHOLD = 0.04
 
 JAW_OPEN_BLENDSHAPE_INDEX = int(face_landmarker_module.Blendshapes.JAW_OPEN)
 MOUTH_OPEN_ON_THRESHOLD = 0.25
@@ -180,10 +179,8 @@ def drum_detect(recognition_result, mp_image=None):
         "leftHandY": 0.0,
         "leftDrumHit": False,
         "leftDrumType": 38,
-        "leftDrumVelocity": DEFAULT_DRUM_VELOCITY,
         "rightDrumHit": False,
         "rightDrumType": 42,
-        "rightDrumVelocity": DEFAULT_DRUM_VELOCITY,
         "mouthKickHit": False,
     }
 
@@ -254,7 +251,6 @@ def drum_detect(recognition_result, mp_image=None):
 
                 drum_payload[f"{prefix}DrumHit"] = True
                 drum_payload[f"{prefix}DrumType"] = zone.note
-                drum_payload[f"{prefix}DrumVelocity"] = DEFAULT_DRUM_VELOCITY
 
                 active_triggered_zones.add(zone_name)
 

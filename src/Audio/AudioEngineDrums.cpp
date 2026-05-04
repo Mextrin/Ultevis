@@ -18,11 +18,10 @@ namespace
         }
     }
 
-    int scaleDrumVelocity(int rawHit, int masterPercent)
+    int midiVelocityFromPercent(int percent)
     {
-        const int p = juce::jlimit(0, 100, masterPercent);
-        const int r = juce::jlimit(0, 127, rawHit);
-        return juce::jlimit(0, 127, static_cast<int>((static_cast<long long>(r) * p + 50) / 100));
+        const int p = juce::jlimit(0, 100, percent);
+        return juce::jlimit(0, 127, static_cast<int>((static_cast<long long>(127) * p + 50) / 100));
     }
 }
 
@@ -37,8 +36,6 @@ void HeadlessAudioEngine::resetDrumPlaybackState()
     globalState->mouthKickHit.store(false);
     globalState->leftDrumType.store(36);
     globalState->rightDrumType.store(38);
-    globalState->leftDrumHitVelocity.store(100);
-    globalState->rightDrumHitVelocity.store(100);
 }
 
 // Loads drum SFZ instrument into drumSynth
@@ -80,9 +77,7 @@ void HeadlessAudioEngine::processDrums(juce::AudioBuffer<float>& buffer, int num
 
     if (globalState->leftDrumHit.exchange(false)) {
         const int leftNote = globalState->leftDrumType.load();
-        const int rawLeftVel = globalState->leftDrumHitVelocity.load();
-        const int masterLeft = globalState->leftDrumVelocity.load();
-        const int leftVelocity = scaleDrumVelocity(rawLeftVel, masterLeft);
+        const int leftVelocity = midiVelocityFromPercent(globalState->leftDrumVelocity.load());
         if (leftVelocity > 0) {
             int standardLeftGMNote = translateSMtoGM(leftNote);
 
@@ -94,9 +89,7 @@ void HeadlessAudioEngine::processDrums(juce::AudioBuffer<float>& buffer, int num
 
     if (globalState->rightDrumHit.exchange(false)) {
         const int rightNote = globalState->rightDrumType.load();
-        const int rawRightVel = globalState->rightDrumHitVelocity.load();
-        const int masterRight = globalState->rightDrumVelocity.load();
-        const int rightVelocity = scaleDrumVelocity(rawRightVel, masterRight);
+        const int rightVelocity = midiVelocityFromPercent(globalState->rightDrumVelocity.load());
         if (rightVelocity > 0) {
             int standardRightGMNote = translateSMtoGM(rightNote);
 

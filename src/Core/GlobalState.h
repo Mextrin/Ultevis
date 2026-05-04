@@ -74,14 +74,12 @@ public:
    // --LEFT HAND DRUM--
    std::atomic<bool> leftDrumHit { false }; 
    std::atomic<int> leftDrumType { 36 }; 
-   std::atomic<int> leftDrumVelocity { 100 };          // master velocity % 0–100 (UI; scales hit → MIDI 0–127)
-   std::atomic<int> leftDrumHitVelocity { 100 };     // per-hit velocity from vision / triggers
+   std::atomic<int> leftDrumVelocity { 100 };       // velocity % 0–100 (UI → MIDI 0–127 per hit)
 
    // --RIGHT HAND DRUM--
    std::atomic<bool> rightDrumHit { false }; 
    std::atomic<int> rightDrumType { 38 }; 
-   std::atomic<int> rightDrumVelocity { 100 };      // master velocity % 0–100 (UI)
-   std::atomic<int> rightDrumHitVelocity { 100 };   // per-hit velocity from vision / triggers
+   std::atomic<int> rightDrumVelocity { 100 };      // velocity % 0–100 (UI)
    std::atomic<bool> mouthKickHit { false };
 
    // --DRUM STATES--
