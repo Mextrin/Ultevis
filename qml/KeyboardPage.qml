@@ -166,14 +166,14 @@ Item {
                     width: parent.width
                     height: (parent.height - octaveControls.height) / 2
                     keyboardIndex: 1
-                    label: "Keyboard Octave 1"
+                    label: "Keyboard 1"
                 }
 
                 KeyboardZone {
                     width: parent.width
                     height: (parent.height - octaveControls.height) / 2
                     keyboardIndex: 2
-                    label: "Keyboard Octave 2"
+                    label: "Keyboard 2"
                 }
             }
         }
