@@ -70,19 +70,29 @@ void HeadlessAudioEngine::processGuitar(juce::AudioBuffer<float>& buffer, int nu
     constexpr int stringDelaySamples = 900; // ~20 ms at 44.1 kHz
 
     if (globalState->guitarStrumHit.exchange(false)) {
-        const int* chord = airchestra::getGuitarChord(
-            globalState->currentGuitarRoot.load(),
-            globalState->currentGuitarQuality.load()
-        );
+        
+        int activeRoot = static_cast<int>(globalState->currentGuitarRoot.load());
+        int activeQuality = static_cast<int>(globalState->currentGuitarQuality.load());
 
-        for (int i = 0; i < 6; ++i)
-            pendingNotes[i] = chord[i];
+        // Bounds check (possible source of previous seg fault)
+        if (activeRoot >= 0 && activeRoot < 12 && activeQuality >= 0 && activeQuality < 7) {
+            
+            const int* chord = airchestra::getGuitarChord(
+                globalState->currentGuitarRoot.load(),
+                globalState->currentGuitarQuality.load()
+            );
 
-        pendingVelocity = globalState->guitarVelocity.load();
+            if (chord != nullptr) {
+                for (int i = 0; i < 6; ++i) {
+                    pendingNotes[i] = chord[i];
+                }
 
-        nextStringIndex = 0;
-        samplesUntilNextString = 0;
-        strumInProgress = true;
+                pendingVelocity = globalState->guitarVelocity.load();
+                nextStringIndex = 0;
+                samplesUntilNextString = 0;
+                strumInProgress = true;
+            }
+        }
     }
 
     if (strumInProgress) {
