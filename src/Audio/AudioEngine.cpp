@@ -25,6 +25,17 @@ namespace
     }
 }
 
+#if JUCE_MAC
+static OSStatus onDefaultDeviceChanged(AudioObjectID, UInt32,
+                                       const AudioObjectPropertyAddress*,
+                                       void* clientData)
+{
+    auto* engine = static_cast<HeadlessAudioEngine*>(clientData);
+    juce::MessageManager::callAsync([engine] { engine->startTimer(500); });
+    return noErr;
+}
+#endif
+
 // Initializes the audio engine from precomputed startup configuration.
 HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr, const AudioEngineConfig& config)
     : globalState(statePtr)
@@ -63,6 +74,19 @@ HeadlessAudioEngine::HeadlessAudioEngine(GlobalState* statePtr, const AudioEngin
     deviceManager.setAudioDeviceSetup(setup, true);
 
     deviceManager.addAudioCallback(this);
+    deviceManager.addChangeListener(this);
+
+#if JUCE_MAC
+    {
+        AudioObjectPropertyAddress addr {
+            kAudioHardwarePropertyDefaultOutputDevice,
+            kAudioObjectPropertyScopeGlobal,
+            kAudioObjectPropertyElementMain
+        };
+        AudioObjectAddPropertyListener(kAudioObjectSystemObject, &addr,
+                                       onDefaultDeviceChanged, this);
+    }
+#endif
 }
 
 std::vector<std::pair<std::string, std::string>> HeadlessAudioEngine::getAvailableMidiDevices() const
@@ -86,6 +110,18 @@ void HeadlessAudioEngine::openMidiDevice(const std::string& identifier) {
 // Cleans up audio resources by removing the audio callback
 HeadlessAudioEngine::~HeadlessAudioEngine()
 {
+#if JUCE_MAC
+    {
+        AudioObjectPropertyAddress addr {
+            kAudioHardwarePropertyDefaultOutputDevice,
+            kAudioObjectPropertyScopeGlobal,
+            kAudioObjectPropertyElementMain
+        };
+        AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &addr,
+                                          onDefaultDeviceChanged, this);
+    }
+#endif
+    deviceManager.removeChangeListener(this);
     deviceManager.removeAudioCallback(this);
 }
 
@@ -123,8 +159,12 @@ void HeadlessAudioEngine::audioDeviceAboutToStart(juce::AudioIODevice* device)
     }
 }
 
-// Called when audio device stops (not implemented)
-void HeadlessAudioEngine::audioDeviceStopped() {}
+// Called when audio device stops — triggers reinit to pick up new default device
+void HeadlessAudioEngine::audioDeviceStopped()
+{
+    if (!isReinitializing)
+        startTimer(500);
+}
 
 // Resets drum playback/trigger state so stale hits are not consumed
 void HeadlessAudioEngine::resetDrumPlaybackState()
@@ -360,22 +400,50 @@ void HeadlessAudioEngine::processDrums(juce::AudioBuffer<float>& buffer, int num
 
 void HeadlessAudioEngine::changeListenerCallback(juce::ChangeBroadcaster*)
 {
-    startTimer(1000); // debounce — wait 500ms for macOS to settle on new default device
+    if (!isReinitializing)
+        startTimer(500);
 }
 
 void HeadlessAudioEngine::timerCallback()
 {
     stopTimer();
-
-    deviceManager.closeAudioDevice();
-    deviceManager.initialise(0, 2, nullptr, true);
+    isReinitializing = true;
 
     juce::AudioDeviceManager::AudioDeviceSetup setup;
     deviceManager.getAudioDeviceSetup(setup);
+
+#if JUCE_MAC
+    // Get the current macOS default output device name directly from CoreAudio
+    AudioDeviceID defaultDeviceID = 0;
+    UInt32 propSize = sizeof(defaultDeviceID);
+    AudioObjectPropertyAddress defaultAddr {
+        kAudioHardwarePropertyDefaultOutputDevice,
+        kAudioObjectPropertyScopeGlobal,
+        kAudioObjectPropertyElementMain
+    };
+    AudioObjectGetPropertyData(kAudioObjectSystemObject, &defaultAddr, 0, nullptr, &propSize, &defaultDeviceID);
+
+    CFStringRef cfName = nullptr;
+    propSize = sizeof(cfName);
+    AudioObjectPropertyAddress nameAddr {
+        kAudioObjectPropertyName,
+        kAudioObjectPropertyScopeGlobal,
+        kAudioObjectPropertyElementMain
+    };
+    AudioObjectGetPropertyData(defaultDeviceID, &nameAddr, 0, nullptr, &propSize, &cfName);
+    if (cfName != nullptr)
+    {
+        setup.outputDeviceName = juce::String::fromCFString(cfName);
+        CFRelease(cfName);
+    }
+#endif
+
     setup.bufferSize = 256;
     setup.sampleRate = 44100.0;
     setup.useDefaultOutputChannels = true;
     deviceManager.setAudioDeviceSetup(setup, true);
+
+    isReinitializing = false;
 }
 
 // Processes the keyboard

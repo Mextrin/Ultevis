@@ -2,6 +2,9 @@
 #include <juce_core/juce_core.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_basics/juce_audio_basics.h>
+#if JUCE_MAC
+  #include <CoreAudio/CoreAudio.h>
+#endif
 #include "../Core/GlobalState.h"
 #include "OscillatorVoice.h"
 #include <sfizz.hpp>
@@ -61,5 +64,6 @@ private:
 
     bool wasRightVisible = false;
     bool wasSustainPedalPressed = false;
+    bool isReinitializing = false;
     std::array<bool, 128> internalKeyboardState {};
 };

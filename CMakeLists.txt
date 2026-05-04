@@ -69,6 +69,7 @@ target_link_libraries(Airchestra PRIVATE
     juce::juce_audio_devices
     juce::juce_audio_basics
     sfizz::sfizz
+    "$<$<PLATFORM_ID:Darwin>:-framework CoreAudio>"
 )
 
 target_include_directories(
