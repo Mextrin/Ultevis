@@ -73,6 +73,7 @@ void startCameraFeed(GlobalState* state) {
 
     state->cameraSessionActive.store(true);
     char buf[8192];
+    
     while (!state->requestStopCameraSession.load()) {
         ssize_t len = recvfrom(sock, buf, sizeof(buf) - 1, 0, nullptr, nullptr);
         if (len < 0) break;
@@ -85,24 +86,25 @@ void startCameraFeed(GlobalState* state) {
             break;
         }
 
-        state->rightHandVisible.store(parseBool(json, "rightHandVisible"));
-        state->leftHandVisible.store(parseBool(json,  "leftHandVisible"));
-        state->rightHandX.store(parseFloat(json, "rightHandX"));
-        state->rightHandY.store(parseFloat(json, "rightHandY"));
-        state->leftHandX.store(parseFloat(json,  "leftHandX"));
-        state->leftHandY.store(parseFloat(json,  "leftHandY"));
-        state->rightPinch.store(parseBool(json, "rightPinch"));
-        state->leftPinch.store(parseBool(json,  "leftPinch"));
-        state->rightThumbUp.store(parseBool(json,   "rightThumbUp"));
-        state->rightThumbDown.store(parseBool(json, "rightThumbDown"));
-        state->leftThumbUp.store(parseBool(json,    "leftThumbUp"));
-        state->leftThumbDown.store(parseBool(json,  "leftThumbDown"));
-        state->leftDrumHit.store(parseBool(json, "leftDrumHit"));
-        state->rightDrumHit.store(parseBool(json, "rightDrumHit"));
-        state->mouthKickHit.store(parseBool(json, "mouthKickHit"));
-        state->leftDrumType.store(parseInt(json, "leftDrumType", state->leftDrumType.load()));
-        state->rightDrumType.store(parseInt(json, "rightDrumType", state->rightDrumType.load()));
-        auto updateNotes = [&](const std::string& key, bool isPressed, int defaultOctave, int currentOctave) {
+        std::string instrument = parseValue(json, "instrument");
+        instrument.erase(std::remove(instrument.begin(), instrument.end(), '\"'), instrument.end());
+
+        if (instrument == "keyboard") {
+            state->rightHandVisible.store(parseBool(json, "rightHandVisible"));
+            state->leftHandVisible.store(parseBool(json,  "leftHandVisible"));
+            state->rightHandX.store(parseFloat(json, "rightHandX"));
+            state->rightHandY.store(parseFloat(json, "rightHandY"));
+            state->leftHandX.store(parseFloat(json,  "leftHandX"));
+            state->leftHandY.store(parseFloat(json,  "leftHandY"));
+            state->rightPinch.store(parseBool(json, "rightPinch"));
+            state->leftPinch.store(parseBool(json,  "leftPinch"));
+            
+            state->rightThumbUp.store(parseBool(json,   "rightThumbUp"));
+            state->rightThumbDown.store(parseBool(json, "rightThumbDown"));
+            state->leftThumbUp.store(parseBool(json,    "leftThumbUp"));
+            state->leftThumbDown.store(parseBool(json,  "leftThumbDown"));
+
+            auto updateNotes = [&](const std::string& key, bool isPressed, int defaultOctave, int currentOctave) {
                 std::string noteStr = parseValue(json, key);
                 noteStr.erase(std::remove(noteStr.begin(), noteStr.end(), '\"'), noteStr.end());
 
@@ -117,7 +119,7 @@ void startCameraFeed(GlobalState* state) {
                             state->keyboardState[note].store(isPressed);
                     }
                 }
-        };
+            };
 
             int topOctave    = state->topKeyboardOctave.load();
             int bottomOctave = state->bottomKeyboardOctave.load();
@@ -125,6 +127,46 @@ void startCameraFeed(GlobalState* state) {
             updateNotes("topNotesOff",    false, 5, topOctave);
             updateNotes("bottomNotesOn",  true,  4, bottomOctave);
             updateNotes("bottomNotesOff", false, 4, bottomOctave);
+        }
+        else if (instrument == "drums") {
+            state->rightHandVisible.store(parseBool(json, "rightHandVisible"));
+            state->leftHandVisible.store(parseBool(json,  "leftHandVisible"));
+            state->rightHandX.store(parseFloat(json, "rightHandX"));
+            state->rightHandY.store(parseFloat(json, "rightHandY"));
+            state->leftHandX.store(parseFloat(json,  "leftHandX"));
+            state->leftHandY.store(parseFloat(json,  "leftHandY"));
+            state->rightPinch.store(parseBool(json, "rightPinch"));
+            state->leftPinch.store(parseBool(json,  "leftPinch"));
+
+            state->leftDrumHit.store(parseBool(json, "leftDrumHit"));
+            state->rightDrumHit.store(parseBool(json, "rightDrumHit"));
+            state->mouthKickHit.store(parseBool(json, "mouthKickHit"));
+            state->leftDrumType.store(parseInt(json, "leftDrumType", state->leftDrumType.load()));
+            state->rightDrumType.store(parseInt(json, "rightDrumType", state->rightDrumType.load()));
+        }
+        else if (instrument == "theremin") {
+            state->rightHandVisible.store(parseBool(json, "rightHandVisible"));
+            state->leftHandVisible.store(parseBool(json,  "leftHandVisible"));
+            state->rightHandX.store(parseFloat(json, "rightHandX"));
+            state->rightHandY.store(parseFloat(json, "rightHandY"));
+            state->leftHandX.store(parseFloat(json,  "leftHandX"));
+            state->leftHandY.store(parseFloat(json,  "leftHandY"));
+            state->rightPinch.store(parseBool(json, "rightPinch"));
+            state->leftPinch.store(parseBool(json,  "leftPinch"));
+        }
+        else if (instrument == "guitar") {
+            state->rightHandVisible.store(parseBool(json, "rightHandVisible"));
+            state->leftHandVisible.store(parseBool(json,  "leftHandVisible"));
+            state->leftHandX.store(parseFloat(json,  "leftHandX"));
+            state->leftHandY.store(parseFloat(json,  "leftHandY"));
+            state->leftPinch.store(parseBool(json,  "leftPinch"));
+            
+            state->guitarStrumHit.store(parseBool(json, "guitarStrumHit"));
+        }
+        else if (instrument == "none") {
+            state->rightHandVisible.store(false);
+            state->leftHandVisible.store(false);
+        }
     }
 
     state->cameraSessionActive.store(false);
@@ -136,4 +178,3 @@ void startCameraFeed(GlobalState* state) {
         close(sock);
     #endif
 }
-

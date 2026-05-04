@@ -2,8 +2,6 @@ import os
 import sys
 import cv2
 import mediapipe as mp
-from mediapipe.tasks import python
-from mediapipe.tasks.python import vision
 import numpy as np
 import socket
 import json
@@ -11,25 +9,31 @@ import tempfile
 import threading
 import time
 
-from theremin import detect_hands, draw_circle, add_theremin_text, recognizer as theremin_recognizer
+# --- Instrument Modules ---
+from theremin import detect_hands, draw_circle, recognizer as theremin_recognizer
 from drums import drum_detect, get_drum_hit_coordinates, recognizer as drum_recognizer
 from keyboard import detect_key_strokes, draw_keyboard_zones, detect_keyboard_hands, recognizer as keyboard_recognizer
+from guitar import detect_guitar_hands
 
+# --- Configuration & Network ---
 UDP_IP = "127.0.0.1"
 UDP_PORT = 5005
-
-CAMERA_MODE = "none"
-
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-payload = {}
+CMD_PORT = 5006
 
 TEMP_DIR = tempfile.gettempdir()
-temp_frame_path = os.path.join(TEMP_DIR, "airchestra_frame.tmp.jpg")
-final_frame_path = os.path.join(TEMP_DIR, "airchestra_frame.jpg")
+TEMP_FRAME_PATH = os.path.join(TEMP_DIR, "airchestra_frame.tmp.jpg")
+FINAL_FRAME_PATH = os.path.join(TEMP_DIR, "airchestra_frame.jpg")
 
+# --- Global State ---
+CAMERA_MODE = "none"
 requested_mode = "none"
 
+# ==============================================================================
+# Helper Functions
+# ==============================================================================
+
 def safe_replace(src, dst, retries=10, delay=0.01):
+    """Safely overwrites the image file so QML doesn't read a half-written file."""
     for _ in range(retries):
         try:
             os.replace(src, dst)
@@ -39,6 +43,7 @@ def safe_replace(src, dst, retries=10, delay=0.01):
     return False
 
 def open_camera_safely():
+    """Opens the camera with platform-specific optimizations."""
     if sys.platform == "win32":
         capture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
@@ -51,160 +56,188 @@ def open_camera_safely():
         
     if not capture.isOpened():
         raise RuntimeError("Unable to open webcam at index 0.")
-        
     return capture
 
 def command_listener():
+    """Listens on a background thread for instrument change commands from C++."""
     global requested_mode
     listen_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    listen_sock.bind(("127.0.0.1", 5006))
+    listen_sock.bind(("127.0.0.1", CMD_PORT))
+    
+    valid_modes = ["theremin", "drums", "keyboard", "guitar", "none"]
     while True:
         try:
             data, _ = listen_sock.recvfrom(1024)
             cmd = json.loads(data.decode())
-            # Added "none" and "keyboard" to the valid modes
-            if "mode" in cmd and cmd["mode"] in ["theremin", "drums", "keyboard", "guitar", "none"]:
+            if "mode" in cmd and cmd["mode"] in valid_modes:
                 requested_mode = cmd["mode"]
-        except Exception as e:
+        except Exception:
             pass
 
-listener_thread = threading.Thread(target=command_listener, daemon=True)
-listener_thread.start()
+def send_mute_payload(sock):
+    """Sends a completely blank payload to mute all instruments."""
+    mute_payload = {
+        "instrument": "none",
+        "leftHandVisible": False, "rightHandVisible": False, 
+        "leftHandX": 0.0, "leftHandY": 0.0,
+        "rightHandX": 0.0, "rightHandY": 0.0,
+        "leftPinch": False, "rightPinch": False,
+        "leftDrumHit": False, "rightDrumHit": False,
+        "mouthKickHit": False, "guitarStrumHit": False
+    }
+    sock.sendto(json.dumps(mute_payload).encode(), (UDP_IP, UDP_PORT))
 
-INSTRUMENT = 1 if CAMERA_MODE == "drums" else 0
-recognizer = drum_recognizer if INSTRUMENT == 1 else theremin_recognizer
+def write_black_frame():
+    """Writes a black frame to disk when the camera is off."""
+    black_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+    cv2.imwrite(TEMP_FRAME_PATH, black_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
+    safe_replace(TEMP_FRAME_PATH, FINAL_FRAME_PATH)
 
-cap = open_camera_safely() if CAMERA_MODE != "none" else None
+# ==============================================================================
+# Main Loop
+# ==============================================================================
 
-last_timestamp_ms = -1
+def main():
+    global CAMERA_MODE
+    
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    
+    # Start command listener thread
+    threading.Thread(target=command_listener, daemon=True).start()
 
-try:
-    while True:
-        if CAMERA_MODE != requested_mode:
-            CAMERA_MODE = requested_mode
-            
-            if CAMERA_MODE == "none":
-                # Physically turn off the webcam
-                if cap is not None:
-                    cap.release()
-                    cap = None
+    cap = None
+    recognizer = None
+    last_timestamp_ms = -1
+
+    try:
+        while True:
+            # ---------------------------------------------------------
+            # 1: Camera Mode & Hardware
+            # ---------------------------------------------------------
+            if CAMERA_MODE != requested_mode:
+                CAMERA_MODE = requested_mode
                 
-                # Send one final packet to C++ to tell the audio engine to mute everything
-                mute_payload = {
-                    "instrument": "none",
-                    "leftHandVisible": False, 
-                    "rightHandVisible": False, 
-                    "leftHandX": 0.0,
-                    "leftHandY": 0.0,
-                    "rightHandX": 0.0,
-                    "rightHandY": 0.0,
-                    "leftPinch": False,
-                    "rightPinch": False,
-                    "leftDrumHit": False, 
-                    "rightDrumHit": False,
-                    "mouthKickHit": False
-                }
-                sock.sendto(json.dumps(mute_payload).encode(), (UDP_IP, UDP_PORT))
-
-                black_frame = np.zeros((480, 640, 3), dtype=np.uint8)
-                cv2.imwrite(temp_frame_path, black_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
-                safe_replace(temp_frame_path, final_frame_path)
-                
-            else:
-                if cap is None:
-                    cap = open_camera_safely()
-                    
-                INSTRUMENT = 1 if CAMERA_MODE == "drums" else 0
-                if CAMERA_MODE == "keyboard":
-                    recognizer = keyboard_recognizer
+                if CAMERA_MODE == "none":
+                    if cap is not None:
+                        cap.release()
+                        cap = None
+                    send_mute_payload(sock)
+                    write_black_frame()
                 else:
-                    recognizer = drum_recognizer if INSTRUMENT == 1 else theremin_recognizer
+                    if cap is None:
+                        cap = open_camera_safely()
+                        
+                    # Map the correct MediaPipe model to the instrument
+                    if CAMERA_MODE in ["keyboard", "guitar"]:
+                        recognizer = keyboard_recognizer
+                    elif CAMERA_MODE == "drums":
+                        recognizer = drum_recognizer
+                    else:
+                        recognizer = theremin_recognizer
 
-        if CAMERA_MODE == "none" or cap is None:
-            time.sleep(0.05)
-            continue
+            # Skip loop if camera is meant to be off
+            if CAMERA_MODE == "none" or cap is None:
+                time.sleep(0.05)
+                continue
 
-        ret, frame = cap.read()
-        if not ret or frame is None:
-            continue
+            # ---------------------------------------------------------
+            # 2: Frame Capture 
+            # ---------------------------------------------------------
+            ret, frame = cap.read()
+            if not ret or frame is None:
+                continue
 
-        current_timestamp_ms = int(time.time() * 1000)
+            current_timestamp_ms = int(time.time() * 1000)
+            if current_timestamp_ms <= last_timestamp_ms:
+                continue
+            last_timestamp_ms = current_timestamp_ms
 
-        if current_timestamp_ms <= last_timestamp_ms:
-            continue
-        last_timestamp_ms = current_timestamp_ms
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            clean_frame = np.ascontiguousarray(rgb_frame.copy())
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=clean_frame)
 
-        image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame.copy())
-        
-        if CAMERA_MODE == "keyboard":
-            recognition_result = recognizer.recognize_for_video(image, current_timestamp_ms)
-        elif INSTRUMENT == 0:
-            recognition_result = recognizer.detect_for_video(image, current_timestamp_ms)
-        else:
-            recognition_result = recognizer.recognize(image)
+            # ---------------------------------------------------------
+            # 3: MediaPipe
+            # ---------------------------------------------------------
+            if CAMERA_MODE in ["keyboard", "guitar", "theremin"]:
+                # High-speed video tracking mode
+                if CAMERA_MODE == "theremin":
+                    recognition_result = recognizer.detect_for_video(mp_image, current_timestamp_ms)
+                else:
+                    recognition_result = recognizer.recognize_for_video(mp_image, current_timestamp_ms)
+            else:
+                # Standard image mode (Drums)
+                recognition_result = recognizer.recognize(mp_image)
 
-        active_zone_names: set[str] = set()
-        displayed_hand_positions: dict[str, tuple[float, float]] = {}
-        detected_labels = set()
+            # ---------------------------------------------------------
+            # 4: Payload
+            # ---------------------------------------------------------
+            payload = {}
+            active_zone_names = set()
+            displayed_hand_positions = {}
 
-        if CAMERA_MODE == "keyboard":
-            # Get the main payload and drawing info from detect_key_strokes
-            payload, active_zone_names, displayed_hand_positions = detect_key_strokes(recognition_result)
-            
-            # Get display-space hand positions plus gesture information for the QML overlay.
-            gesture_payload = detect_keyboard_hands(recognition_result)
-            
-            # Add the hand/gesture info to the main payload, else it will get overwritten
-            # in the next frame and cause missed QML hit-tests.
-            for key in (
-                "rightHandVisible",
-                "leftHandVisible",
-                "rightHandX",
-                "rightHandY",
-                "leftHandX",
-                "leftHandY",
-                "rightPinch",
-                "leftPinch",
-                "rightThumbUp",
-                "rightThumbDown",
-                "leftThumbUp",
-                "leftThumbDown",
-            ):
-                payload[key] = gesture_payload.get(key, payload.get(key, False))
+            if CAMERA_MODE == "keyboard":
+                payload, active_zone_names, displayed_hand_positions = detect_key_strokes(recognition_result)
+                gesture_payload = detect_keyboard_hands(recognition_result)
+                payload.update(gesture_payload) # Merge gesture coords into main payload
 
-        elif INSTRUMENT == 0:
-            payload = detect_hands(recognition_result)
-        else:
-            payload, active_zone_names, displayed_hand_positions = drum_detect(recognition_result, image)
-            
-        sock.sendto(json.dumps(payload).encode(), (UDP_IP, UDP_PORT))
-        display_frame = cv2.flip(frame, 1)       
-        
-        h, w = display_frame.shape[:2]
-        frame_height, frame_width = h, w
+            elif CAMERA_MODE == "guitar":
+                payload, active_zone_names, displayed_hand_positions = detect_guitar_hands(recognition_result)
 
-        if CAMERA_MODE == "keyboard":
-            # Draw the keyboard zones
-            draw_keyboard_zones(display_frame, active_zone_names)
-            # Draw circles for hand positions
-            for label, position in displayed_hand_positions.items():
-                center_x = int(position[0] * frame_width)
-                center_y = int(position[1] * frame_height)
-                cv2.circle(display_frame, center=(center_x, center_y), radius=10, color=(0, 180, 255), thickness=-1)
-        elif INSTRUMENT == 0:
-            draw_circle(display_frame, frame_height, frame_width, recognition_result)
-        else:
-            get_drum_hit_coordinates(display_frame, frame_height, frame_width, active_zone_names, displayed_hand_positions)
+            elif CAMERA_MODE == "drums":
+                payload, active_zone_names, displayed_hand_positions = drum_detect(recognition_result, mp_image)
 
-        resized_frame = cv2.resize(display_frame, (640, 480))
-        
-        cv2.imwrite(temp_frame_path, resized_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
-        safe_replace(temp_frame_path, final_frame_path)
+            elif CAMERA_MODE == "theremin":
+                payload = detect_hands(recognition_result)
 
-finally:
-    if cap is not None:
-        cap.release()
-    sock.sendto(json.dumps({"cameraOff": True}).encode(), (UDP_IP, UDP_PORT))
-    sock.close()
+            # Transmit data to C++ backend
+            sock.sendto(json.dumps(payload).encode(), (UDP_IP, UDP_PORT))
+
+            # ---------------------------------------------------------
+            # 5: Visual Feedback & UI Drawing
+            # ---------------------------------------------------------
+            display_frame = cv2.flip(frame, 1) # Mirror for UI
+            frame_height, frame_width = display_frame.shape[:2]
+
+            if CAMERA_MODE == "keyboard":
+                draw_keyboard_zones(display_frame, active_zone_names)
+                for label, pos in displayed_hand_positions.items():
+                    cx, cy = int(pos[0] * frame_width), int(pos[1] * frame_height)
+                    cv2.circle(display_frame, (cx, cy), 10, (0, 180, 255), -1)
+
+            elif CAMERA_MODE == "guitar":
+                for label, pos in displayed_hand_positions.items():
+                    cx, cy = int(pos[0] * frame_width), int(pos[1] * frame_height)
+                    
+                    # Guitar specific feedback colors
+                    color = (0, 255, 0) # Green default
+                    if label == "Right" and payload.get("guitarStrumHit", False):
+                        color = (0, 0, 255) # Red on strum
+                    elif label == "Left" and payload.get("leftPinch", False):
+                        color = (0, 165, 255) # Orange on pinch
+                        
+                    cv2.circle(display_frame, (cx, cy), 15, color, -1)
+
+            elif CAMERA_MODE == "drums":
+                get_drum_hit_coordinates(display_frame, frame_height, frame_width, active_zone_names, displayed_hand_positions)
+
+            elif CAMERA_MODE == "theremin":
+                draw_circle(display_frame, frame_height, frame_width, recognition_result)
+
+            # Write finalized frame to disk for QML to pick up
+            resized_frame = cv2.resize(display_frame, (640, 480))
+            cv2.imwrite(TEMP_FRAME_PATH, resized_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
+            safe_replace(TEMP_FRAME_PATH, FINAL_FRAME_PATH)
+
+            del mp_image
+            del recognition_result
+
+    finally:
+        if cap is not None:
+            cap.release()
+        sock.sendto(json.dumps({"cameraOff": True}).encode(), (UDP_IP, UDP_PORT))
+        sock.close()
+
+if __name__ == "__main__":
+    main()
