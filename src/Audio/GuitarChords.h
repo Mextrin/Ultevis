@@ -141,7 +141,7 @@ const std::map<std::string, GuitarChord> CHORD_LIBRARY = {
     {"D_sus2", {{ -1, -1, 50, 57, 62, 64 }}},
 
     // E sus2 (0 2 4 1 0 0)
-    {"E_sus4", {{ 40, 47, 54, 56, 59, 64 }}},
+    {"E_sus2", {{ 40, 47, 54, 56, 59, 64 }}},
 
     // F sus2 (1 3 3 0 1 1 - Open G string variant)
     {"F_sus2", {{ 41, 48, 53, 55, 60, 65 }}},
