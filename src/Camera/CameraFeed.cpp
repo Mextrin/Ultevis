@@ -72,7 +72,7 @@ void startCameraFeed(GlobalState* state) {
     std::cout << "Listening for hand data on UDP port 5005...\n";
 
     state->cameraSessionActive.store(true);
-    char buf[1024];
+    char buf[8192];
     while (!state->requestStopCameraSession.load()) {
         ssize_t len = recvfrom(sock, buf, sizeof(buf) - 1, 0, nullptr, nullptr);
         if (len < 0) break;
