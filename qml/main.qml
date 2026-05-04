@@ -10,7 +10,7 @@ ApplicationWindow {
     height: 800
     minimumWidth: 960
     minimumHeight: 600
-    visible: true
+    visibility: Window.FullScreen
     title: "Airchestra"
     color: "#101218"
 
