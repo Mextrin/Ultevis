@@ -78,7 +78,6 @@ public:
 
    // --DRUM STATES--
    std::atomic<bool> mouthKickEnable { false }; 
-   std::atomic<bool> snareLeverDown { false }; //false = normal snare
 
    // --- KEYBOARD STATE ---
    std::array<std::atomic<bool>, 128> keyboardState {};
