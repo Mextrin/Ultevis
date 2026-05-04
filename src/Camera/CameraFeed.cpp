@@ -2,7 +2,6 @@
 #include <string>
 #include <sstream>
 #include <algorithm>
-#include <cstdlib>
 
 #ifdef _WIN32
     #include <winsock2.h>
@@ -16,15 +15,6 @@
 #endif
 
 #include "Core/GlobalState.h"
-
-namespace
-{
-    bool keyboardDebugEnabled()
-    {
-        static const bool enabled = std::getenv("ULTEVIS_DEBUG_KEYBOARD") != nullptr;
-        return enabled;
-    }
-}
 
 // Minimal JSON field parser 
 static std::string parseValue(const std::string& json, const std::string& key) {
@@ -82,7 +72,7 @@ void startCameraFeed(GlobalState* state) {
     std::cout << "Listening for hand data on UDP port 5005...\n";
 
     state->cameraSessionActive.store(true);
-    char buf[4096];
+    char buf[1024];
     while (!state->requestStopCameraSession.load()) {
         ssize_t len = recvfrom(sock, buf, sizeof(buf) - 1, 0, nullptr, nullptr);
         if (len < 0) break;
@@ -118,8 +108,6 @@ void startCameraFeed(GlobalState* state) {
         auto updateNotes = [&](const std::string& key, bool isPressed, int defaultOctave, int currentOctave) {
                 std::string noteStr = parseValue(json, key);
                 noteStr.erase(std::remove(noteStr.begin(), noteStr.end(), '\"'), noteStr.end());
-                if (noteStr.empty())
-                    return;
 
                 int semitoneShift = (currentOctave - defaultOctave) * 12;
 
@@ -128,22 +116,14 @@ void startCameraFeed(GlobalState* state) {
                 while (std::getline(ss, noteItem, ' ')) {
                     if (!noteItem.empty()) {
                         int note = std::stoi(noteItem) + semitoneShift;
-                        if (note >= 0 && note < 128) {
+                        if (note >= 0 && note < 128)
                             state->keyboardState[note].store(isPressed);
-                            if (keyboardDebugEnabled()) {
-                                std::cout << "[keyboard] UDP " << key << ' '
-                                          << note << (isPressed ? " on" : " off")
-                                          << std::endl;
-                            }
-                        }
                     }
                 }
         };
 
             int topOctave    = state->topKeyboardOctave.load();
             int bottomOctave = state->bottomKeyboardOctave.load();
-            updateNotes("notesOn",       true,  4, 4);
-            updateNotes("notesOff",      false, 4, 4);
             updateNotes("topNotesOn",     true,  5, topOctave);
             updateNotes("topNotesOff",    false, 5, topOctave);
             updateNotes("bottomNotesOn",  true,  4, bottomOctave);
@@ -159,3 +139,4 @@ void startCameraFeed(GlobalState* state) {
         close(sock);
     #endif
 }
+
