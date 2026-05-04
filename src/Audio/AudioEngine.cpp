@@ -438,8 +438,6 @@ void HeadlessAudioEngine::timerCallback()
     }
 #endif
 
-    setup.bufferSize = 0; 
-    setup.sampleRate = 44100.0;
     setup.useDefaultOutputChannels = true;
     deviceManager.setAudioDeviceSetup(setup, true);
 
