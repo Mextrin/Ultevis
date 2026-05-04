@@ -49,6 +49,7 @@ target_sources(Airchestra PRIVATE
     src/Audio/AudioEngineDrums.cpp
     src/Audio/AudioEngineKeyboard.cpp
     src/Audio/AudioEngineDevice.cpp
+    src/Audio/AudioEngineGuitar.cpp
     src/Audio/OscillatorVoice.cpp
 
     src/Camera/CameraFeed.cpp
