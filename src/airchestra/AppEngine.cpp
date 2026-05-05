@@ -5,6 +5,12 @@
 #include <QCoreApplication>
 #include <QtGlobal>
 
+#include <QFile>
+#include <QTextStream>
+#include <QStandardPaths>
+#include <QStringList>
+#include <QFileInfo>
+
 // --- Network headers for sendCommandToPython ---
 #ifdef _WIN32
     #include <winsock2.h>
@@ -44,6 +50,46 @@ namespace {
         #else
             close(sock);
         #endif
+    }
+
+    // --- Helper function to trim drum SFZ file ---
+    QString createTrimmedDrumSfz(const QString& originalSfzPath) {
+        QFile originalFile(originalSfzPath);
+        if (!originalFile.open(QIODevice::ReadOnly | QIODevice::Text)) return originalSfzPath;
+
+        QFileInfo fileInfo(originalSfzPath);
+        QString tempPath = fileInfo.absolutePath() + "/airchestra_lite_drums.sfz";
+        
+        QFile tempFile(tempPath);
+        if (!tempFile.open(QIODevice::WriteOnly | QIODevice::Text)) return originalSfzPath;
+
+        QTextStream in(&originalFile);
+        QTextStream out(&tempFile);
+
+        while (!in.atEnd()) {
+            QString line = in.readLine();
+            
+            if (line.trimmed().startsWith("#include")) {
+                
+                if (!(line.contains("kick") || 
+                      line.contains("snare") || 
+                      line.contains("tom") || 
+                      line.contains("hat") || 
+                      line.contains("crash") || 
+                      line.contains("ride") || 
+                      line.contains("curves"))) 
+                {
+                    continue;
+                }
+            }
+
+            out << line << "\n";
+        }
+
+        originalFile.close();
+        tempFile.close();
+        
+        return tempPath; 
     }
 }
 
@@ -104,7 +150,11 @@ void AppEngine::selectInstrument(const QString &name) {
     else if (name == QStringLiteral("drums")) {
         state.setCurrentScreen(static_cast<int>(AppScreen::Drums)); 
         globalState->currentInstrument.store(ActiveInstrument::Drums);
-        audioEngine->loadDrumSound("Instruments/SMDrums_Sforzando_1.2/Programs/SM_Drums_kit.sfz");
+        
+        QString liteSfz = createTrimmedDrumSfz("Instruments/SMDrums_Sforzando_1.2/Programs/SM_Drums_kit.sfz");
+        
+        audioEngine->loadDrumSound(liteSfz.toStdString()); 
+        
         sendCommandToPython("drums");
     }
     else if (name == QStringLiteral("keyboard")) {
@@ -116,9 +166,9 @@ void AppEngine::selectInstrument(const QString &name) {
     }
     else if (name == QStringLiteral("guitar")) {
         globalState->currentInstrument.store(ActiveInstrument::Guitar);
-        globalState->currentGuitarSound.store(GuitarSound::CleanElectric);
+        globalState->currentGuitarSound.store(GuitarSound::Acoustic);
 
-        audioEngine->loadGuitarSound(0);
+        audioEngine->loadGuitarSound(2);
 
         // simple rotating test progression
         static int chordIndex = 0;
@@ -178,24 +228,20 @@ void AppEngine::selectMidiDevice(const QString& displayName) {
         emit currentMidiDeviceChanged();
     }
 
-    // If the user selects "None", close the port and disable routing
     if (displayName == "None" || displayName.isEmpty()) {
         audioEngine->openMidiDevice("");
         globalState->routeToMidiOut.store(false);
         return;
     }
 
-    // Search our list of detected devices for the exact name
     for (int i = 1; i < midiDeviceNames.size(); ++i) {
         if (midiDeviceNames[i] == displayName) {
-            // ACTUALLY TELL JUCE TO OPEN THE PORT
             audioEngine->openMidiDevice(midiDeviceIds[static_cast<size_t>(i)]);
             globalState->routeToMidiOut.store(true);
             return;
         }
     }
     
-    // Fallback if something goes wrong
     audioEngine->openMidiDevice("");
     globalState->routeToMidiOut.store(false);
 }
@@ -273,10 +319,10 @@ void AppEngine::adjustKeyboardOctave(int keyboardIndex, int delta) {
         switch (globalState->currentKeyboardInstrument.load())
         {
             case KeyboardSound::GrandPiano: minOctave = 1; maxOctave = 7; break;
-            case KeyboardSound::Organ:      minOctave = 1; maxOctave = 6; break;
-            case KeyboardSound::Flute:      minOctave = 3; maxOctave = 6; break;
+            case KeyboardSound::Organ:      minOctave = 2; maxOctave = 6; break;
+            case KeyboardSound::Flute:      minOctave = 4; maxOctave = 6; break;
             case KeyboardSound::Harp:       minOctave = 1; maxOctave = 7; break;
-            case KeyboardSound::Violin:     minOctave = 3; maxOctave = 6; break;
+            case KeyboardSound::Violin:     minOctave = 4; maxOctave = 6; break;
         }
         const int next = qBound(minOctave, current + delta, maxOctave);
         if (next == current)
@@ -293,10 +339,10 @@ void AppEngine::adjustKeyboardOctave(int keyboardIndex, int delta) {
         switch (globalState->currentKeyboardInstrument.load())
         {
             case KeyboardSound::GrandPiano: minOctave = 1; maxOctave = 7; break;
-            case KeyboardSound::Organ:      minOctave = 1; maxOctave = 6; break;
-            case KeyboardSound::Flute:      minOctave = 3; maxOctave = 6; break;
+            case KeyboardSound::Organ:      minOctave = 2; maxOctave = 6; break;
+            case KeyboardSound::Flute:      minOctave = 4; maxOctave = 6; break;
             case KeyboardSound::Harp:       minOctave = 1; maxOctave = 7; break;
-            case KeyboardSound::Violin:     minOctave = 3; maxOctave = 6; break;
+            case KeyboardSound::Violin:     minOctave = 4; maxOctave = 6; break;
         }
         const int next = qBound(minOctave, current + delta, maxOctave);
         if (next == current)
@@ -320,10 +366,10 @@ void AppEngine::setKeyboardInstrument(int instrumentID) {
     switch (static_cast<KeyboardSound>(instrumentID))
     {
         case KeyboardSound::GrandPiano: minOctave = 1; maxOctave = 7; break;
-        case KeyboardSound::Organ:      minOctave = 1; maxOctave = 6; break;
-        case KeyboardSound::Flute:      minOctave = 3; maxOctave = 6; break;
+        case KeyboardSound::Organ:      minOctave = 2; maxOctave = 6; break;
+        case KeyboardSound::Flute:      minOctave = 4; maxOctave = 6; break;
         case KeyboardSound::Harp:       minOctave = 1; maxOctave = 7; break;
-        case KeyboardSound::Violin:     minOctave = 3; maxOctave = 6; break;
+        case KeyboardSound::Violin:     minOctave = 4; maxOctave = 6; break;
     }
 
     globalState->topKeyboardOctave.store(
