@@ -66,10 +66,9 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-
             onClicked: {
-                appEngine.goBack() 
-                root.back()        
+                appEngine.goBack()
+                root.back()
             }
 
             Text {
@@ -133,8 +132,15 @@ Item {
             anchors.right: parent.right
             anchors.rightMargin: 20
             anchors.verticalCenter: parent.verticalCenter
-            model: ["Acoustic Guitar", "Electric Guitar", "Classical Guitar", "Bass Guitar"]
+            model: ["Acoustic Guitar", "Clean Electric", "Distorted Electric"]
             currentIndex: 0
+            onActivated: function(index) {
+                if (typeof appEngine === "undefined")
+                    return
+
+                const soundIds = [2, 0, 1]
+                appEngine.setGuitarSound(soundIds[index] ?? 2)
+            }
         }
     }
 

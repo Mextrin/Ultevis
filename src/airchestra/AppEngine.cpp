@@ -135,6 +135,10 @@ void AppEngine::proceed() {
 void AppEngine::goBack() {
     for (int i = 0; i < 128; ++i) {
         globalState->keyboardState[i].store(false);
+        globalState->keyboardTopLeftState[i].store(false);
+        globalState->keyboardTopRightState[i].store(false);
+        globalState->keyboardBottomLeftState[i].store(false);
+        globalState->keyboardBottomRightState[i].store(false);
         globalState->keyboardNoteVelocity[i].store(100);
     }
     state.setCurrentScreen(static_cast<int>(AppScreen::Session));
@@ -209,6 +213,7 @@ void AppEngine::selectInstrument(const QString &name) {
         chordIndex++;
 
         globalState->guitarVelocity.store(110);
+        globalState->guitarStrumDirection.store(GuitarStrumDirection::Down);
         globalState->guitarStrumHit.store(true);
 
         sendCommandToPython("guitar");
@@ -454,14 +459,30 @@ void AppEngine::refreshTrackedState() {
         emit keyboardOctavesChanged();
 
     QVariantList nextActiveKeyboardNotes;
+    QVariantList nextActiveTopKeyboardNotes;
+    QVariantList nextActiveBottomKeyboardNotes;
     for (int note = 0; note < 128; ++note) {
         if (globalState->keyboardState[note].load()) {
             nextActiveKeyboardNotes.append(note);
         }
+
+        if (globalState->keyboardTopLeftState[note].load() ||
+            globalState->keyboardTopRightState[note].load()) {
+            nextActiveTopKeyboardNotes.append(note);
+        }
+
+        if (globalState->keyboardBottomLeftState[note].load() ||
+            globalState->keyboardBottomRightState[note].load()) {
+            nextActiveBottomKeyboardNotes.append(note);
+        }
     }
 
-    if (m_activeKeyboardNotes != nextActiveKeyboardNotes) {
+    if (m_activeKeyboardNotes != nextActiveKeyboardNotes ||
+        m_activeTopKeyboardNotes != nextActiveTopKeyboardNotes ||
+        m_activeBottomKeyboardNotes != nextActiveBottomKeyboardNotes) {
         m_activeKeyboardNotes = nextActiveKeyboardNotes;
+        m_activeTopKeyboardNotes = nextActiveTopKeyboardNotes;
+        m_activeBottomKeyboardNotes = nextActiveBottomKeyboardNotes;
         emit activeKeyboardNotesChanged();
     }
 }
@@ -473,6 +494,7 @@ void AppEngine::setGuitarSound(int soundID) {
 
 void AppEngine::triggerGuitarStrum(int velocity) {
     globalState->guitarVelocity.store(qBound(0, velocity, 127));
+    globalState->guitarStrumDirection.store(GuitarStrumDirection::Down);
     globalState->guitarStrumHit.store(true);
 }
 

@@ -5,6 +5,56 @@
 
 namespace
 {
+    bool looksLikeProjectRoot(const juce::File& directory)
+    {
+        return directory.isDirectory()
+            && directory.getChildFile("CMakeLists.txt").existsAsFile()
+            && directory.getChildFile("Instruments").isDirectory()
+            && directory.getChildFile("qml").isDirectory();
+    }
+
+    juce::File searchUpwardsForProjectRoot(juce::File start)
+    {
+        if (start.existsAsFile())
+            start = start.getParentDirectory();
+
+        while (start.exists()) {
+            if (looksLikeProjectRoot(start))
+                return start;
+
+            const juce::File parent = start.getParentDirectory();
+            if (parent == start)
+                break;
+            start = parent;
+        }
+
+        return {};
+    }
+
+    juce::File resolvedProjectFile(const juce::String& relativePath)
+    {
+        if (juce::File::isAbsolutePath(relativePath))
+            return juce::File(relativePath);
+
+        const juce::File cwdRoot = searchUpwardsForProjectRoot(juce::File::getCurrentWorkingDirectory());
+        if (cwdRoot.isDirectory()) {
+            const juce::File candidate = cwdRoot.getChildFile(relativePath);
+            if (candidate.exists())
+                return candidate;
+        }
+
+        const juce::File appRoot = searchUpwardsForProjectRoot(
+            juce::File::getSpecialLocation(juce::File::currentApplicationFile)
+        );
+        if (appRoot.isDirectory()) {
+            const juce::File candidate = appRoot.getChildFile(relativePath);
+            if (candidate.exists())
+                return candidate;
+        }
+
+        return juce::File(relativePath);
+    }
+
     int midiVelocityFromKeyboardStore(int stored)
     {
         return std::clamp(stored, 1, 127);
@@ -76,7 +126,15 @@ void HeadlessAudioEngine::loadKeyboardSound(int keyboardInstrumentID)
 
     std::cout << "Loading keyboard SFZ: " << sfzToLoad << std::endl;
 
-    juce::File sfzFile(sfzToLoad);
+    const juce::File sfzFile = resolvedProjectFile(sfzToLoad);
+
+    if (!sfzFile.existsAsFile()) {
+        std::cerr << "ERROR: Keyboard SFZ not found: "
+                  << sfzFile.getFullPathName() << std::endl;
+        return;
+    }
+
+    std::cout << "Resolved keyboard SFZ: " << sfzFile.getFullPathName() << std::endl;
     juce::String content = sfzFile.loadFileAsString();
 
     //inject sustain values into sfz files for violin, flute, organ

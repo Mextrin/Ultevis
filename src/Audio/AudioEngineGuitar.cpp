@@ -2,12 +2,66 @@
 #include "GuitarChords.h"
 #include <iostream>
 
+namespace
+{
+    bool looksLikeProjectRoot(const juce::File& directory)
+    {
+        return directory.isDirectory()
+            && directory.getChildFile("CMakeLists.txt").existsAsFile()
+            && directory.getChildFile("Instruments").isDirectory()
+            && directory.getChildFile("qml").isDirectory();
+    }
+
+    juce::File searchUpwardsForProjectRoot(juce::File start)
+    {
+        if (start.existsAsFile())
+            start = start.getParentDirectory();
+
+        while (start.exists()) {
+            if (looksLikeProjectRoot(start))
+                return start;
+
+            const juce::File parent = start.getParentDirectory();
+            if (parent == start)
+                break;
+            start = parent;
+        }
+
+        return {};
+    }
+
+    juce::File resolvedProjectFile(const juce::String& relativePath)
+    {
+        if (juce::File::isAbsolutePath(relativePath))
+            return juce::File(relativePath);
+
+        const juce::File cwdRoot = searchUpwardsForProjectRoot(juce::File::getCurrentWorkingDirectory());
+        if (cwdRoot.isDirectory()) {
+            const juce::File candidate = cwdRoot.getChildFile(relativePath);
+            if (candidate.exists())
+                return candidate;
+        }
+
+        const juce::File appRoot = searchUpwardsForProjectRoot(
+            juce::File::getSpecialLocation(juce::File::currentApplicationFile)
+        );
+        if (appRoot.isDirectory()) {
+            const juce::File candidate = appRoot.getChildFile(relativePath);
+            if (candidate.exists())
+                return candidate;
+        }
+
+        return juce::File(relativePath);
+    }
+}
+
 void HeadlessAudioEngine::resetGuitarPlaybackState()
 {
     if (globalState == nullptr)
         return;
 
     globalState->guitarStrumHit.store(false);
+    globalState->guitarStrumDirection.store(GuitarStrumDirection::Down);
     globalState->guitarVelocity.store(100);
     guitarChordActive = false;
 }
@@ -17,10 +71,10 @@ void HeadlessAudioEngine::loadGuitarSound(int guitarSoundID)
     juce::String sfzToLoad;
 
     if (guitarSoundID == 0) {
-        sfzToLoad = "Instruments/EGuitarFSBS-bridge-clean-SFZ-20220911/EGuitarFSBS-bridge-clean-20220911.sfz";
+        sfzToLoad = "Instruments/EGuitarFSBS-bridge-clean-small-SFZ+FLAC-20220911/EGuitarFSBS-bridge-clean-small-20220911.sfz";
     }
     else if (guitarSoundID == 1) {
-        sfzToLoad = "Instruments/EGuitarFSBS-bridge-dist1-SFZ-20220911/EGuitarFSBS-bridge-dist1-20220911.sfz";
+        sfzToLoad = "Instruments/EGuitarFSBS-bridge-dist2-SFZ+FLAC-20220911/EGuitarFSBS-bridge-dist2-20220911.sfz";
     }
     else if (guitarSoundID == 2) {
         sfzToLoad = "Instruments/FSS-SteelStringGuitar-SFZ-20200521/FSS-SteelStringGuitar-20200521.sfz";
@@ -41,18 +95,25 @@ void HeadlessAudioEngine::loadGuitarSound(int guitarSoundID)
 
     resetGuitarPlaybackState();
 
-    std::cout << "Loading guitar SFZ: " << sfzToLoad << std::endl;
+    const juce::File sfzFile = resolvedProjectFile(sfzToLoad);
 
-    juce::File sfzFile(sfzToLoad);
+    std::cout << "Loading guitar SFZ: " << sfzFile.getFullPathName() << std::endl;
+
+    if (!sfzFile.existsAsFile()) {
+        std::cerr << "ERROR: Guitar SFZ not found: "
+                  << sfzFile.getFullPathName() << std::endl;
+        return;
+    }
 
     bool loaded = guitarSynth.loadSfzFile(sfzFile.getFullPathName().toStdString());
 
     if (!loaded) {
         std::cerr << "ERROR: Failed to load guitar SFZ: "
-                  << sfzToLoad << std::endl;
+                  << sfzFile.getFullPathName() << std::endl;
         return;
     }
 
+    loadedGuitarSfzPath = sfzFile.getFullPathName();
     loadedGuitarSoundID = guitarSoundID;
 }
 
@@ -66,6 +127,7 @@ void HeadlessAudioEngine::processGuitar(juce::AudioBuffer<float>& buffer, int nu
     static int pendingNotes[6] = { -1, -1, -1, -1, -1, -1 };
     static int pendingVelocity = 100;
     static int nextStringIndex = 0;
+    static int stringStep = 1;
     static int samplesUntilNextString = 0;
     static bool strumInProgress = false;
 
@@ -89,8 +151,10 @@ void HeadlessAudioEngine::processGuitar(juce::AudioBuffer<float>& buffer, int nu
                     pendingNotes[i] = chord[i];
                 }
 
+                const auto strumDirection = globalState->guitarStrumDirection.load();
                 pendingVelocity = globalState->guitarVelocity.load();
-                nextStringIndex = 0;
+                nextStringIndex = strumDirection == GuitarStrumDirection::Up ? 5 : 0;
+                stringStep = strumDirection == GuitarStrumDirection::Up ? -1 : 1;
                 samplesUntilNextString = 0;
                 strumInProgress = true;
             }
@@ -100,7 +164,7 @@ void HeadlessAudioEngine::processGuitar(juce::AudioBuffer<float>& buffer, int nu
     if (strumInProgress) {
         int samplesProcessed = 0;
 
-        while (samplesProcessed < numSamples && nextStringIndex < 6) {
+        while (samplesProcessed < numSamples && nextStringIndex >= 0 && nextStringIndex < 6) {
             if (samplesUntilNextString <= 0) {
                 const int note = pendingNotes[nextStringIndex];
 
@@ -114,7 +178,7 @@ void HeadlessAudioEngine::processGuitar(juce::AudioBuffer<float>& buffer, int nu
                     }
                 }
 
-                nextStringIndex++;
+                nextStringIndex += stringStep;
                 samplesUntilNextString = stringDelaySamples;
             }
 
@@ -123,7 +187,7 @@ void HeadlessAudioEngine::processGuitar(juce::AudioBuffer<float>& buffer, int nu
             samplesProcessed += advance;
         }
 
-        if (nextStringIndex >= 6)
+        if (nextStringIndex < 0 || nextStringIndex >= 6)
             strumInProgress = false;
     }
 

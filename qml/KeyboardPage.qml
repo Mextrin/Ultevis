@@ -12,6 +12,8 @@ Item {
     readonly property int k1Octave: engineReady ? appEngine.topKeyboardOctave : 3
     readonly property int k2Octave: engineReady ? appEngine.bottomKeyboardOctave : 5
     readonly property var activeKeyboardNotes: engineReady ? appEngine.activeKeyboardNotes : []
+    readonly property var activeTopKeyboardNotes: engineReady ? appEngine.activeTopKeyboardNotes : []
+    readonly property var activeBottomKeyboardNotes: engineReady ? appEngine.activeBottomKeyboardNotes : []
     readonly property var whiteKeySteps: [
         { label: "C", semitone: 0 },
         { label: "D", semitone: 2 },
@@ -42,8 +44,9 @@ Item {
     property int counterFlashKeyboard: 0
     property int counterFlashDelta: 0
 
-    function noteActive(midiNote) {
-        return activeKeyboardNotes.indexOf(midiNote) !== -1
+    function noteActive(keyboardIndex, midiNote) {
+        const notes = keyboardIndex === 1 ? activeTopKeyboardNotes : activeBottomKeyboardNotes
+        return notes.indexOf(midiNote) !== -1
     }
 
     function handInsideItem(item, x, y) {
@@ -305,8 +308,10 @@ Item {
             model: root.whiteKeySteps
 
             delegate: Rectangle {
+                required property int index
+                required property var modelData
                 readonly property int midiNote: zone.baseMidiNote + modelData.semitone + zone.octaveShift
-                readonly property bool noteActive: root.noteActive(midiNote)
+                readonly property bool noteActive: root.noteActive(zone.keyboardIndex, midiNote)
 
                 x: index * zone.whiteKeyWidth
                 y: 0
@@ -324,8 +329,10 @@ Item {
             model: root.blackKeySteps
 
             delegate: Rectangle {
+                required property int index
+                required property var modelData
                 readonly property int midiNote: zone.baseMidiNote + modelData.semitone + zone.octaveShift
-                readonly property bool noteActive: root.noteActive(midiNote)
+                readonly property bool noteActive: root.noteActive(zone.keyboardIndex, midiNote)
                 readonly property real centerX: zone.whiteKeyWidth * modelData.boundaryIndex
 
                 x: centerX - (width / 2)

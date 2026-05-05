@@ -44,11 +44,36 @@ static int parseInt(const std::string& json, const std::string& key, int fallbac
     return std::stoi(value);
 }
 
+static GuitarStrumDirection parseGuitarStrumDirection(const std::string& json)
+{
+    auto value = parseValue(json, "guitarStrumDirection");
+    value.erase(std::remove(value.begin(), value.end(), '\"'), value.end());
+
+    if (value == "up")
+        return GuitarStrumDirection::Up;
+
+    return GuitarStrumDirection::Down;
+}
+
 /** Same mapping as drums: UI % 0–100 → MIDI 0–127. */
 static int midiVelocityFromPercentKeyboard(int percent)
 {
     const int p = std::clamp(percent, 0, 100);
     return std::clamp((127 * p + 50) / 100, 0, 127);
+}
+
+static void refreshKeyboardNoteAggregate(GlobalState* state, int note)
+{
+    if (state == nullptr || note < 0 || note >= 128)
+        return;
+
+    const bool active =
+        state->keyboardTopLeftState[note].load() ||
+        state->keyboardTopRightState[note].load() ||
+        state->keyboardBottomLeftState[note].load() ||
+        state->keyboardBottomRightState[note].load();
+
+    state->keyboardState[note].store(active);
 }
 
 void startCameraFeed(GlobalState* state) {
@@ -111,7 +136,7 @@ void startCameraFeed(GlobalState* state) {
             state->leftThumbUp.store(parseBool(json,    "leftThumbUp"));
             state->leftThumbDown.store(parseBool(json,  "leftThumbDown"));
 
-            auto updateNotes = [&](const std::string& key, bool isPressed, int defaultOctave, int currentOctave, bool leftHand) {
+            auto updateNotes = [&](const std::string& key, bool isPressed, int defaultOctave, int currentOctave, bool leftHand, auto& sourceState) {
                 std::string noteStr = parseValue(json, key);
                 noteStr.erase(std::remove(noteStr.begin(), noteStr.end(), '\"'), noteStr.end());
 
@@ -132,21 +157,22 @@ void startCameraFeed(GlobalState* state) {
                                 continue;
                             state->keyboardNoteVelocity[note].store(vel);
                         }
-                        state->keyboardState[note].store(isPressed);
+                        sourceState[note].store(isPressed);
+                        refreshKeyboardNoteAggregate(state, note);
                     }
                 }
             };
 
             int topOctave    = state->topKeyboardOctave.load();
             int bottomOctave = state->bottomKeyboardOctave.load();
-            updateNotes("leftTopNotesOn",     true,  5, topOctave, true);
-            updateNotes("leftTopNotesOff",    false, 5, topOctave, true);
-            updateNotes("rightTopNotesOn",    true,  5, topOctave, false);
-            updateNotes("rightTopNotesOff",   false, 5, topOctave, false);
-            updateNotes("leftBottomNotesOn",  true,  4, bottomOctave, true);
-            updateNotes("leftBottomNotesOff", false, 4, bottomOctave, true);
-            updateNotes("rightBottomNotesOn",  true,  4, bottomOctave, false);
-            updateNotes("rightBottomNotesOff", false, 4, bottomOctave, false);
+            updateNotes("leftTopNotesOn",      true,  5, topOctave,    true,  state->keyboardTopLeftState);
+            updateNotes("leftTopNotesOff",     false, 5, topOctave,    true,  state->keyboardTopLeftState);
+            updateNotes("rightTopNotesOn",     true,  5, topOctave,    false, state->keyboardTopRightState);
+            updateNotes("rightTopNotesOff",    false, 5, topOctave,    false, state->keyboardTopRightState);
+            updateNotes("leftBottomNotesOn",   true,  4, bottomOctave, true,  state->keyboardBottomLeftState);
+            updateNotes("leftBottomNotesOff",  false, 4, bottomOctave, true,  state->keyboardBottomLeftState);
+            updateNotes("rightBottomNotesOn",  true,  4, bottomOctave, false, state->keyboardBottomRightState);
+            updateNotes("rightBottomNotesOff", false, 4, bottomOctave, false, state->keyboardBottomRightState);
         }
         else if (instrument == "drums") {
             state->rightHandVisible.store(parseBool(json, "rightHandVisible"));
@@ -180,7 +206,7 @@ void startCameraFeed(GlobalState* state) {
             state->leftHandX.store(parseFloat(json,  "leftHandX"));
             state->leftHandY.store(parseFloat(json,  "leftHandY"));
             state->leftPinch.store(parseBool(json,  "leftPinch"));
-            
+            state->guitarStrumDirection.store(parseGuitarStrumDirection(json));
             state->guitarStrumHit.store(parseBool(json, "guitarStrumHit"));
         }
         else if (instrument == "none") {
