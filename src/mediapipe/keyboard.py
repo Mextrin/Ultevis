@@ -224,27 +224,18 @@ def detect_key_strokes(detection_result):
                 if zone:
                     #press
                     finger_pressed = dist_velocity > PRESS_DISTANCE_THRESHOLD
-                    finger_lifted = dist_velocity < LIFT_DISTANCE_THRESHOLD
-                    finger_repressed = dist_velocity > REPRESS_DISTANCE_THRESHOLD
+                    # The 'finger_lifted' and 'finger_repressed' variables are no longer needed here.
 
-                    if not is_note_on and finger_pressed:
+                    # We only care about a new press. If a press is detected, the note is 'on' for this frame.
+                    # If it's not detected, the note is 'off'. Simple as that.
+                    if finger_pressed:
                         active_zone_names.add(zone.name)
                         if label == "Right":
                             (current_right_top_notes if is_top else current_right_bottom_notes)[zone.note] = True
                         else:
                             (current_left_top_notes if is_top else current_left_bottom_notes)[zone.note] = True
-                    
-                    #sustain while note on
-                    elif is_note_on:
-                        # If the finger is re-pressing, we DON'T sustain the note in the current frame.
-                        # This makes it 'off' for this frame, so it can be turned 'on' again in the next.
-                        # Otherwise, if it's not lifted, we sustain.
-                        if not finger_lifted and not finger_repressed:
-                            active_zone_names.add(zone.name)
-                            if label == "Right":
-                                (current_right_top_notes if is_top else current_right_bottom_notes)[zone.note] = True
-                            else:
-                                (current_left_top_notes if is_top else current_left_bottom_notes)[zone.note] = True
+                
+                # REMOVE THE ENTIRE 'elif is_note_on:' BLOCK
 
     # Update the last known distances for the next frame
     last_finger_wrist_dist = current_finger_distances
