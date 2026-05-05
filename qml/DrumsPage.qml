@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import Qt5Compat.GraphicalEffects
-import "components" // Ensures QML can find your DrumSettingsPane.qml
+import "components" 
 
 Item {
     id: root

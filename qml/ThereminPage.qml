@@ -6,8 +6,6 @@ Item {
     id: root
     signal back()
 
-    readonly property bool engineReady: typeof appEngine !== "undefined"
-
     FontLoader {
         id: figTreeVariable
         source: "../assets/fonts/Figtree-VariableFont_wght.ttf"
@@ -77,9 +75,9 @@ Item {
             id: waveDropdown
             anchors.right: parent.right; anchors.rightMargin: 20
             anchors.verticalCenter: parent.verticalCenter
-            value: root.engineReady && appEngine.viewState && appEngine.viewState.thereminWaveform !== undefined ? appEngine.viewState.thereminWaveform : "sine"
+            value: appEngine.viewState ? appEngine.viewState.thereminWaveform : "sine"
             font.family: figTreeVariable.name
-            onChanged: function(v) { if (root.engineReady) appEngine.setThereminWaveform(v) }
+            onChanged: function(v) { appEngine.setThereminWaveform(v) }
         }
     }
 
@@ -118,7 +116,7 @@ Item {
             onPaint: {
                 const ctx = getContext("2d"); ctx.reset(); ctx.save()
                 ctx.strokeStyle = Qt.rgba(0.922, 0.929, 0.941, 0.6); ctx.lineWidth = 4; ctx.setLineDash([6, 8])
-                const x = Math.round(width * 0.365) + 0.5
+                const x = Math.round(width * 0.33) + 0.5
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke(); ctx.restore()
             }
         }
@@ -131,10 +129,8 @@ Item {
             readonly property int maxTrailLength: 40
 
             Connections {
-                target: root.engineReady ? appEngine : null
+                target: appEngine
                 function onHandStateChanged() {
-                    if (!root.engineReady) return;
-
                     if (appEngine.rightHandVisible) {
                         trailCanvas.rightTrail.push({x: (1.0 - appEngine.rightHandX) * trailCanvas.width, y: appEngine.rightHandY * trailCanvas.height})
                         if (trailCanvas.rightTrail.length > trailCanvas.maxTrailLength) trailCanvas.rightTrail.shift()
@@ -150,51 +146,39 @@ Item {
             }
 
             onPaint: {
-                var ctx = getContext("2d"); 
-                ctx.clearRect(0, 0, width, height); 
-                ctx.lineCap = "round";
-                
-                // --- THE NEON TRICK ---
-                // Additive blending makes the trail literally glow when it overlaps itself
+                var ctx = getContext("2d"); ctx.clearRect(0, 0, width, height); ctx.lineCap = "round"
                 ctx.globalCompositeOperation = "lighter"; 
                 
                 function drawFadingTrail(trail) {
                     if (trail.length < 2) return;
                     for (var i = 1; i < trail.length; i++) {
-                        ctx.beginPath(); 
-                        ctx.moveTo(trail[i-1].x, trail[i-1].y); 
-                        ctx.lineTo(trail[i].x, trail[i].y);
-                        
-                        var alpha = i / trail.length;
-                        
-                        // Pure Electric Orange with lowered max opacity (0.4 instead of 0.7)
-                        ctx.strokeStyle = "rgba(255, 100, 0, " + (alpha * 0.4) + ")";
-                        ctx.lineWidth = 14 * alpha; 
-                        ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(trail[i-1].x, trail[i-1].y); ctx.lineTo(trail[i].x, trail[i].y)
+                        var alpha = i / trail.length
+                        ctx.strokeStyle = "rgba(255, 100, 0, " + (alpha * 0.4) + ")"
+                        ctx.lineWidth = 14 * alpha; ctx.stroke()
                     }
                 }
-                drawFadingTrail(leftTrail); 
-                drawFadingTrail(rightTrail);
+                drawFadingTrail(leftTrail); drawFadingTrail(rightTrail)
             }
         }
 
         Rectangle {
-            visible: root.engineReady && appEngine.leftHandVisible
+            visible: appEngine.leftHandVisible
             width: 18; height: 18; radius: 9
-            x: (root.engineReady ? (1.0 - appEngine.leftHandX) * parent.width : 0) - width / 2
-            y: (root.engineReady ? appEngine.leftHandY * parent.height : 0) - height / 2
-            color: "#e07826"
+            x: ((1.0 - appEngine.leftHandX) * parent.width) - width / 2
+            y: (appEngine.leftHandY * parent.height) - height / 2
+            color: appEngine.leftPinch ? "#e07826" : "#deab84"
             border.color: "#FFFFFF"
             border.width: 2
             Behavior on color { ColorAnimation { duration: 100 } }
         }
 
         Rectangle {
-            visible: root.engineReady && appEngine.rightHandVisible
+            visible: appEngine.rightHandVisible
             width: 18; height: 18; radius: 9
-            x: (root.engineReady ? (1.0 - appEngine.rightHandX) * parent.width : 0) - width / 2
-            y: (root.engineReady ? appEngine.rightHandY * parent.height : 0) - height / 2
-            color: "#e07826"
+            x: ((1.0 - appEngine.rightHandX) * parent.width) - width / 2
+            y: (appEngine.rightHandY * parent.height) - height / 2
+            color: appEngine.rightPinch ? "#e07826" : "#deab84"
             border.color: "#FFFFFF"
             border.width: 2
             Behavior on color { ColorAnimation { duration: 100 } }
