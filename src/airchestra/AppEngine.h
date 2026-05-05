@@ -34,7 +34,10 @@ class AppEngine : public QObject {
     Q_PROPERTY(bool leftThumbUp READ leftThumbUp NOTIFY handStateChanged)
     Q_PROPERTY(bool leftThumbDown READ leftThumbDown NOTIFY handStateChanged)
     Q_PROPERTY(bool rightThumbUp READ rightThumbUp NOTIFY handStateChanged)
-    Q_PROPERTY(bool rightThumbDown READ rightThumbDown NOTIFY handStateChanged)
+    Q_PROPERTY(bool rightThumbDown  READ rightThumbDown  NOTIFY handStateChanged)
+    Q_PROPERTY(bool guitarNeckUp    READ guitarNeckUp    NOTIFY handStateChanged)
+    Q_PROPERTY(bool guitarNeckDown  READ guitarNeckDown  NOTIFY handStateChanged)
+    Q_PROPERTY(bool guitarStrumHit  READ guitarStrumHit  NOTIFY handStateChanged)
 
     // Keyboard octave state (read/write via slots).
     Q_PROPERTY(int topKeyboardOctave READ topKeyboardOctave NOTIFY keyboardOctavesChanged)
@@ -80,6 +83,10 @@ public:
 
     Q_INVOKABLE void setGuitarSound(int soundID);
     Q_INVOKABLE void triggerGuitarStrum(int velocity);
+
+    bool guitarNeckUp()   const { return m_guitarNeckUp;   }
+    bool guitarNeckDown() const { return m_guitarNeckDown; }
+    bool guitarStrumHit() const { return m_guitarStrumHit; }
 
     // --- ADDED SETTERS for theremin jingle---
     Q_INVOKABLE void setRightHandVisible(bool visible);
@@ -139,10 +146,13 @@ private:
     qreal m_rightHandY = 0.5;
     bool m_leftPinch = false;
     bool m_rightPinch = false;
-    bool m_leftThumbUp = false;
-    bool m_leftThumbDown = false;
-    bool m_rightThumbUp = false;
+    bool m_leftThumbUp    = false;
+    bool m_leftThumbDown  = false;
+    bool m_rightThumbUp   = false;
     bool m_rightThumbDown = false;
+    bool m_guitarNeckUp   = false;
+    bool m_guitarNeckDown = false;
+    bool m_guitarStrumHit = false;
     int m_topKeyboardOctave = 3;
     int m_bottomKeyboardOctave = 5;
     QVariantList m_activeKeyboardNotes;

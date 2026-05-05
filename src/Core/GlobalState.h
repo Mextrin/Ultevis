@@ -111,6 +111,8 @@ public:
    std::atomic<GuitarChordRoot> currentGuitarRoot { GuitarChordRoot::C };
    std::atomic<GuitarChordQuality> currentGuitarQuality { GuitarChordQuality::Major };
    std::atomic<int> guitarVelocity { 100 };
+   std::atomic<bool> guitarNeckUp   { false };
+   std::atomic<bool> guitarNeckDown { false };
 
    // --Routing and instrument selection--
    std::atomic<bool> routeToInternalAudio { true };

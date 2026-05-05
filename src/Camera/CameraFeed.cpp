@@ -201,13 +201,18 @@ void startCameraFeed(GlobalState* state) {
             state->leftPinch.store(parseBool(json,  "leftPinch"));
         }
         else if (instrument == "guitar") {
-            state->rightHandVisible.store(parseBool(json, "rightHandVisible"));
-            state->leftHandVisible.store(parseBool(json,  "leftHandVisible"));
-            state->leftHandX.store(parseFloat(json,  "leftHandX"));
-            state->leftHandY.store(parseFloat(json,  "leftHandY"));
-            state->leftPinch.store(parseBool(json,  "leftPinch"));
-            state->guitarStrumDirection.store(parseGuitarStrumDirection(json));
-            state->guitarStrumHit.store(parseBool(json, "guitarStrumHit"));
+            state->rightHandVisible.store(parseBool(json,  "rightHandVisible"));
+            state->leftHandVisible.store(parseBool(json,   "leftHandVisible"));
+            state->leftHandX.store(parseFloat(json,        "leftHandX"));
+            state->leftHandY.store(parseFloat(json,        "leftHandY"));
+            state->rightHandX.store(parseFloat(json,       "rightHandX"));
+            state->rightHandY.store(parseFloat(json,       "rightHandY"));
+            state->leftPinch.store(parseBool(json,         "leftPinch"));
+            state->rightPinch.store(parseBool(json,        "rightPinch"));
+            state->leftThumbUp.store(parseBool(json,       "leftThumbUp"));
+            state->leftThumbDown.store(parseBool(json,     "leftThumbDown"));
+            state->rightThumbUp.store(parseBool(json,      "rightThumbUp"));
+            state->rightThumbDown.store(parseBool(json,    "rightThumbDown"));
         }
         else if (instrument == "none") {
             state->rightHandVisible.store(false);

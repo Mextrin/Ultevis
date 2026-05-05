@@ -1,79 +1,106 @@
-from collections import deque
+"""
+guitar.py — Hand tracking for Guitar mode.
 
-PINCH_THRESHOLD = 0.04
-STRUM_THRESHOLD = 0.06
-STRUM_COOLDOWN_FRAMES = 5
-FIST_SCORE_THRESHOLD = 0.45
-FIST_WINDOW_SIZE = 4
-FIST_MIN_VOTES = 2
+Strum detection and neck-position control are handled entirely in QML
+(pinch rising-edge inside the strum zone, and thumb up/down via
+OctaveGestureHoldController), so Python only needs to track:
 
-last_right_y = None
-cooldown_frames = 0
-closed_fist_history = deque(maxlen=FIST_WINDOW_SIZE)
+  • Hand visibility + positions
+  • Pinch state (hysteresis, same as drums.py)
+  • Thumb-up / thumb-down gestures (same thresholds as keyboard.py)
+"""
 
+# ── Thresholds ────────────────────────────────────────────────────────────────
+PINCH_ON_THRESHOLD     = 0.035
+PINCH_OFF_THRESHOLD    = 0.05
+PINCH_RELEASE_VELOCITY = 0.008
 
-def gesture_matches_closed_fist(gesture_categories):
-    for category in gesture_categories or []:
-        if getattr(category, "category_name", "") != "Closed_Fist":
-            continue
+THUMB_SCORE_THRESHOLD  = 0.60
 
-        if float(getattr(category, "score", 0.0)) >= FIST_SCORE_THRESHOLD:
-            return True
-
-    return False
-
-
-def update_closed_fist_state(gesture_categories):
-    is_closed_fist = gesture_matches_closed_fist(gesture_categories)
-
-    if not is_closed_fist:
-        closed_fist_history.clear()
-        return False
-
-    closed_fist_history.append(True)
-    return sum(closed_fist_history) >= FIST_MIN_VOTES
+# ── Module-level hysteresis state ─────────────────────────────────────────────
+_prev_pinch_dist = {"Left": 1.0, "Right": 1.0}
+_pinch_active    = {"Left": False, "Right": False}
 
 
-def reset_closed_fist_state():
-    closed_fist_history.clear()
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
+def _is_pinch(label: str, hand_landmarks) -> bool:
+    """Hysteresis-based pinch — identical to drums.py."""
+    thumb_tip = hand_landmarks[4]
+    index_tip = hand_landmarks[8]
+    dist = ((thumb_tip.x - index_tip.x) ** 2 +
+            (thumb_tip.y - index_tip.y) ** 2) ** 0.5
+
+    prev_dist = _prev_pinch_dist.get(label, 1.0)
+    active    = _pinch_active.get(label, False)
+
+    if active and (dist - prev_dist > PINCH_RELEASE_VELOCITY):
+        active = False
+    elif active and dist > PINCH_OFF_THRESHOLD:
+        active = False
+    elif not active and dist < PINCH_ON_THRESHOLD:
+        active = True
+
+    _prev_pinch_dist[label] = dist
+    _pinch_active[label]    = active
+    return active
+
+
+def _gesture_score(gesture_categories, name: str) -> float:
+    for cat in gesture_categories or []:
+        if getattr(cat, "category_name", "") == name:
+            return float(getattr(cat, "score", 0.0))
+    return 0.0
+
+
+def _thumb_up(gesture_categories) -> bool:
+    return _gesture_score(gesture_categories, "Thumb_Up") >= THUMB_SCORE_THRESHOLD
+
+
+def _thumb_down(gesture_categories) -> bool:
+    return _gesture_score(gesture_categories, "Thumb_Down") >= THUMB_SCORE_THRESHOLD
+
+
+# ── Main detection ────────────────────────────────────────────────────────────
 
 def detect_guitar_hands(detection_result):
-    global last_right_y, cooldown_frames
-
     payload = {
-        "instrument": "guitar",
-        "leftHandVisible": False,
+        "instrument":      "guitar",
+        "leftHandVisible":  False,
         "rightHandVisible": False,
-        "leftHandX": 0.5,
-        "leftHandY": 0.5,
-        "leftPinch": False,
-        "guitarStrumHit": False,
-        "guitarStrumDirection": "down"
+        "leftHandX":        0.5,
+        "leftHandY":        0.5,
+        "rightHandX":       0.5,
+        "rightHandY":       0.5,
+        "leftPinch":        False,
+        "rightPinch":       False,
+        "leftThumbUp":      False,
+        "leftThumbDown":    False,
+        "rightThumbUp":     False,
+        "rightThumbDown":   False,
     }
 
-    active_zone_names = set()
+    active_zone_names        = set()
     displayed_hand_positions = {}
 
     if not detection_result.handedness:
-        last_right_y = None
+        _pinch_active["Left"]  = False
+        _pinch_active["Right"] = False
         return payload, active_zone_names, displayed_hand_positions
 
-    processed_labels = set()
     gestures_per_hand = getattr(detection_result, "gestures", None) or []
+    processed_labels  = set()
 
-    # Decrease cooldown every frame
-    if cooldown_frames > 0:
-        cooldown_frames -= 1
-
-    for idx, (hand_landmarks, handedness) in enumerate(zip(detection_result.hand_landmarks, detection_result.handedness)):
+    for idx, (hand_landmarks, handedness) in enumerate(
+        zip(detection_result.hand_landmarks, detection_result.handedness)
+    ):
         label = handedness[0].category_name
         if label in processed_labels:
             continue
         processed_labels.add(label)
 
-        # Mirrored X for display
-        display_x = 1.0 - hand_landmarks[9].x # Middle finger base
+        # Mirror X so coordinates match the flipped camera display
+        display_x = 1.0 - hand_landmarks[9].x
         display_y = hand_landmarks[9].y
         displayed_hand_positions[label] = (display_x, display_y)
 
@@ -81,42 +108,28 @@ def detect_guitar_hands(detection_result):
         if idx < len(gestures_per_hand) and gestures_per_hand[idx]:
             gesture_categories = gestures_per_hand[idx]
 
-        if label == "Right":
-            payload["rightHandVisible"] = True
-            current_y = hand_landmarks[9].y
-            closed_fist_active = update_closed_fist_state(gesture_categories)
+        is_pinching = _is_pinch(label, hand_landmarks)
 
-            if closed_fist_active:
-                last_right_y = None
-                cooldown_frames = 0
-                continue
-
-            if last_right_y is not None:
-                velocity = current_y - last_right_y
-
-                if velocity > STRUM_THRESHOLD and cooldown_frames == 0:
-                    payload["guitarStrumHit"] = True
-                    payload["guitarStrumDirection"] = "down"
-                    cooldown_frames = STRUM_COOLDOWN_FRAMES
-                elif velocity < -STRUM_THRESHOLD and cooldown_frames == 0:
-                    payload["guitarStrumHit"] = True
-                    payload["guitarStrumDirection"] = "up"
-                    cooldown_frames = STRUM_COOLDOWN_FRAMES
-
-            last_right_y = current_y
-
-        elif label == "Left":
+        if label == "Left":
             payload["leftHandVisible"] = True
-            payload["leftHandX"] = display_x
-            payload["leftHandY"] = display_y
+            payload["leftHandX"]       = display_x
+            payload["leftHandY"]       = display_y
+            payload["leftPinch"]       = is_pinching
+            payload["leftThumbUp"]     = _thumb_up(gesture_categories)
+            payload["leftThumbDown"]   = _thumb_down(gesture_categories)
 
-            thumb_tip = hand_landmarks[4]
-            index_tip = hand_landmarks[8]
-            pinch_dist = ((thumb_tip.x - index_tip.x)**2 + (thumb_tip.y - index_tip.y)**2)**0.5
-            payload["leftPinch"] = pinch_dist < PINCH_THRESHOLD
+        elif label == "Right":
+            payload["rightHandVisible"] = True
+            payload["rightHandX"]       = display_x
+            payload["rightHandY"]       = display_y
+            payload["rightPinch"]       = is_pinching
+            payload["rightThumbUp"]     = _thumb_up(gesture_categories)
+            payload["rightThumbDown"]   = _thumb_down(gesture_categories)
 
+    # Clear pinch state for hands that left the frame
+    if "Left"  not in processed_labels:
+        _pinch_active["Left"]  = False
     if "Right" not in processed_labels:
-        last_right_y = None
-        reset_closed_fist_state()
+        _pinch_active["Right"] = False
 
     return payload, active_zone_names, displayed_hand_positions

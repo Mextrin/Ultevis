@@ -413,35 +413,45 @@ void AppEngine::refreshTrackedState() {
     const bool nextRightPinch = globalState->rightPinch.load();
     const bool nextLeftThumbUp = globalState->leftThumbUp.load();
     const bool nextLeftThumbDown = globalState->leftThumbDown.load();
-    const bool nextRightThumbUp = globalState->rightThumbUp.load();
+    const bool nextRightThumbUp   = globalState->rightThumbUp.load();
     const bool nextRightThumbDown = globalState->rightThumbDown.load();
+    const bool nextGuitarNeckUp   = globalState->guitarNeckUp.load();
+    const bool nextGuitarNeckDown = globalState->guitarNeckDown.load();
+    // guitarStrumHit is a pulse — read and immediately clear so QML sees a rising edge
+    const bool nextGuitarStrumHit = globalState->guitarStrumHit.exchange(false);
 
     const bool handChanged =
-        m_leftHandVisible != nextLeftHandVisible ||
+        m_leftHandVisible  != nextLeftHandVisible  ||
         m_rightHandVisible != nextRightHandVisible ||
-        m_leftHandX != nextLeftHandX ||
-        m_leftHandY != nextLeftHandY ||
-        m_rightHandX != nextRightHandX ||
-        m_rightHandY != nextRightHandY ||
-        m_leftPinch != nextLeftPinch ||
-        m_rightPinch != nextRightPinch ||
-        m_leftThumbUp != nextLeftThumbUp ||
-        m_leftThumbDown != nextLeftThumbDown ||
-        m_rightThumbUp != nextRightThumbUp ||
-        m_rightThumbDown != nextRightThumbDown;
+        m_leftHandX        != nextLeftHandX        ||
+        m_leftHandY        != nextLeftHandY        ||
+        m_rightHandX       != nextRightHandX       ||
+        m_rightHandY       != nextRightHandY       ||
+        m_leftPinch        != nextLeftPinch        ||
+        m_rightPinch       != nextRightPinch       ||
+        m_leftThumbUp      != nextLeftThumbUp      ||
+        m_leftThumbDown    != nextLeftThumbDown    ||
+        m_rightThumbUp     != nextRightThumbUp     ||
+        m_rightThumbDown   != nextRightThumbDown   ||
+        m_guitarNeckUp     != nextGuitarNeckUp     ||
+        m_guitarNeckDown   != nextGuitarNeckDown   ||
+        nextGuitarStrumHit;   // always emit when a strum fires
 
-    m_leftHandVisible = nextLeftHandVisible;
+    m_leftHandVisible  = nextLeftHandVisible;
     m_rightHandVisible = nextRightHandVisible;
-    m_leftHandX = nextLeftHandX;
-    m_leftHandY = nextLeftHandY;
-    m_rightHandX = nextRightHandX;
-    m_rightHandY = nextRightHandY;
-    m_leftPinch = nextLeftPinch;
-    m_rightPinch = nextRightPinch;
-    m_leftThumbUp = nextLeftThumbUp;
-    m_leftThumbDown = nextLeftThumbDown;
-    m_rightThumbUp = nextRightThumbUp;
-    m_rightThumbDown = nextRightThumbDown;
+    m_leftHandX        = nextLeftHandX;
+    m_leftHandY        = nextLeftHandY;
+    m_rightHandX       = nextRightHandX;
+    m_rightHandY       = nextRightHandY;
+    m_leftPinch        = nextLeftPinch;
+    m_rightPinch       = nextRightPinch;
+    m_leftThumbUp      = nextLeftThumbUp;
+    m_leftThumbDown    = nextLeftThumbDown;
+    m_rightThumbUp     = nextRightThumbUp;
+    m_rightThumbDown   = nextRightThumbDown;
+    m_guitarNeckUp     = nextGuitarNeckUp;
+    m_guitarNeckDown   = nextGuitarNeckDown;
+    m_guitarStrumHit   = nextGuitarStrumHit;
 
     if (handChanged)
         emit handStateChanged();
