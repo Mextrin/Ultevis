@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import mediapipe as mp
 import cv2
 from pathlib import Path
@@ -37,17 +38,21 @@ left_hand_bottom_notes = {}
 # Keep track of the last finger-to-wrist Y-distance to detect a "press"
 last_finger_wrist_dist = {} # {(hand_label, finger_name): distance}
 
-# Threshold for detecting a "press" (finger moving towards wrist)
-# A negative value means the finger is moving closer to the wrist.
-PRESS_DISTANCE_THRESHOLD = 0.015 
+# Threshold for detecting a "press" from the finger moving down in screen space.
+PRESS_DISTANCE_THRESHOLD = 0.015
 
-# Add this new constant
-REPRESS_DISTANCE_THRESHOLD = 0.005
+# Require the finger direction to be mostly aligned with the camera axis.
+# This filters out fingers hovering parallel to the screen.
+FINGER_SCREEN_ORTHOGONAL_RATIO_THRESHOLD = 0.72
+MIN_DEPTH_COMPONENT = 0.03
 
-# Threshold for detecting a "lift" to allow re-pressing the same key
-# A positive value means the finger is moving away from the wrist.
-LIFT_DISTANCE_THRESHOLD = -0.01
-# --------------------
+FINGER_DIRECTION_LANDMARKS = {
+    "thumb": (2, 4),
+    "index": (5, 8),
+    "middle": (9, 12),
+    "ring": (13, 16),
+    "pinky": (17, 20),
+}
 
 def detect_keyboard_hands(detection_result):
     keyboard_payload = {
@@ -137,6 +142,23 @@ def find_key_zone(x: float, y: float) -> KeyboardZone | None:
     return None
 
 
+def is_finger_pointing_orthogonal_to_screen(hand_landmarks, finger_name: str) -> bool:
+    base_idx, tip_idx = FINGER_DIRECTION_LANDMARKS[finger_name]
+    base = hand_landmarks[base_idx]
+    tip = hand_landmarks[tip_idx]
+
+    dx = tip.x - base.x
+    dy = tip.y - base.y
+    dz = tip.z - base.z
+
+    direction_length = math.sqrt((dx * dx) + (dy * dy) + (dz * dz))
+    if direction_length <= 1e-6:
+        return False
+
+    orthogonal_ratio = abs(dz) / direction_length
+    return abs(dz) >= MIN_DEPTH_COMPONENT and orthogonal_ratio >= FINGER_SCREEN_ORTHOGONAL_RATIO_THRESHOLD
+
+
 def detect_key_strokes(detection_result):
     global right_hand_top_notes, right_hand_bottom_notes, left_hand_top_notes, left_hand_bottom_notes, last_finger_wrist_dist
 
@@ -199,26 +221,20 @@ def detect_key_strokes(detection_result):
                 mirrored_x = 1.0 - tip.x
                 zone = find_key_zone(mirrored_x, tip.y)
 
-                # Determine if the note for this finger is currently "on"
                 is_top = zone.name.endswith("+") if zone else False
-                is_note_on = (label == "Right" and zone and zone.note in (right_hand_top_notes if is_top else right_hand_bottom_notes)) or \
-                             (label == "Left"  and zone and zone.note in (left_hand_top_notes  if is_top else left_hand_bottom_notes))
 
                 if zone:
-                    #press
-                    finger_pressed = dist_velocity > PRESS_DISTANCE_THRESHOLD
-                    # The 'finger_lifted' and 'finger_repressed' variables are no longer needed here.
+                    finger_pressed = (
+                        dist_velocity > PRESS_DISTANCE_THRESHOLD
+                        and is_finger_pointing_orthogonal_to_screen(hand_landmarks, name)
+                    )
 
-                    # We only care about a new press. If a press is detected, the note is 'on' for this frame.
-                    # If it's not detected, the note is 'off'. Simple as that.
                     if finger_pressed:
                         active_zone_names.add(zone.name)
                         if label == "Right":
                             (current_right_top_notes if is_top else current_right_bottom_notes)[zone.note] = True
                         else:
                             (current_left_top_notes if is_top else current_left_bottom_notes)[zone.note] = True
-                
-                # REMOVE THE ENTIRE 'elif is_note_on:' BLOCK
 
     # Update the last known distances for the next frame
     last_finger_wrist_dist = current_finger_distances
