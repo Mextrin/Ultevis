@@ -17,8 +17,8 @@ _keyboard_gesture_options = vision.GestureRecognizerOptions(
     base_options=python.BaseOptions(model_asset_path=str(_GESTURE_MODEL_PATH)),
     running_mode=RunningMode.VIDEO,
     num_hands=2,
-    min_hand_detection_confidence=0.5,
-    min_tracking_confidence=0.5,
+    min_hand_detection_confidence=0.7,
+    min_tracking_confidence=0.7,
     canned_gesture_classifier_options=_ClassifierOptions(score_threshold=0.35),
 )
 recognizer = vision.GestureRecognizer.create_from_options(_keyboard_gesture_options)
@@ -38,6 +38,9 @@ last_finger_wrist_dist = {} # {(hand_label, finger_name): distance}
 # Threshold for detecting a "press" (finger moving towards wrist)
 # A negative value means the finger is moving closer to the wrist.
 PRESS_DISTANCE_THRESHOLD = 0.015 
+
+# Add this new constant
+REPRESS_DISTANCE_THRESHOLD = 0.005
 
 # Threshold for detecting a "lift" to allow re-pressing the same key
 # A positive value means the finger is moving away from the wrist.
@@ -220,17 +223,21 @@ def detect_key_strokes(detection_result):
                     #press
                     finger_pressed = dist_velocity > PRESS_DISTANCE_THRESHOLD
                     finger_lifted = dist_velocity < LIFT_DISTANCE_THRESHOLD
+                    finger_repressed = dist_velocity > REPRESS_DISTANCE_THRESHOLD
 
                     if not is_note_on and finger_pressed:
-                            active_zone_names.add(zone.name)
-                            if label == "Right":
-                                (current_right_top_notes if is_top else current_right_bottom_notes)[zone.note] = True
-                            else:
-                                (current_left_top_notes if is_top else current_left_bottom_notes)[zone.note] = True
+                        active_zone_names.add(zone.name)
+                        if label == "Right":
+                            (current_right_top_notes if is_top else current_right_bottom_notes)[zone.note] = True
+                        else:
+                            (current_left_top_notes if is_top else current_left_bottom_notes)[zone.note] = True
                     
                     #sustain while note on
                     elif is_note_on:
-                        if not finger_lifted:
+                        # If the finger is re-pressing, we DON'T sustain the note in the current frame.
+                        # This makes it 'off' for this frame, so it can be turned 'on' again in the next.
+                        # Otherwise, if it's not lifted, we sustain.
+                        if not finger_lifted and not finger_repressed:
                             active_zone_names.add(zone.name)
                             if label == "Right":
                                 (current_right_top_notes if is_top else current_right_bottom_notes)[zone.note] = True
