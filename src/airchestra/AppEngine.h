@@ -2,6 +2,7 @@
 #include <QObject>
 #include <QStringList>
 #include <QTimer>
+#include <QVariantList>
 #include <memory>
 #include <vector>
 #include <string>
@@ -38,6 +39,7 @@ class AppEngine : public QObject {
     // Keyboard octave state (read/write via slots).
     Q_PROPERTY(int topKeyboardOctave READ topKeyboardOctave NOTIFY keyboardOctavesChanged)
     Q_PROPERTY(int bottomKeyboardOctave READ bottomKeyboardOctave NOTIFY keyboardOctavesChanged)
+    Q_PROPERTY(QVariantList activeKeyboardNotes READ activeKeyboardNotes NOTIFY activeKeyboardNotesChanged)
 
 public:
     AppEngine(GlobalState* gState, HeadlessAudioEngine* aEngine, QObject *parent = nullptr);
@@ -92,6 +94,7 @@ public:
     bool rightThumbDown() const { return m_rightThumbDown; }
     int topKeyboardOctave() const { return m_topKeyboardOctave; }
     int bottomKeyboardOctave() const { return m_bottomKeyboardOctave; }
+    QVariantList activeKeyboardNotes() const { return m_activeKeyboardNotes; }
 
     std::vector<std::pair<std::string, std::string>> getAvailableMidiDevices();
 
@@ -100,6 +103,7 @@ signals:
     void currentMidiDeviceChanged();
     void handStateChanged();
     void keyboardOctavesChanged();
+    void activeKeyboardNotesChanged();
 
 private:
     void setCameraPermissionStatus(const QString &value);
@@ -131,6 +135,7 @@ private:
     bool m_rightThumbDown = false;
     int m_topKeyboardOctave = 3;
     int m_bottomKeyboardOctave = 5;
+    QVariantList m_activeKeyboardNotes;
 };
 
 } // namespace airchestra

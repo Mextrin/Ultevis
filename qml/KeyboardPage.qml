@@ -11,8 +11,40 @@ Item {
     readonly property bool engineReady: typeof appEngine !== "undefined"
     readonly property int k1Octave: engineReady ? appEngine.topKeyboardOctave : 3
     readonly property int k2Octave: engineReady ? appEngine.bottomKeyboardOctave : 5
+    readonly property var activeKeyboardNotes: engineReady ? appEngine.activeKeyboardNotes : []
+    readonly property var whiteKeySteps: [
+        { label: "C", semitone: 0 },
+        { label: "D", semitone: 2 },
+        { label: "E", semitone: 4 },
+        { label: "F", semitone: 5 },
+        { label: "G", semitone: 7 },
+        { label: "A", semitone: 9 },
+        { label: "B", semitone: 11 },
+        { label: "C", semitone: 12 },
+        { label: "D", semitone: 14 },
+        { label: "E", semitone: 16 }
+    ]
+    readonly property var blackKeySteps: [
+        { label: "C#", semitone: 1, boundaryIndex: 1 },
+        { label: "D#", semitone: 3, boundaryIndex: 2 },
+        { label: "F#", semitone: 6, boundaryIndex: 4 },
+        { label: "G#", semitone: 8, boundaryIndex: 5 },
+        { label: "A#", semitone: 10, boundaryIndex: 6 },
+        { label: "C#", semitone: 13, boundaryIndex: 8 },
+        { label: "D#", semitone: 15, boundaryIndex: 9 }
+    ]
+    readonly property real keyboardTopStart: 0.12
+    readonly property real keyboardTopWhiteEnd: 0.55
+    readonly property real keyboardTopBlackEnd: 0.32
+    readonly property real keyboardBottomStart: 0.60
+    readonly property real keyboardBottomWhiteEnd: 1.0
+    readonly property real keyboardBottomBlackEnd: 0.80
     property int counterFlashKeyboard: 0
     property int counterFlashDelta: 0
+
+    function noteActive(midiNote) {
+        return activeKeyboardNotes.indexOf(midiNote) !== -1
+    }
 
     function handInsideItem(item, x, y) {
         if (!item || cameraViewport.width <= 0 || cameraViewport.height <= 0)
@@ -134,15 +166,14 @@ Item {
                 color: Qt.rgba(0.01, 0.012, 0.018, 0.16)
             }
 
-            Column {
+            Item {
                 id: keyboardOverlay
                 anchors.fill: parent
-                spacing: 0
 
                 Row {
                     id: octaveControls
                     width: parent.width
-                    height: Math.max(58, Math.min(82, parent.height * 0.12))
+                    height: parent.height * root.keyboardTopStart
                     spacing: 0
 
                     OctaveGroup {
@@ -164,16 +195,26 @@ Item {
 
                 KeyboardZone {
                     width: parent.width
-                    height: (parent.height - octaveControls.height) / 2
+                    y: parent.height * root.keyboardTopStart
+                    height: parent.height * (root.keyboardTopWhiteEnd - root.keyboardTopStart)
                     keyboardIndex: 1
                     label: "Keyboard 1"
+                    defaultOctave: 5
+                    currentOctave: root.k1Octave
+                    baseMidiNote: 72
+                    blackKeyHeightRatio: (root.keyboardTopBlackEnd - root.keyboardTopStart) / (root.keyboardTopWhiteEnd - root.keyboardTopStart)
                 }
 
                 KeyboardZone {
                     width: parent.width
-                    height: (parent.height - octaveControls.height) / 2
+                    y: parent.height * root.keyboardBottomStart
+                    height: parent.height * (root.keyboardBottomWhiteEnd - root.keyboardBottomStart)
                     keyboardIndex: 2
                     label: "Keyboard 2"
+                    defaultOctave: 4
+                    currentOctave: root.k2Octave
+                    baseMidiNote: 60
+                    blackKeyHeightRatio: (root.keyboardBottomBlackEnd - root.keyboardBottomStart) / (root.keyboardBottomWhiteEnd - root.keyboardBottomStart)
                 }
             }
         }
@@ -216,24 +257,22 @@ Item {
         }
     }
 
-    component KeyboardZone: Rectangle {
+    component KeyboardZone: Item {
         id: zone
         property int keyboardIndex: 1
         property string label: "Keyboard Octave"
+        property int defaultOctave: 5
+        property int currentOctave: 5
+        property int baseMidiNote: 72
+        property real blackKeyHeightRatio: 0.5
         property bool active: root.anyHandInside(zone)
         property bool thumbUpHover: root.anyThumbUpInside(zone)
         property bool thumbDownHover: root.anyThumbDownInside(zone)
         property bool octaveGestureActive: thumbUpHover || thumbDownHover
         property int octaveGestureDelta: thumbUpHover === thumbDownHover ? 0 : (thumbUpHover ? 1 : -1)
-
-        color: active ? Qt.rgba(0.878, 0.478, 0.149, 0.23)
-                      : Qt.rgba(1, 1, 1, 0.035)
-        border.width: active ? 3 : 2
-        border.color: active ? "#E07A26" : Qt.rgba(1, 1, 1, 0.34)
-
-        Behavior on color { ColorAnimation { duration: 140 } }
-        Behavior on border.color { ColorAnimation { duration: 140 } }
-        Behavior on border.width { NumberAnimation { duration: 140 } }
+        readonly property real whiteKeyWidth: width / root.whiteKeySteps.length
+        readonly property real blackKeyWidth: whiteKeyWidth * 0.6
+        readonly property int octaveShift: (currentOctave - defaultOctave) * 12
 
         function triggerOctaveChange(delta) {
             if (delta === 0)
@@ -250,18 +289,79 @@ Item {
             }
         }
 
-        Text {
-            anchors.centerIn: parent
-            width: parent.width * 0.9
-            text: zone.label
-            font.family: figTreeVariable.name
-            font.pixelSize: Math.max(30, Math.min(58, parent.height * 0.28))
-            font.weight: Font.Light
-            color: zone.active ? "#FFFFFF" : Qt.rgba(0.922, 0.929, 0.941, 0.72)
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            wrapMode: Text.NoWrap
-            elide: Text.ElideRight
+        Rectangle {
+            anchors.fill: parent
+            color: zone.active ? Qt.rgba(0.878, 0.478, 0.149, 0.14)
+                              : Qt.rgba(1, 1, 1, 0.025)
+            border.width: zone.active ? 3 : 2
+            border.color: zone.active ? "#E07A26" : Qt.rgba(1, 1, 1, 0.26)
+
+            Behavior on color { ColorAnimation { duration: 140 } }
+            Behavior on border.color { ColorAnimation { duration: 140 } }
+            Behavior on border.width { NumberAnimation { duration: 140 } }
+        }
+
+        Repeater {
+            model: root.whiteKeySteps
+
+            delegate: Rectangle {
+                readonly property int midiNote: zone.baseMidiNote + modelData.semitone + zone.octaveShift
+                readonly property bool noteActive: root.noteActive(midiNote)
+
+                x: index * zone.whiteKeyWidth
+                y: 0
+                width: zone.whiteKeyWidth
+                height: zone.height
+                radius: Math.min(8, width * 0.12)
+                color: noteActive ? Qt.rgba(0.878, 0.478, 0.149, 0.82)
+                                  : Qt.rgba(0.985, 0.988, 0.995, 0.68)
+                border.width: noteActive ? 2 : 1
+                border.color: noteActive ? "#FFD2A8" : Qt.rgba(0.18, 0.2, 0.26, 0.55)
+            }
+        }
+
+        Repeater {
+            model: root.blackKeySteps
+
+            delegate: Rectangle {
+                readonly property int midiNote: zone.baseMidiNote + modelData.semitone + zone.octaveShift
+                readonly property bool noteActive: root.noteActive(midiNote)
+                readonly property real centerX: zone.whiteKeyWidth * modelData.boundaryIndex
+
+                x: centerX - (width / 2)
+                y: 0
+                width: zone.blackKeyWidth
+                height: zone.height * zone.blackKeyHeightRatio
+                radius: Math.min(7, width * 0.16)
+                z: 2
+                color: noteActive ? Qt.rgba(0.898, 0.502, 0.149, 0.92)
+                                  : Qt.rgba(0.04, 0.055, 0.08, 0.92)
+                border.width: 1
+                border.color: noteActive ? "#FFE0B8" : Qt.rgba(1, 1, 1, 0.18)
+            }
+        }
+
+        Rectangle {
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.margins: 14
+            width: labelText.implicitWidth + 18
+            height: labelText.implicitHeight + 10
+            radius: 8
+            color: Qt.rgba(0.02, 0.025, 0.035, 0.52)
+            border.width: 1
+            border.color: Qt.rgba(1, 1, 1, 0.1)
+            z: 3
+
+            Text {
+                id: labelText
+                anchors.centerIn: parent
+                text: zone.label
+                font.family: figTreeVariable.name
+                font.pixelSize: Math.max(13, Math.min(18, zone.height * 0.08))
+                font.weight: Font.Medium
+                color: Qt.rgba(0.922, 0.929, 0.941, 0.88)
+            }
         }
     }
 

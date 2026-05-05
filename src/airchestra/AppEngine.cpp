@@ -452,6 +452,18 @@ void AppEngine::refreshTrackedState() {
 
     if (octavesChanged)
         emit keyboardOctavesChanged();
+
+    QVariantList nextActiveKeyboardNotes;
+    for (int note = 0; note < 128; ++note) {
+        if (globalState->keyboardState[note].load()) {
+            nextActiveKeyboardNotes.append(note);
+        }
+    }
+
+    if (m_activeKeyboardNotes != nextActiveKeyboardNotes) {
+        m_activeKeyboardNotes = nextActiveKeyboardNotes;
+        emit activeKeyboardNotesChanged();
+    }
 }
 
 void AppEngine::setGuitarSound(int soundID) {

@@ -125,28 +125,7 @@ def detect_keyboard_hands(detection_result):
 
 
 def draw_keyboard_zones(frame, active_zone_names: set[str]) -> None:
-    overlay = frame.copy()
-    height, width = frame.shape[:2]
-
-    # Sort keys to draw white keys first, then black keys
-    sorted_zones = sorted(KEYBOARD_ZONES, key=lambda z: "#" in z.name)
-
-    for zone in sorted_zones:
-        left, top, right, bottom = zone.pixel_rect(width, height)
-        is_active = zone.name in active_zone_names
-        is_black_key = "#" in zone.name
-
-        if is_black_key:
-            fill_color = (0, 120, 255) if is_active else (0, 0, 0)
-            border_color = (0, 180, 255) if is_active else (80, 80, 80)
-        else:
-            fill_color = (0, 120, 255) if is_active else (255, 255, 255)
-            border_color = (0, 180, 255) if is_active else (150, 150, 150)
-
-        cv2.rectangle(overlay, (left, top), (right, bottom), fill_color, -1)
-        cv2.rectangle(overlay, (left, top), (right, bottom), border_color, 2)
-
-    cv2.addWeighted(overlay, 0.3, frame, 0.7, 0.0, frame)
+    return
 
 
 def find_key_zone(x: float, y: float) -> KeyboardZone | None:
