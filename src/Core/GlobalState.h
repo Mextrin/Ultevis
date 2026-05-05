@@ -1,42 +1,12 @@
-/*
-==============================================================================
-GLOBAL STATE (Thread-Safe Shared Control Data)
-
-Lightweight lock-free container for communication between vision input,
-audio engine, and UI. All members are std::atomic for safe concurrent access.
-
-State groups:
-
-1. Continuous Control (Theremin):
-   - rightHandX → pitch
-   - leftHandY  → volume
-   - hand visibility → note gating
-
-2. Trigger Events (Drums):
-   - left/right drum hit flags
-   - drum type (MIDI note) and velocity
-
-3. Instrument & Routing:
-   - currentInstrument (Theremin / Drums)
-   - routeToInternalAudio / routeToMidiOut
-
-4. Synthesis Parameters:
-   - currentWaveform (oscillator shape)
-
-Design:
-- No locks, no blocking, no dynamic allocation
-- Written by input thread, read by audio thread
-- Strictly a data container (no logic)
-==============================================================================
-*/
-
 #pragma once
 #include <atomic>
+#include <array>
 
 enum class ActiveInstrument {
    Theremin = 0,
    Drums = 1,
-   Keyboard = 2
+   Keyboard = 2,
+   Guitar = 3
 };
 
 enum class Waveform {
@@ -54,33 +24,83 @@ enum class KeyboardSound {
    Violin = 4
 };
 
+enum class GuitarSound {
+   CleanElectric = 0,
+   DistortedElectric = 1,
+   Acoustic = 2
+};
+
+enum class GuitarChordRoot {
+   C = 0,
+   D = 1,
+   E = 2,
+   F = 3,
+   G = 4,
+   A = 5,
+   B = 6
+};
+
+enum class GuitarChordQuality {
+   Major = 0,
+   Minor = 1,
+   Dom7 = 2,
+   Maj7 = 3,
+   Min7 = 4,
+   Sus2 = 5,
+   Sus4 = 6
+};
+
 class GlobalState {
 public:
    // --Theremin controls--
    std::atomic<float> rightHandX { 0.5f }; // 0-1
+   std::atomic<float> rightHandY { 0.5f }; // 0-1
+   std::atomic<float> leftHandX  { 0.5f }; // 0-1
    std::atomic<float> leftHandY  { 1.0f }; // 0-1
    std::atomic<bool> rightHandVisible { false };
    std::atomic<bool> leftHandVisible  { false };
+   std::atomic<bool> rightPinch { false };
+   std::atomic<bool> leftPinch  { false };
    std::atomic<Waveform> currentWaveform { Waveform::Sine };
    std::atomic<int> thereminSemitoneRangeOneSide { 24 }; //one octave up, one octave down
    std::atomic<int> thereminCenterNote { 60 }; // 60 = C4
+   std::atomic<float> thereminVolumeFloor { 0.05f };  // minimum volume when left hand is at bottom
 
    // --LEFT HAND DRUM--
    std::atomic<bool> leftDrumHit { false }; 
    std::atomic<int> leftDrumType { 36 }; 
-   std::atomic<int> leftDrumVelocity { 100 }; 
+   std::atomic<int> leftDrumVelocity { 100 };       // velocity % 0–100 (UI → MIDI 0–127 per hit)
 
    // --RIGHT HAND DRUM--
    std::atomic<bool> rightDrumHit { false }; 
    std::atomic<int> rightDrumType { 38 }; 
-   std::atomic<int> rightDrumVelocity { 100 };
+   std::atomic<int> rightDrumVelocity { 100 };      // velocity % 0–100 (UI)
+   std::atomic<bool> mouthKickHit { false };
+
+   // --DRUM STATES--
+   std::atomic<bool> mouthKickEnable { false }; 
 
    // --- KEYBOARD STATE ---
-   std::atomic<bool> isKeyPressed { false }; 
-   std::atomic<int> keyboardNote { 60 };    
-   std::atomic<int> keyboardVelocity { 100 }; 
+   std::array<std::atomic<bool>, 128> keyboardState {};
+   /// Last MIDI velocity (1–127) for noteOn; set from camera UDP using left/right hand master %.
+   std::array<std::atomic<int>, 128> keyboardNoteVelocity {};
+   std::atomic<int> leftKeyboardVelocity { 100 };   // % 0–100 (UI), same semantics as drum hands
+   std::atomic<int> rightKeyboardVelocity { 100 };
    std::atomic<KeyboardSound> currentKeyboardInstrument { KeyboardSound::GrandPiano };
    std::atomic<bool> sustainPedal { false };
+   std::atomic<int> topKeyboardOctave { 5 };
+   std::atomic<int> bottomKeyboardOctave { 4 };
+   std::atomic<bool> rightThumbUp { false };
+   std::atomic<bool> rightThumbDown { false };
+   std::atomic<bool> leftThumbUp { false };
+   std::atomic<bool> leftThumbDown { false };
+
+   // --- GUITAR STATE ---
+   std::atomic<GuitarSound> currentGuitarSound { GuitarSound::CleanElectric };
+   std::atomic<bool> guitarStrumHit { false };
+   std::atomic<GuitarChordRoot> currentGuitarRoot { GuitarChordRoot::C };
+   std::atomic<GuitarChordQuality> currentGuitarQuality { GuitarChordQuality::Major };
+   std::atomic<int> guitarVelocity { 100 };
 
    // --Routing and instrument selection--
    std::atomic<bool> routeToInternalAudio { true };
@@ -93,7 +113,3 @@ public:
    std::atomic<bool> cameraSessionActive{false};
 
 };
-
- 
- 
- 

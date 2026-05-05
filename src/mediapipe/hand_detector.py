@@ -1,143 +1,253 @@
 import os
+import sys
 import cv2
 import mediapipe as mp
-from mediapipe.tasks import python
-from mediapipe.tasks.python import vision
+import numpy as np
 import socket
 import json
-from theremin import detect_hands, draw_circle, add_theremin_text, recognizer as theremin_recognizer
-from drums import drum_detect, get_drum_hit_coordinates, recognizer as drum_recognizer
+import tempfile
+import threading
+import time
+import gc
 
+# --- Instrument Modules ---
+from theremin import detect_hands, draw_circle, recognizer as theremin_recognizer
+from drums import drum_detect, get_drum_hit_coordinates, recognizer as drum_recognizer
+from keyboard import detect_key_strokes, draw_keyboard_zones, detect_keyboard_hands, recognizer as keyboard_recognizer
+from guitar import detect_guitar_hands
+
+# --- Configuration & Network ---
 UDP_IP = "127.0.0.1"
 UDP_PORT = 5005
-CAMERA_MODE = os.environ.get("ULTEVIS_CAMERA_MODE", "theremin").strip().lower()
+CMD_PORT = 5006
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-payload = {}
+TEMP_DIR = tempfile.gettempdir()
+TEMP_FRAME_PATH = os.path.join(TEMP_DIR, "airchestra_frame.tmp.jpg")
+FINAL_FRAME_PATH = os.path.join(TEMP_DIR, "airchestra_frame.jpg")
 
-# Determine the instrument index from the camera mode
-if CAMERA_MODE == "drums":
-    INSTRUMENT = 1
-else:
-    INSTRUMENT = 0
+# --- Global State ---
+CAMERA_MODE = "none"
+requested_mode = "none"
 
-def draw_frame():
-    frame_height, frame_width = display_frame.shape[:2]
-    return frame_height, frame_width
+# ==============================================================================
+# Helper Functions
+# ==============================================================================
 
-recognizer = None
+def safe_replace(src, dst, retries=10, delay=0.01):
+    for _ in range(retries):
+        try:
+            os.replace(src, dst)
+            return True
+        except PermissionError:
+            time.sleep(delay)
+    return False
 
-# Set recognizer and window title based on Instrument
-if INSTRUMENT == 0:
-    recognizer = theremin_recognizer
-    window_title = "MediaPipe Theremin Tracker"
-else:
-    recognizer = drum_recognizer
-    window_title = "MediaPipe Drum Zone Tracker"
+def camera_candidates():
+    """Returns camera index/backend pairs to try, respecting ENV variables."""
+    configured_index = os.environ.get("ULTEVIS_CAMERA_INDEX")
+    indexes = [int(configured_index)] if configured_index is not None else [0, 1, 2, 3]
 
-# Video feed logic
-cap = cv2.VideoCapture(0)
-if not cap.isOpened():
-    raise RuntimeError("Unable to open webcam at index 0. Check camera permissions.")
+    # Windows needs multiple driver fallbacks. Mac/Linux just use 'Any'.
+    if sys.platform == "win32":
+        backends = [("DirectShow", cv2.CAP_DSHOW), ("Media Foundation", cv2.CAP_MSMF), ("Any", cv2.CAP_ANY)]
+    else:
+        backends = [("Any", cv2.CAP_ANY)]
 
-# Request the highest resolution from the camera hardware (10000 is the resolution)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 10000)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 10000)
+    for index in indexes:
+        for backend_name, backend in backends:
+            yield index, backend_name, backend
 
-# Create a resizable window that maintains the aspect ratio
-cv2.namedWindow(window_title, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
+def open_camera_safely():
+    """Opens the camera using driver fallbacks while forcing HD resolution."""
+    for index, backend_name, backend in camera_candidates():
+        print(f"[hand_detector] Trying camera {index} via {backend_name}...")
+        cap = cv2.VideoCapture(index, backend)
+        
+        if sys.platform == "win32":
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            # Ask for 1080p HD on Windows (10000x10000 is laggy on windows)
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+        else:
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 10000)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 10000)
 
-# Initialize frame_counter before the loop
-frame_counter = 0
+        if not cap.isOpened():
+            cap.release()
+            continue
 
-try:
-    # Video feed loop
-    while cap.isOpened():
         ret, frame = cap.read()
-        if not ret:
-            break
-
-        # Increment the frame counter
-        frame_counter += 1
-
-        # Convert to MediaPipe format
-        image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        
-        if INSTRUMENT == 0: 
-            # Theremin uses HandLandmarker in VIDEO mode
-            recognition_result = recognizer.detect_for_video(image, frame_counter)
-        else: 
-            # Drums use GestureRecognizer
-            recognition_result = recognizer.recognize(image)
-
-        active_zone_names: set[str] = set()
-        displayed_hand_positions: dict[str, tuple[float, float]] = {}
-        detected_labels = set()
-
-        if INSTRUMENT == 0:
-            payload = detect_hands(recognition_result)
-        else:
-            # Unpack the three return values from the updated function
-            payload, active_zones, hand_positions = drum_detect(recognition_result)
+        if ret and frame is not None:
+            w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            print(f"[hand_detector] Success! Opened camera {index} via {backend_name} at {w}x{h}.")
+            return cap
             
-        # Draw frame so that text or circles are drawn on the displayed frame
-        sock.sendto(json.dumps(payload).encode(), (UDP_IP, UDP_PORT))
-        display_frame = cv2.flip(frame, 1)       
-        frame_height, frame_width = draw_frame()
+        cap.release()
 
-        if INSTRUMENT == 0:
-            draw_circle(display_frame, frame_height, frame_width, recognition_result)
-            add_theremin_text(display_frame, payload)
-        else:
-            # Pass the visual state to the drawing function
-            get_drum_hit_coordinates(display_frame, frame_height, frame_width, active_zones, hand_positions)
+    raise RuntimeError("Unable to open any webcam. Please check your hardware.")
 
-        # Show the frame in the adaptive, resizable window
-        cv2.imshow(window_title, display_frame)
+def command_listener():
+    global requested_mode
+    listen_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    listen_sock.bind(("127.0.0.1", CMD_PORT))
+    
+    valid_modes = ["theremin", "drums", "keyboard", "guitar", "none"]
+    while True:
+        try:
+            data, _ = listen_sock.recvfrom(1024)
+            cmd = json.loads(data.decode())
+            if "mode" in cmd and cmd["mode"] in valid_modes:
+                requested_mode = cmd["mode"]
+        except Exception:
+            pass
 
-        # Initialize default text and normalized coordinates for both hands
-        left_gesture_text = "None"
-        right_gesture_text = "None"
-        left_coords = "(X: 0.00, Y: 0.00)"
-        right_coords = "(X: 0.00, Y: 0.00)"
+def send_mute_payload(sock):
+    mute_payload = {
+        "instrument": "none",
+        "leftHandVisible": False, "rightHandVisible": False, 
+        "leftHandX": 0.0, "leftHandY": 0.0,
+        "rightHandX": 0.0, "rightHandY": 0.0,
+        "leftPinch": False, "rightPinch": False,
+        "leftDrumHit": False, "rightDrumHit": False,
+        "mouthKickHit": False, "guitarStrumHit": False
+    }
+    sock.sendto(json.dumps(mute_payload).encode(), (UDP_IP, UDP_PORT))
 
-        # Check if the model returned data about gestures, handedness, and landmarks
-        if hasattr(recognition_result, 'gestures') and recognition_result.gestures and hasattr(recognition_result, 'hand_landmarks'):
-            
-            # Loop combining gesture data, hand side, and anatomical landmarks
-            for gesture_info, hand_info, landmarks in zip(recognition_result.gestures, recognition_result.handedness, recognition_result.hand_landmarks):
-                if gesture_info and hand_info and landmarks:
-                    gesture_name = gesture_info[0].category_name
-                    hand_label = hand_info[0].category_name
+def write_black_frame():
+    black_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+    cv2.imwrite(TEMP_FRAME_PATH, black_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
+    safe_replace(TEMP_FRAME_PATH, FINAL_FRAME_PATH)
+
+# ==============================================================================
+# Main Loop
+# ==============================================================================
+
+def main():
+    global CAMERA_MODE
+    
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    threading.Thread(target=command_listener, daemon=True).start()
+
+    cap = None
+    recognizer = None
+    last_timestamp_ms = -1
+
+    try:
+        while True:
+            # 1: Camera Mode & Hardware
+            if CAMERA_MODE != requested_mode:
+                CAMERA_MODE = requested_mode
+                
+                if CAMERA_MODE == "none":
+                    if cap is not None:
+                        cap.release()
+                        cap = None
+                    send_mute_payload(sock)
+                    write_black_frame()
+                else:
+                    if cap is None:
+                        cap = open_camera_safely()
+                        
+                    if CAMERA_MODE in ["keyboard", "guitar"]:
+                        recognizer = keyboard_recognizer
+                    elif CAMERA_MODE == "drums":
+                        recognizer = drum_recognizer
+                    else:
+                        recognizer = theremin_recognizer
+
+            if CAMERA_MODE == "none" or cap is None:
+                time.sleep(0.05)
+                continue
+
+            # 2: Frame Capture 
+            ret, frame = cap.read()
+            if not ret or frame is None:
+                continue
+
+            current_timestamp_ms = int(time.time() * 1000)
+            if current_timestamp_ms <= last_timestamp_ms:
+                continue
+            last_timestamp_ms = current_timestamp_ms
+
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            clean_frame = np.ascontiguousarray(rgb_frame.copy())
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=clean_frame)
+
+            # 3: MediaPipe
+            if CAMERA_MODE in ["keyboard", "guitar", "theremin"]:
+                if CAMERA_MODE == "theremin":
+                    recognition_result = recognizer.detect_for_video(mp_image, current_timestamp_ms)
+                else:
+                    recognition_result = recognizer.recognize_for_video(mp_image, current_timestamp_ms)
+            else:
+                recognition_result = recognizer.recognize(mp_image)
+
+            # 4: Payload
+            payload = {}
+            active_zone_names = set()
+            displayed_hand_positions = {}
+
+            if CAMERA_MODE == "keyboard":
+                payload, active_zone_names, displayed_hand_positions = detect_key_strokes(recognition_result)
+                gesture_payload = detect_keyboard_hands(recognition_result)
+                payload.update(gesture_payload) 
+
+            elif CAMERA_MODE == "guitar":
+                payload, active_zone_names, displayed_hand_positions = detect_guitar_hands(recognition_result)
+
+            elif CAMERA_MODE == "drums":
+                payload, active_zone_names, displayed_hand_positions = drum_detect(recognition_result, mp_image)
+
+            elif CAMERA_MODE == "theremin":
+                payload = detect_hands(recognition_result)
+
+            sock.sendto(json.dumps(payload).encode(), (UDP_IP, UDP_PORT))
+
+            # 5: Visual Feedback & UI Drawing
+            display_frame = cv2.flip(frame, 1) 
+            frame_height, frame_width = display_frame.shape[:2]
+
+            if CAMERA_MODE == "keyboard":
+                draw_keyboard_zones(display_frame, active_zone_names)
+                for label, pos in displayed_hand_positions.items():
+                    cx, cy = int(pos[0] * frame_width), int(pos[1] * frame_height)
+                    cv2.circle(display_frame, (cx, cy), 10, (0, 180, 255), -1)
+
+            elif CAMERA_MODE == "guitar":
+                for label, pos in displayed_hand_positions.items():
+                    cx, cy = int(pos[0] * frame_width), int(pos[1] * frame_height)
                     
-                    # MediaPipe natively returns normalized coordinates between 0.0 and 1.0
-                    # We invert the X-axis (1.0 - x) because the display_frame is mirrored horizontally
-                    norm_x = 1.0 - landmarks[9].x
-                    norm_y = landmarks[9].y
-                    
-                    # Format the text to 2 decimal places for screen readability
-                    coord_text = f"(X: {norm_x:.2f}, Y: {norm_y:.2f})"
-                    
-                    # Assign data to the corresponding hand
-                    if hand_label == "Left":
-                        left_gesture_text = gesture_name
-                        left_coords = coord_text
-                    elif hand_label == "Right":
-                        right_gesture_text = gesture_name
-                        right_coords = coord_text
+                    color = (0, 255, 0)
+                    if label == "Right" and payload.get("guitarStrumHit", False):
+                        color = (0, 0, 255)
+                    elif label == "Left" and payload.get("leftPinch", False):
+                        color = (0, 165, 255)
+                        
+                    cv2.circle(display_frame, (cx, cy), 15, color, -1)
 
-        # Draw the text permanently on the screen
-        cv2.putText(display_frame, f"Left Hand: {left_gesture_text} {left_coords}", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 3, cv2.LINE_AA)
-        cv2.putText(display_frame, f"Right Hand: {right_gesture_text} {right_coords}", (20, 90), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 3, cv2.LINE_AA)
+            elif CAMERA_MODE == "drums":
+                get_drum_hit_coordinates(display_frame, frame_height, frame_width, active_zone_names, displayed_hand_positions)
 
-        # Show the frame in the adaptive, resizable window
-        cv2.imshow(window_title, display_frame)
-        
-        # Check for quit command
-        if cv2.waitKey(1) == ord('q'):
-            break
-finally:
-    cap.release()
-    cv2.destroyAllWindows()
-    sock.sendto(json.dumps({"cameraOff": True}).encode(), (UDP_IP, UDP_PORT))
-    sock.close()
+            elif CAMERA_MODE == "theremin":
+                pass
+
+            # Downscale the final UI image here, so the original tracking stays accurate!
+            resized_frame = cv2.resize(display_frame, (640, 480))
+            cv2.imwrite(TEMP_FRAME_PATH, resized_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
+            safe_replace(TEMP_FRAME_PATH, FINAL_FRAME_PATH)
+
+            del mp_image
+            del recognition_result
+            del clean_frame
+
+            gc.collect()
+
+    finally:
+        if cap is not None:
+            cap.release()
+        sock.sendto(json.dumps({"cameraOff": True}).encode(), (UDP_IP, UDP_PORT))
+        sock.close()
+
+if __name__ == "__main__":
+    main()

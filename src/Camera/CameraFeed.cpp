@@ -1,5 +1,7 @@
 #include <iostream>
 #include <string>
+#include <sstream>
+#include <algorithm>
 
 #ifdef _WIN32
     #include <winsock2.h>
@@ -14,7 +16,7 @@
 
 #include "Core/GlobalState.h"
 
-// Minimal JSON field parser — no library needed for this simple payload
+// Minimal JSON field parser 
 static std::string parseValue(const std::string& json, const std::string& key) {
     auto pos = json.find("\"" + key + "\":");
     if (pos == std::string::npos) return {};
@@ -40,6 +42,13 @@ static int parseInt(const std::string& json, const std::string& key, int fallbac
     const auto value = parseValue(json, key);
     if (value.empty()) return fallback;
     return std::stoi(value);
+}
+
+/** Same mapping as drums: UI % 0–100 → MIDI 0–127. */
+static int midiVelocityFromPercentKeyboard(int percent)
+{
+    const int p = std::clamp(percent, 0, 100);
+    return std::clamp((127 * p + 50) / 100, 0, 127);
 }
 
 void startCameraFeed(GlobalState* state) {
@@ -70,7 +79,8 @@ void startCameraFeed(GlobalState* state) {
     std::cout << "Listening for hand data on UDP port 5005...\n";
 
     state->cameraSessionActive.store(true);
-    char buf[1024];
+    char buf[8192];
+    
     while (!state->requestStopCameraSession.load()) {
         ssize_t len = recvfrom(sock, buf, sizeof(buf) - 1, 0, nullptr, nullptr);
         if (len < 0) break;
@@ -83,20 +93,100 @@ void startCameraFeed(GlobalState* state) {
             break;
         }
 
-        state->rightHandVisible.store(parseBool(json, "rightHandVisible"));
-        state->leftHandVisible.store(parseBool(json,  "leftHandVisible"));
-        state->rightHandX.store(parseFloat(json, "rightHandX"));
-        state->leftHandY.store(parseFloat(json,  "leftHandY"));
-        state->leftDrumHit.store(parseBool(json, "leftDrumHit"));
-        state->rightDrumHit.store(parseBool(json, "rightDrumHit"));
-        state->leftDrumType.store(parseInt(json, "leftDrumType", state->leftDrumType.load()));
-        state->rightDrumType.store(parseInt(json, "rightDrumType", state->rightDrumType.load()));
-        state->leftDrumVelocity.store(parseInt(json, "leftDrumVelocity", state->leftDrumVelocity.load()));
-        state->rightDrumVelocity.store(parseInt(json, "rightDrumVelocity", state->rightDrumVelocity.load()));
+        std::string instrument = parseValue(json, "instrument");
+        instrument.erase(std::remove(instrument.begin(), instrument.end(), '\"'), instrument.end());
 
-        // std::cout << "R: " << state->rightHandVisible.load()
-        //           << "  x=" << state->rightHandX.load()
-        //           << "  y=" << state->leftHandY.load() << "\n";
+        if (instrument == "keyboard") {
+            state->rightHandVisible.store(parseBool(json, "rightHandVisible"));
+            state->leftHandVisible.store(parseBool(json,  "leftHandVisible"));
+            state->rightHandX.store(parseFloat(json, "rightHandX"));
+            state->rightHandY.store(parseFloat(json, "rightHandY"));
+            state->leftHandX.store(parseFloat(json,  "leftHandX"));
+            state->leftHandY.store(parseFloat(json,  "leftHandY"));
+            state->rightPinch.store(parseBool(json, "rightPinch"));
+            state->leftPinch.store(parseBool(json,  "leftPinch"));
+            
+            state->rightThumbUp.store(parseBool(json,   "rightThumbUp"));
+            state->rightThumbDown.store(parseBool(json, "rightThumbDown"));
+            state->leftThumbUp.store(parseBool(json,    "leftThumbUp"));
+            state->leftThumbDown.store(parseBool(json,  "leftThumbDown"));
+
+            auto updateNotes = [&](const std::string& key, bool isPressed, int defaultOctave, int currentOctave, bool leftHand) {
+                std::string noteStr = parseValue(json, key);
+                noteStr.erase(std::remove(noteStr.begin(), noteStr.end(), '\"'), noteStr.end());
+
+                int semitoneShift = (currentOctave - defaultOctave) * 12;
+
+                std::stringstream ss(noteStr);
+                std::string noteItem;
+                while (std::getline(ss, noteItem, ' ')) {
+                    if (!noteItem.empty()) {
+                        int note = std::stoi(noteItem) + semitoneShift;
+                        if (note < 0 || note >= 128)
+                            continue;
+
+                        if (isPressed) {
+                            const int pct = leftHand ? state->leftKeyboardVelocity.load() : state->rightKeyboardVelocity.load();
+                            const int vel = midiVelocityFromPercentKeyboard(pct);
+                            if (vel <= 0)
+                                continue;
+                            state->keyboardNoteVelocity[note].store(vel);
+                        }
+                        state->keyboardState[note].store(isPressed);
+                    }
+                }
+            };
+
+            int topOctave    = state->topKeyboardOctave.load();
+            int bottomOctave = state->bottomKeyboardOctave.load();
+            updateNotes("leftTopNotesOn",     true,  5, topOctave, true);
+            updateNotes("leftTopNotesOff",    false, 5, topOctave, true);
+            updateNotes("rightTopNotesOn",    true,  5, topOctave, false);
+            updateNotes("rightTopNotesOff",   false, 5, topOctave, false);
+            updateNotes("leftBottomNotesOn",  true,  4, bottomOctave, true);
+            updateNotes("leftBottomNotesOff", false, 4, bottomOctave, true);
+            updateNotes("rightBottomNotesOn",  true,  4, bottomOctave, false);
+            updateNotes("rightBottomNotesOff", false, 4, bottomOctave, false);
+        }
+        else if (instrument == "drums") {
+            state->rightHandVisible.store(parseBool(json, "rightHandVisible"));
+            state->leftHandVisible.store(parseBool(json,  "leftHandVisible"));
+            state->rightHandX.store(parseFloat(json, "rightHandX"));
+            state->rightHandY.store(parseFloat(json, "rightHandY"));
+            state->leftHandX.store(parseFloat(json,  "leftHandX"));
+            state->leftHandY.store(parseFloat(json,  "leftHandY"));
+            state->rightPinch.store(parseBool(json, "rightPinch"));
+            state->leftPinch.store(parseBool(json,  "leftPinch"));
+
+            state->leftDrumHit.store(parseBool(json, "leftDrumHit"));
+            state->rightDrumHit.store(parseBool(json, "rightDrumHit"));
+            state->mouthKickHit.store(parseBool(json, "mouthKickHit"));
+            state->leftDrumType.store(parseInt(json, "leftDrumType", state->leftDrumType.load()));
+            state->rightDrumType.store(parseInt(json, "rightDrumType", state->rightDrumType.load()));
+        }
+        else if (instrument == "theremin") {
+            state->rightHandVisible.store(parseBool(json, "rightHandVisible"));
+            state->leftHandVisible.store(parseBool(json,  "leftHandVisible"));
+            state->rightHandX.store(parseFloat(json, "rightHandX"));
+            state->rightHandY.store(parseFloat(json, "rightHandY"));
+            state->leftHandX.store(parseFloat(json,  "leftHandX"));
+            state->leftHandY.store(parseFloat(json,  "leftHandY"));
+            state->rightPinch.store(parseBool(json, "rightPinch"));
+            state->leftPinch.store(parseBool(json,  "leftPinch"));
+        }
+        else if (instrument == "guitar") {
+            state->rightHandVisible.store(parseBool(json, "rightHandVisible"));
+            state->leftHandVisible.store(parseBool(json,  "leftHandVisible"));
+            state->leftHandX.store(parseFloat(json,  "leftHandX"));
+            state->leftHandY.store(parseFloat(json,  "leftHandY"));
+            state->leftPinch.store(parseBool(json,  "leftPinch"));
+            
+            state->guitarStrumHit.store(parseBool(json, "guitarStrumHit"));
+        }
+        else if (instrument == "none") {
+            state->rightHandVisible.store(false);
+            state->leftHandVisible.store(false);
+        }
     }
 
     state->cameraSessionActive.store(false);

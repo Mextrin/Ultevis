@@ -2,6 +2,9 @@
 #include <juce_core/juce_core.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_basics/juce_audio_basics.h>
+#if JUCE_MAC
+  #include <CoreAudio/CoreAudio.h>
+#endif
 #include "../Core/GlobalState.h"
 #include "OscillatorVoice.h"
 #include <sfizz.hpp>
@@ -15,12 +18,15 @@ struct AudioEngineConfig
     int midiDeviceIndex = -1;
 };
 
-class HeadlessAudioEngine : public juce::AudioIODeviceCallback
+class HeadlessAudioEngine : public juce::AudioIODeviceCallback,
+                            public juce::ChangeListener,
+                            public juce::Timer
 {
 public:
     HeadlessAudioEngine(GlobalState* statePtr, const AudioEngineConfig& config);
     ~HeadlessAudioEngine() override;
 
+    // --- Audio lifecycle ---
     void audioDeviceAboutToStart(juce::AudioIODevice* device) override;
     void audioDeviceStopped() override;
     void audioDeviceIOCallbackWithContext(
@@ -28,33 +34,56 @@ public:
         float* const* outputChannelData, int numOutputChannels,
         int numSamples, const juce::AudioIODeviceCallbackContext& context) override;
 
+    // --- Instrument loading ---
     void loadDrumSound(const juce::String& sfzPath);
     void loadKeyboardSound(int keyboardInstrumentID);
+    void loadGuitarSound(int guitarSoundID);
+
+    // --- MIDI ---
+    bool isMidiEnabled() const;
+    std::vector<std::pair<std::string, std::string>> getAvailableMidiDevices() const;
+    void openMidiDevice(const std::string& identifier);
+
+private:
+    // --- Processing (split across cpp files) ---
     void processTheremin(juce::AudioBuffer<float>& buffer, int numSamples);
     void processDrums(juce::AudioBuffer<float>& buffer, int numSamples);
     void processKeyboard(juce::AudioBuffer<float>& buffer, int numSamples);
-    bool isMidiEnabled() const;
+    void processGuitar(juce::AudioBuffer<float>& buffer, int numSamples);
 
-private:
+    // --- State reset ---
     void resetDrumPlaybackState();
     void resetKeyboardPlaybackState();
+    void resetGuitarPlaybackState();
+
+    // --- Device management ---
+    void changeListenerCallback(juce::ChangeBroadcaster* source) override;
+    void timerCallback() override;
 
 private:
     juce::AudioDeviceManager deviceManager;
     GlobalState* globalState = nullptr;
+
     juce::Synthesiser synth;
     sfz::Sfizz drumSynth;
     sfz::Sfizz keyboardSynth;
+    sfz::Sfizz guitarSynth;
+
     std::unique_ptr<juce::MidiOutput> midiOut;
 
     std::mutex drumSynthMutex;
     std::mutex keyboardSynthMutex;
+    std::mutex guitarSynthMutex;
 
     juce::String loadedDrumSfzPath;
+    juce::String loadedGuitarSfzPath;
     int loadedKeyboardInstrumentID = -1;
+    int loadedGuitarSoundID = -1;
 
+    bool guitarChordActive = false;
     bool wasRightVisible = false;
-    bool wasKeyPressed = false;
-    int lastPlayedKey = -1; // -1 means no key is playing
     bool wasSustainPedalPressed = false;
+    bool isReinitializing = false;
+
+    std::array<bool, 128> internalKeyboardState {};
 };
