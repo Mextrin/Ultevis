@@ -22,7 +22,9 @@ void HeadlessAudioEngine::loadGuitarSound(int guitarSoundID)
     else if (guitarSoundID == 1) {
         sfzToLoad = "Instruments/EGuitarFSBS-bridge-dist1-SFZ-20220911/EGuitarFSBS-bridge-dist1-20220911.sfz";
     }
-    else {
+    else if (guitarSoundID == 2) {
+        sfzToLoad = "Instruments/FSS-SteelStringGuitar-SFZ-20200521/FSS-SteelStringGuitar-20200521.sfz";
+    } else {
         std::cerr << "ERROR: Invalid guitar sound ID: "
                   << guitarSoundID << std::endl;
         return;

@@ -26,7 +26,8 @@ enum class KeyboardSound {
 
 enum class GuitarSound {
    CleanElectric = 0,
-   DistortedElectric = 1
+   DistortedElectric = 1,
+   Acoustic = 2
 };
 
 enum class GuitarChordRoot {

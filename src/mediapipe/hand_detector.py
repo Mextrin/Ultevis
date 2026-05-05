@@ -8,6 +8,7 @@ import json
 import tempfile
 import threading
 import time
+import gc
 
 # --- Instrument Modules ---
 from theremin import detect_hands, draw_circle, recognizer as theremin_recognizer
@@ -232,6 +233,9 @@ def main():
 
             del mp_image
             del recognition_result
+            del clean_frame
+
+            gc.collect()
 
     finally:
         if cap is not None:
