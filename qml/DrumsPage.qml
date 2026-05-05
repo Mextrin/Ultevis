@@ -11,8 +11,8 @@ Item {
         { name: "High-Tom", note: 48, left: 0.31, top: 0.14, right: 0.47, bottom: 0.36, cymbal: false },
         { name: "Low-Tom", note: 45, left: 0.53, top: 0.14, right: 0.69, bottom: 0.36, cymbal: false },
         { name: "Ride", note: 60, left: 0.75, top: 0.09, right: 0.98, bottom: 0.34, cymbal: true },
-        { name: "Closed Hi-Hat", note: 42, left: 0.02, top: 0.56, right: 0.28, bottom: 0.71, cymbal: true },
-        { name: "Open Hi-Hat", note: 46, left: 0.02, top: 0.36, right: 0.28, bottom: 0.52, cymbal: true },
+        { name: "Closed Hi-Hat", note: 42, left: 0.02, top: 0.65, right: 0.28, bottom: 0.80, cymbal: true },
+        { name: "Open Hi-Hat", note: 46, left: 0.02, top: 0.45, right: 0.28, bottom: 0.61, cymbal: true },
         { name: "Snare", note: 38, left: 0.29, top: 0.49, right: 0.48, bottom: 0.68, cymbal: false },
         { name: "Floor Tom", note: 43, left: 0.77, top: 0.49, right: 0.98, bottom: 0.71, cymbal: false },
         { name: "Kick", note: 36, left: 0.31, top: 0.75, right: 0.69, bottom: 0.96, cymbal: false }
