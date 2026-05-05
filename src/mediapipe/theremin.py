@@ -68,11 +68,15 @@ def detect_hands(detection_result):
                 X_RIGHT_MAX = 0.67 ###
 
                 if label == "Right":
-                    # Constrain the value between X_MIN and X_MAX
-                    constrained_x_right = max(X_RIGHT_MIN, min(index_tip.x, X_RIGHT_MAX))
-                    theremin_payload["rightHandVisible"] = True
-                    theremin_payload["rightHandX"] = constrained_x_right
-                    theremin_payload["rightHandY"] = index_tip.y
+                    X_RIGHT_MIN = 0.0
+                    X_RIGHT_MAX = 0.67
+
+                    # Do NOT clamp. If the right hand is outside its valid zone,
+                    # reject this frame instead of forcing it onto the divider.
+                    if X_RIGHT_MIN <= index_tip.x <= X_RIGHT_MAX:
+                        theremin_payload["rightHandVisible"] = True
+                        theremin_payload["rightHandX"] = index_tip.x
+                        theremin_payload["rightHandY"] = index_tip.y
                 else:
                     theremin_payload["leftHandVisible"] = True
                     theremin_payload["leftHandX"] = index_tip.x
