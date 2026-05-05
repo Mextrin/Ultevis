@@ -82,6 +82,10 @@ public:
 
    // --- KEYBOARD STATE ---
    std::array<std::atomic<bool>, 128> keyboardState {};
+   /// Last MIDI velocity (1–127) for noteOn; set from camera UDP using left/right hand master %.
+   std::array<std::atomic<int>, 128> keyboardNoteVelocity {};
+   std::atomic<int> leftKeyboardVelocity { 100 };   // % 0–100 (UI), same semantics as drum hands
+   std::atomic<int> rightKeyboardVelocity { 100 };
    std::atomic<KeyboardSound> currentKeyboardInstrument { KeyboardSound::GrandPiano };
    std::atomic<bool> sustainPedal { false };
    std::atomic<int> topKeyboardOctave { 5 };

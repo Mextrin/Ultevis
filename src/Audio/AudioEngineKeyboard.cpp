@@ -1,5 +1,15 @@
 #include "AudioEngine.h"
+
+#include <algorithm>
 #include <iostream>
+
+namespace
+{
+    int midiVelocityFromKeyboardStore(int stored)
+    {
+        return std::clamp(stored, 1, 127);
+    }
+}
 
 // Resets keyboard playback state so stale notes/pedal are not reused
 void HeadlessAudioEngine::resetKeyboardPlaybackState()
@@ -13,6 +23,7 @@ void HeadlessAudioEngine::resetKeyboardPlaybackState()
     // Turn off all 128 notes
     for (int i = 0; i < 128; ++i) {
         globalState->keyboardState[i].store(false);
+        globalState->keyboardNoteVelocity[i].store(100);
         if (internalKeyboardState[i]) {
             keyboardSynth.noteOff(0, i, 0);
             if (midiOut != nullptr) {
@@ -119,9 +130,10 @@ void HeadlessAudioEngine::processKeyboard(juce::AudioBuffer<float>& buffer, int 
             internalKeyboardState[i] = isPressed; // Sync memory
             
             if (isPressed) {
-                keyboardSynth.noteOn(0, i, 100); 
+                const int vel = midiVelocityFromKeyboardStore(globalState->keyboardNoteVelocity[i].load());
+                keyboardSynth.noteOn(0, i, vel);
                 if (midiOut != nullptr) {
-                    midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, i, (juce::uint8)100));
+                    midiOut->sendMessageNow(juce::MidiMessage::noteOn(1, i, (juce::uint8)vel));
                 }
             } else {
                 keyboardSynth.noteOff(0, i, 0);

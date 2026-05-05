@@ -457,6 +457,34 @@ Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
             color: "#E07826"
         }
 
+        SettingsSlider {
+            label: "Left Hand Master Velocity"
+            unit: "%"
+            from: 0
+            to: 100
+            stepSize: 1
+            width: parent.width
+            value: typeof appEngine !== "undefined" && appEngine.viewState ? appEngine.viewState.leftKeyboardVelocity : 100
+            onValueChanged: {
+                if (typeof appEngine !== "undefined")
+                    appEngine.setLeftKeyboardVelocity(Math.round(value))
+            }
+        }
+
+        SettingsSlider {
+            label: "Right Hand Master Velocity"
+            unit: "%"
+            from: 0
+            to: 100
+            stepSize: 1
+            width: parent.width
+            value: typeof appEngine !== "undefined" && appEngine.viewState ? appEngine.viewState.rightKeyboardVelocity : 100
+            onValueChanged: {
+                if (typeof appEngine !== "undefined")
+                    appEngine.setRightKeyboardVelocity(Math.round(value))
+            }
+        }
+
         SettingsToggle {
             label: "Sustain"
             checked: typeof appEngine !== "undefined" && appEngine.viewState ? appEngine.viewState.sustainPedal : false

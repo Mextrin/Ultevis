@@ -44,6 +44,13 @@ static int parseInt(const std::string& json, const std::string& key, int fallbac
     return std::stoi(value);
 }
 
+/** Same mapping as drums: UI % 0–100 → MIDI 0–127. */
+static int midiVelocityFromPercentKeyboard(int percent)
+{
+    const int p = std::clamp(percent, 0, 100);
+    return std::clamp((127 * p + 50) / 100, 0, 127);
+}
+
 void startCameraFeed(GlobalState* state) {
 #ifdef _WIN32
     WSADATA wsa_data;
@@ -104,7 +111,7 @@ void startCameraFeed(GlobalState* state) {
             state->leftThumbUp.store(parseBool(json,    "leftThumbUp"));
             state->leftThumbDown.store(parseBool(json,  "leftThumbDown"));
 
-            auto updateNotes = [&](const std::string& key, bool isPressed, int defaultOctave, int currentOctave) {
+            auto updateNotes = [&](const std::string& key, bool isPressed, int defaultOctave, int currentOctave, bool leftHand) {
                 std::string noteStr = parseValue(json, key);
                 noteStr.erase(std::remove(noteStr.begin(), noteStr.end(), '\"'), noteStr.end());
 
@@ -115,18 +122,31 @@ void startCameraFeed(GlobalState* state) {
                 while (std::getline(ss, noteItem, ' ')) {
                     if (!noteItem.empty()) {
                         int note = std::stoi(noteItem) + semitoneShift;
-                        if (note >= 0 && note < 128)
-                            state->keyboardState[note].store(isPressed);
+                        if (note < 0 || note >= 128)
+                            continue;
+
+                        if (isPressed) {
+                            const int pct = leftHand ? state->leftKeyboardVelocity.load() : state->rightKeyboardVelocity.load();
+                            const int vel = midiVelocityFromPercentKeyboard(pct);
+                            if (vel <= 0)
+                                continue;
+                            state->keyboardNoteVelocity[note].store(vel);
+                        }
+                        state->keyboardState[note].store(isPressed);
                     }
                 }
             };
 
             int topOctave    = state->topKeyboardOctave.load();
             int bottomOctave = state->bottomKeyboardOctave.load();
-            updateNotes("topNotesOn",     true,  5, topOctave);
-            updateNotes("topNotesOff",    false, 5, topOctave);
-            updateNotes("bottomNotesOn",  true,  4, bottomOctave);
-            updateNotes("bottomNotesOff", false, 4, bottomOctave);
+            updateNotes("leftTopNotesOn",     true,  5, topOctave, true);
+            updateNotes("leftTopNotesOff",    false, 5, topOctave, true);
+            updateNotes("rightTopNotesOn",    true,  5, topOctave, false);
+            updateNotes("rightTopNotesOff",   false, 5, topOctave, false);
+            updateNotes("leftBottomNotesOn",  true,  4, bottomOctave, true);
+            updateNotes("leftBottomNotesOff", false, 4, bottomOctave, true);
+            updateNotes("rightBottomNotesOn",  true,  4, bottomOctave, false);
+            updateNotes("rightBottomNotesOff", false, 4, bottomOctave, false);
         }
         else if (instrument == "drums") {
             state->rightHandVisible.store(parseBool(json, "rightHandVisible"));

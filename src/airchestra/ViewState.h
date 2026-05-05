@@ -36,6 +36,9 @@ class ViewState : public QObject
     Q_PROPERTY(int leftDrumVelocity READ leftDrumVelocity WRITE setLeftDrumVelocity NOTIFY leftDrumVelocityChanged)
     Q_PROPERTY(int rightDrumVelocity READ rightDrumVelocity WRITE setRightDrumVelocity NOTIFY rightDrumVelocityChanged)
 
+    Q_PROPERTY(int leftKeyboardVelocity READ leftKeyboardVelocity WRITE setLeftKeyboardVelocity NOTIFY leftKeyboardVelocityChanged)
+    Q_PROPERTY(int rightKeyboardVelocity READ rightKeyboardVelocity WRITE setRightKeyboardVelocity NOTIFY rightKeyboardVelocityChanged)
+
     Q_PROPERTY(bool sustainPedal READ sustainPedal WRITE setSustainPedal NOTIFY sustainPedalChanged)
 
 
@@ -110,6 +113,18 @@ public:
         if (m_rightDrumVelocity != v) { m_rightDrumVelocity = v; emit rightDrumVelocityChanged(); }
     }
 
+    int leftKeyboardVelocity() const { return m_leftKeyboardVelocity; }
+    void setLeftKeyboardVelocity(int v)
+    {
+        if (m_leftKeyboardVelocity != v) { m_leftKeyboardVelocity = v; emit leftKeyboardVelocityChanged(); }
+    }
+
+    int rightKeyboardVelocity() const { return m_rightKeyboardVelocity; }
+    void setRightKeyboardVelocity(int v)
+    {
+        if (m_rightKeyboardVelocity != v) { m_rightKeyboardVelocity = v; emit rightKeyboardVelocityChanged(); }
+    }
+
     bool sustainPedal() const { return m_sustainPedal; }
     void setSustainPedal(bool v)
     {
@@ -130,6 +145,8 @@ signals:
     void masterVolumeChanged();
     void leftDrumVelocityChanged();
     void rightDrumVelocityChanged();
+    void leftKeyboardVelocityChanged();
+    void rightKeyboardVelocityChanged();
     void sustainPedalChanged();
 
 
@@ -147,6 +164,8 @@ private:
     float m_masterVolume = 1.0f;
     int m_leftDrumVelocity = 100;
     int m_rightDrumVelocity = 100;
+    int m_leftKeyboardVelocity = 100;
+    int m_rightKeyboardVelocity = 100;
     bool m_mouthKickEnabled = false;
     bool m_sustainPedal = false;
 

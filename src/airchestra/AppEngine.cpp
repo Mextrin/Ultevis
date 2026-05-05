@@ -135,6 +135,7 @@ void AppEngine::proceed() {
 void AppEngine::goBack() {
     for (int i = 0; i < 128; ++i) {
         globalState->keyboardState[i].store(false);
+        globalState->keyboardNoteVelocity[i].store(100);
     }
     state.setCurrentScreen(static_cast<int>(AppScreen::Session));
 
@@ -263,6 +264,18 @@ void AppEngine::setRightDrumVelocity(int v) {
     state.setRightDrumVelocity(clamped);
 }
 
+void AppEngine::setLeftKeyboardVelocity(int v) {
+    const int clamped = qBound(0, v, 100);
+    globalState->leftKeyboardVelocity.store(clamped);
+    state.setLeftKeyboardVelocity(clamped);
+}
+
+void AppEngine::setRightKeyboardVelocity(int v) {
+    const int clamped = qBound(0, v, 100);
+    globalState->rightKeyboardVelocity.store(clamped);
+    state.setRightKeyboardVelocity(clamped);
+}
+
 void AppEngine::setMouthKickEnabled(bool enabled) {
     globalState->mouthKickEnable.store(enabled);
     state.setMouthKickEnabled(enabled);
@@ -299,6 +312,7 @@ void AppEngine::triggerDrumHit(int midiNote, int velocity) {
 
 void AppEngine::triggerKeyboardNote(int midiNote, int velocity) {
     if (midiNote >= 0 && midiNote < 128) {
+        globalState->keyboardNoteVelocity[midiNote].store(qBound(1, velocity, 127));
         globalState->keyboardState[midiNote].store(true);
     }
 }

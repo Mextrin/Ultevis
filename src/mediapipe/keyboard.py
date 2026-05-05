@@ -165,10 +165,14 @@ def detect_key_strokes(detection_result):
         "instrument": "keyboard",
         "rightHandVisible": False,
         "leftHandVisible": False,
-        "topNotesOn": "",
-        "topNotesOff": "",
-        "bottomNotesOn": "",
-        "bottomNotesOff": "",
+        "leftTopNotesOn": "",
+        "leftTopNotesOff": "",
+        "rightTopNotesOn": "",
+        "rightTopNotesOff": "",
+        "leftBottomNotesOn": "",
+        "leftBottomNotesOff": "",
+        "rightBottomNotesOn": "",
+        "rightBottomNotesOff": "",
     }
     
     # This set is now ONLY for visual feedback on the frame of the press
@@ -241,20 +245,32 @@ def detect_key_strokes(detection_result):
     last_finger_wrist_dist = current_finger_distances
 
     # Determine which notes to turn ON
-    top_on    = [n for n in current_right_top_notes    if n not in right_hand_top_notes] + \
-                [n for n in current_left_top_notes     if n not in left_hand_top_notes]
-    bottom_on = [n for n in current_right_bottom_notes if n not in right_hand_bottom_notes] + \
-                [n for n in current_left_bottom_notes  if n not in left_hand_bottom_notes]
-    if top_on:    keyboard_payload["topNotesOn"]    = " ".join(map(str, top_on))
-    if bottom_on: keyboard_payload["bottomNotesOn"] = " ".join(map(str, bottom_on))
+    right_top_on = [n for n in current_right_top_notes if n not in right_hand_top_notes]
+    left_top_on = [n for n in current_left_top_notes if n not in left_hand_top_notes]
+    right_bottom_on = [n for n in current_right_bottom_notes if n not in right_hand_bottom_notes]
+    left_bottom_on = [n for n in current_left_bottom_notes if n not in left_hand_bottom_notes]
+    if right_top_on:
+        keyboard_payload["rightTopNotesOn"] = " ".join(map(str, right_top_on))
+    if left_top_on:
+        keyboard_payload["leftTopNotesOn"] = " ".join(map(str, left_top_on))
+    if right_bottom_on:
+        keyboard_payload["rightBottomNotesOn"] = " ".join(map(str, right_bottom_on))
+    if left_bottom_on:
+        keyboard_payload["leftBottomNotesOn"] = " ".join(map(str, left_bottom_on))
 
     # Determine which notes to turn OFF
-    top_off    = [n for n in right_hand_top_notes    if n not in current_right_top_notes] + \
-                 [n for n in left_hand_top_notes     if n not in current_left_top_notes]
-    bottom_off = [n for n in right_hand_bottom_notes if n not in current_right_bottom_notes] + \
-                 [n for n in left_hand_bottom_notes  if n not in current_left_bottom_notes]
-    if top_off:    keyboard_payload["topNotesOff"]    = " ".join(map(str, top_off))
-    if bottom_off: keyboard_payload["bottomNotesOff"] = " ".join(map(str, bottom_off))
+    right_top_off = [n for n in right_hand_top_notes if n not in current_right_top_notes]
+    left_top_off = [n for n in left_hand_top_notes if n not in current_left_top_notes]
+    right_bottom_off = [n for n in right_hand_bottom_notes if n not in current_right_bottom_notes]
+    left_bottom_off = [n for n in left_hand_bottom_notes if n not in current_left_bottom_notes]
+    if right_top_off:
+        keyboard_payload["rightTopNotesOff"] = " ".join(map(str, right_top_off))
+    if left_top_off:
+        keyboard_payload["leftTopNotesOff"] = " ".join(map(str, left_top_off))
+    if right_bottom_off:
+        keyboard_payload["rightBottomNotesOff"] = " ".join(map(str, right_bottom_off))
+    if left_bottom_off:
+        keyboard_payload["leftBottomNotesOff"] = " ".join(map(str, left_bottom_off))
 
     # Update state for next frame
     right_hand_top_notes    = current_right_top_notes
