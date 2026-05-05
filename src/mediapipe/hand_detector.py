@@ -8,6 +8,7 @@ import json
 import tempfile
 import threading
 import time
+import subprocess
 
 # --- Instrument Modules ---
 from theremin import detect_hands, draw_circle, recognizer as theremin_recognizer
@@ -26,7 +27,9 @@ FINAL_FRAME_PATH = os.path.join(TEMP_DIR, "airchestra_frame.jpg")
 
 # --- Global State ---
 CAMERA_MODE = "none"
-requested_mode = "none"
+requested_mode = os.environ.get("ULTEVIS_CAMERA_MODE", "none")
+
+CAMERA_INDEX_ENV = "ULTEVIS_CAMERA_INDEX"
 
 # ==============================================================================
 # Helper Functions
@@ -42,27 +45,159 @@ def safe_replace(src, dst, retries=10, delay=0.01):
             time.sleep(delay)
     return False
 
-def open_camera_safely():
-    """Opens the camera with platform-specific optimizations."""
+def log(message):
+    """Prints camera diagnostics immediately so QProcess forwarding shows them."""
+    print(f"[hand_detector] {message}", flush=True)
+
+def log_available_cameras():
+    """Logs camera-like devices reported by the OS before OpenCV probing starts."""
+    log(f"OpenCV {cv2.__version__} camera diagnostics starting.")
+
+    if sys.platform != "win32":
+        log("OS camera device listing is only implemented for Windows; OpenCV probing will follow.")
+        return
+
+    commands = [
+        [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            (
+                "$devices = Get-PnpDevice | "
+                "Where-Object { "
+                "$_.Class -eq 'Camera' -or "
+                "$_.Class -eq 'Image' -or "
+                "$_.FriendlyName -match 'camera|webcam|usb video|integrated|ir' "
+                "} | "
+                "Sort-Object Class,FriendlyName | "
+                "Select-Object Status,Class,FriendlyName,InstanceId; "
+                "if ($devices) { $devices | Format-Table -AutoSize | Out-String -Width 240 }"
+            ),
+        ],
+        [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            (
+                "$devices = Get-CimInstance Win32_PnPEntity | "
+                "Where-Object { "
+                "$_.PNPClass -eq 'Camera' -or "
+                "$_.PNPClass -eq 'Image' -or "
+                "$_.Name -match 'camera|webcam|usb video|integrated|ir' "
+                "} | "
+                "Sort-Object PNPClass,Name | "
+                "Select-Object Status,PNPClass,Name,DeviceID; "
+                "if ($devices) { $devices | Format-Table -AutoSize | Out-String -Width 240 }"
+            ),
+        ],
+    ]
+
+    errors = []
+    for command in commands:
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+        except Exception as exc:
+            errors.append(str(exc))
+            continue
+
+        if result.returncode != 0:
+            errors.append((result.stderr or result.stdout or "unknown error").strip())
+            continue
+
+        device_list = result.stdout.strip()
+        if device_list:
+            log("Windows camera-like devices:")
+            for line in device_list.splitlines():
+                if line.strip():
+                    log(f"  {line}")
+            return
+
+    detail = "; ".join(error for error in errors if error)
+    if detail:
+        log(f"Unable to list Windows camera devices: {detail}")
+    else:
+        log("Windows camera-like devices: none found.")
+
+def camera_candidates():
+    """Returns camera index/backend pairs to try, preferring explicit user config."""
     if sys.platform == "win32":
-        capture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        backends = [
+            ("DirectShow", cv2.CAP_DSHOW),
+            ("Media Foundation", cv2.CAP_MSMF),
+            ("Any", cv2.CAP_ANY),
+        ]
+    else:
+        backends = [("Any", cv2.CAP_ANY)]
+
+    configured_index = os.environ.get(CAMERA_INDEX_ENV)
+    if configured_index is not None:
+        try:
+            indexes = [int(configured_index)]
+        except ValueError:
+            log(f"Ignoring invalid {CAMERA_INDEX_ENV}={configured_index!r}; using auto-detection.")
+            indexes = list(range(4))
+    else:
+        indexes = list(range(4))
+
+    log("OpenCV camera probe candidates:")
+    for index in indexes:
+        for backend_name, _ in backends:
+            log(f"  index {index} via {backend_name}")
+
+    for index in indexes:
+        for backend_name, backend in backends:
+            yield index, backend_name, backend
+
+def open_camera_safely():
+    """Opens the camera with platform-specific fallbacks."""
+    failures = []
+
+    for index, backend_name, backend in camera_candidates():
+        log(f"Trying camera index {index} via {backend_name}.")
+        capture = cv2.VideoCapture(index, backend)
         capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-    else:
-        capture = cv2.VideoCapture(0)
-        capture.set(cv2.CAP_PROP_FRAME_WIDTH, 10000)
-        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 10000)
-        
-    if not capture.isOpened():
-        raise RuntimeError("Unable to open webcam at index 0.")
-    return capture
+
+        if not capture.isOpened():
+            failures.append(f"index {index} / {backend_name}: open failed")
+            capture.release()
+            continue
+
+        # Some Windows drivers report opened before a frame can actually be read.
+        ok, frame = capture.read()
+        if ok and frame is not None:
+            width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            log(f"Opened camera index {index} via {backend_name} at {width}x{height}.")
+            return capture
+
+        failures.append(f"index {index} / {backend_name}: no frame")
+        capture.release()
+
+    details = "; ".join(failures) if failures else "no candidates tried"
+    raise RuntimeError(
+        "Unable to open a webcam. "
+        f"Tried {details}. "
+        f"Set {CAMERA_INDEX_ENV}=1 (or another index) before launch to force a camera."
+    )
 
 def command_listener():
     """Listens on a background thread for instrument change commands from C++."""
     global requested_mode
     listen_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     listen_sock.bind(("127.0.0.1", CMD_PORT))
+    log(f"Listening for camera mode commands on UDP port {CMD_PORT}.")
     
     valid_modes = ["theremin", "drums", "keyboard", "guitar", "none"]
     while True:
@@ -71,6 +206,7 @@ def command_listener():
             cmd = json.loads(data.decode())
             if "mode" in cmd and cmd["mode"] in valid_modes:
                 requested_mode = cmd["mode"]
+                log(f"Requested camera mode: {requested_mode}.")
         except Exception:
             pass
 
@@ -100,6 +236,8 @@ def write_black_frame():
 def main():
     global CAMERA_MODE
     
+    log_available_cameras()
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     
     # Start command listener thread
