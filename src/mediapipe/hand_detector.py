@@ -27,7 +27,7 @@ FINAL_FRAME_PATH = os.path.join(TEMP_DIR, "airchestra_frame.jpg")
 
 # --- Global State ---
 CAMERA_MODE = "none"
-requested_mode = os.environ.get("ULTEVIS_CAMERA_MODE", "none")
+requested_mode = "none"
 
 # ==============================================================================
 # Helper Functions
@@ -230,7 +230,7 @@ def main():
                 get_drum_hit_coordinates(display_frame, frame_height, frame_width, active_zone_names, displayed_hand_positions)
 
             elif CAMERA_MODE == "theremin":
-                draw_circle(display_frame, frame_height, frame_width, recognition_result)
+                pass
 
             # Downscale the final UI image here, so the original tracking stays accurate!
             resized_frame = cv2.resize(display_frame, (640, 480))

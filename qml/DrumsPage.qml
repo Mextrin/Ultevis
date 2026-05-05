@@ -241,7 +241,6 @@ Item {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             
-            // This tells C++ to switch the state back to the Session Page!
             onClicked: root.back()
 
             Text {
@@ -253,7 +252,6 @@ Item {
             }
         }
 
-        // --- NEW: Settings gear ---
         MouseArea {
             id: settingsBtn
             width: 40
@@ -264,7 +262,6 @@ Item {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             
-            // Toggles the pane open/closed!
             onClicked: drumSettings.open = !drumSettings.open
 
             Rectangle {
@@ -302,7 +299,6 @@ Item {
         }
     }
 
-    // --- NEW: Settings pane overlay ---
     MouseArea {
         anchors.top: header.bottom
         anchors.left: parent.left
@@ -313,7 +309,6 @@ Item {
         z: 20
     }
 
-    // --- NEW: Drum Settings Pane ---
     DrumSettingsPane {
         id: drumSettings
         property bool open: false
