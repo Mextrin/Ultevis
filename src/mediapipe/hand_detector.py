@@ -175,7 +175,7 @@ def main():
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=clean_frame)
 
             # 3: MediaPipe
-            if CAMERA_MODE in ["keyboard", "guitar", "theremin"]:
+            if CAMERA_MODE in ["keyboard", "guitar", "theremin", "drums"]:
                 if CAMERA_MODE == "theremin":
                     recognition_result = recognizer.detect_for_video(mp_image, current_timestamp_ms)
                 else:
@@ -197,7 +197,7 @@ def main():
                 payload, active_zone_names, displayed_hand_positions = detect_guitar_hands(recognition_result)
 
             elif CAMERA_MODE == "drums":
-                payload, active_zone_names, displayed_hand_positions = drum_detect(recognition_result, mp_image)
+                payload, active_zone_names, displayed_hand_positions = drum_detect(recognition_result, mp_image, current_timestamp_ms)
 
             elif CAMERA_MODE == "theremin":
                 payload = detect_hands(recognition_result)
