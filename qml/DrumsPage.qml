@@ -194,7 +194,7 @@ Item {
             width: 18
             height: 18
             radius: 9
-            color: appEngine.leftPinch ? "#22E2FF" : "#7AD7FF"
+            color: appEngine.leftPinch ? "#e07826" : "#deab84"
             border.color: "#FFFFFF"
             border.width: 2
             x: root.stageX(appEngine.leftHandX) - (width / 2)
@@ -207,7 +207,7 @@ Item {
             width: 18
             height: 18
             radius: 9
-            color: appEngine.rightPinch ? "#22E2FF" : "#7AD7FF"
+            color: appEngine.rightPinch ? "#e07826" : "#deab84"
             border.color: "#FFFFFF"
             border.width: 2
             x: root.stageX(appEngine.rightHandX) - (width / 2)
