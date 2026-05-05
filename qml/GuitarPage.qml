@@ -66,7 +66,11 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: root.back()
+
+            onClicked: {
+                appEngine.goBack() 
+                root.back()        
+            }
 
             Text {
                 anchors.centerIn: parent
