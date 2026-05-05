@@ -190,7 +190,43 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 font.family: figTreeVariable.name
-                onClicked: root.instrumentSelected("theremin")
+                onClicked: {
+                    root.instrumentSelected("theremin");
+                    // Reset the timer's state before starting
+                    thereminJingleTimer.step = 0; 
+                    thereminJingleTimer.start();
+                }
+
+                Timer {
+                    id: thereminJingleTimer
+                    interval: 200
+                    repeat: true
+                    property int step: 0
+                    onTriggered: {
+                        if (step === 0) {
+                            appEngine.setRightHandVisible(true);
+                            appEngine.setLeftHandVisible(true);
+
+                            appEngine.setRightHandX(0.3); // Play a note
+                            appEngine.setLeftHandY(0.5);
+                            
+                        } else if (step === 1) {
+                           appEngine.setRightHandX(0.5); // Play another note
+                        } else if (step === 2) {
+                            appEngine.setRightHandX(0.7); // And another
+                        } else {
+                            appEngine.setRightHandVisible(false); // Stop sound
+                            appEngine.setLeftHandVisible(false)
+
+                            appEngine.setRightHandX(0.0);
+                            appEngine.setLeftHandY(0.0);
+
+                            stop();
+                            // No need to reset step here anymore
+                        }
+                        step++;
+                    }
+                }
             }
 
             InstrumentCard {
