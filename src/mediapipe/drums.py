@@ -9,7 +9,12 @@ from mediapipe.tasks.python.vision import face_landmarker as face_landmarker_mod
 from dataclasses import dataclass
 from pathlib import Path
 
-PINCH_THRESHOLD = 0.04
+PINCH_ON_THRESHOLD = 0.035
+PINCH_OFF_THRESHOLD = 0.05
+PINCH_RELEASE_VELOCITY = 0.008
+
+previous_pinch_distances = {"Left": 1.0, "Right": 1.0}
+active_pinches = {"Left": False, "Right": False}
 
 JAW_OPEN_BLENDSHAPE_INDEX = int(face_landmarker_module.Blendshapes.JAW_OPEN)
 MOUTH_OPEN_ON_THRESHOLD = 0.25
@@ -42,7 +47,7 @@ class DrumZone:
             radius_x = raw_radius_x
             radius_y = raw_radius_y
         else:
-            radius = min(raw_radius_x, raw_radius_y)
+            radius = min(raw_radius_x, raw_radius_y) * 1.1
             radius_x = radius
             radius_y = radius
 
@@ -67,8 +72,8 @@ DRUM_ZONES = (
     DrumZone("High-Tom", 48, 0.31, 0.14, 0.47, 0.36),
     DrumZone("Low-Tom", 45, 0.53, 0.14, 0.69, 0.36),
     DrumZone("Ride", 60, 0.75, 0.09, 0.98, 0.34),
-    DrumZone("Closed Hi-Hat", 42, 0.02, 0.62, 0.28, 0.77),
-    DrumZone("Open Hi-Hat", 46, 0.02, 0.42, 0.28, 0.58),
+    DrumZone("Closed Hi-Hat", 42, 0.02, 0.60, 0.28, 0.75),
+    DrumZone("Open Hi-Hat", 46, 0.02, 0.40, 0.28, 0.56),
     DrumZone("Snare", 38, 0.29, 0.49, 0.48, 0.68),
     DrumZone("Floor Tom", 43, 0.77, 0.49, 0.98, 0.71),
     DrumZone("Kick", 36, 0.31, 0.75, 0.69, 0.96),
@@ -86,7 +91,7 @@ def get_face_landmarker():
 
     face_options = face_landmarker_module.FaceLandmarkerOptions(
         base_options=python.BaseOptions(model_asset_path=str(FACE_MODEL_PATH)),
-        running_mode=RunningMode.IMAGE,
+        running_mode=RunningMode.VIDEO,
         num_faces=1,
         min_face_detection_confidence=0.5,
         min_face_presence_confidence=0.5,
@@ -98,16 +103,33 @@ def get_face_landmarker():
     return face_landmarker
 
 
-def is_pinch(hand_landmarks) -> bool:
+def is_pinch(label: str, hand_landmarks) -> bool:
+    global previous_pinch_distances, active_pinches
+
     thumb_tip = hand_landmarks[4]
     index_tip = hand_landmarks[8]
 
-    distance = (
+    current_dist = (
         (thumb_tip.x - index_tip.x) ** 2 +
         (thumb_tip.y - index_tip.y) ** 2
     ) ** 0.5
 
-    return distance < PINCH_THRESHOLD
+    prev_dist = previous_pinch_distances.get(label, 1.0)
+    currently_pinched = active_pinches.get(label, False)
+
+    if currently_pinched and (current_dist - prev_dist > PINCH_RELEASE_VELOCITY):
+        currently_pinched = False
+
+    elif currently_pinched and current_dist > PINCH_OFF_THRESHOLD:
+        currently_pinched = False
+
+    elif not currently_pinched and current_dist < PINCH_ON_THRESHOLD:
+        currently_pinched = True
+
+    previous_pinch_distances[label] = current_dist
+    active_pinches[label] = currently_pinched
+
+    return currently_pinched
 
 
 def find_zone(x: float, y: float) -> DrumZone | None:
@@ -121,9 +143,9 @@ def draw_drum_zones(frame, active_zone_names: set[str]) -> None:
     return
 
 
-def detect_mouth_open(mp_image, was_open: bool) -> bool:
+def detect_mouth_open(mp_image, was_open: bool, timestamp_ms: int) -> bool:
     landmarker = get_face_landmarker()
-    face_result = landmarker.detect(mp_image)
+    face_result = landmarker.detect_for_video(mp_image, timestamp_ms)
 
     if not face_result.face_blendshapes:
         return False
@@ -147,6 +169,7 @@ ClassifierOptions = mp.tasks.components.processors.ClassifierOptions
 
 options = vision.GestureRecognizerOptions(
     base_options=base_options,
+    running_mode=RunningMode.VIDEO,
     num_hands=2,
     min_hand_detection_confidence=0.1,
     min_tracking_confidence=0.1,
@@ -156,7 +179,7 @@ options = vision.GestureRecognizerOptions(
 recognizer = vision.GestureRecognizer.create_from_options(options)
 
 
-def drum_detect(recognition_result, mp_image=None):
+def drum_detect(recognition_result, mp_image=None, timestamp_ms=0):
     global active_triggered_zones
     global previous_mouth_open
 
@@ -182,7 +205,7 @@ def drum_detect(recognition_result, mp_image=None):
     }
 
     if mp_image is not None:
-        is_mouth_open = detect_mouth_open(mp_image, previous_mouth_open)
+        is_mouth_open = detect_mouth_open(mp_image, previous_mouth_open, timestamp_ms)
 
         if is_mouth_open and not previous_mouth_open:
             drum_payload["mouthKickHit"] = True
@@ -204,7 +227,7 @@ def drum_detect(recognition_result, mp_image=None):
 
             processed_labels.add(label)
 
-            pinch = is_pinch(hand_landmarks)
+            pinch = is_pinch(label, hand_landmarks)
 
             index_tip = hand_landmarks[8]
             display_x = 1.0 - index_tip.x
@@ -226,32 +249,35 @@ def drum_detect(recognition_result, mp_image=None):
             zone = find_zone(display_x, display_y)
 
             if zone is not None:
-                hands_in_zones[zone.name] = (pinch, label, zone)
+                hand_zone_key = f"{label}_{zone.name}"
+                hands_in_zones[hand_zone_key] = (pinch, label, zone)
 
     zones_to_remove = set()
 
-    for zone_name in active_triggered_zones:
-        if zone_name not in hands_in_zones:
-            zones_to_remove.add(zone_name)
+    for hand_zone_key in active_triggered_zones:
+        if hand_zone_key not in hands_in_zones:
+            zones_to_remove.add(hand_zone_key)
         else:
-            pinch, _, _ = hands_in_zones[zone_name]
+            pinch, _, _ = hands_in_zones[hand_zone_key]
 
             if not pinch:
-                zones_to_remove.add(zone_name)
+                zones_to_remove.add(hand_zone_key)
 
     active_triggered_zones.difference_update(zones_to_remove)
 
-    for zone_name, (pinch, label, zone) in hands_in_zones.items():
+    for hand_zone_key, (pinch, label, zone) in hands_in_zones.items():
         if pinch:
-            active_zone_names.add(zone_name)
+            # We just add the zone.name here so the QML UI still lights up properly!
+            active_zone_names.add(zone.name) 
 
-            if zone_name not in active_triggered_zones:
+            # Check if THIS specific hand has already triggered THIS drum
+            if hand_zone_key not in active_triggered_zones:
                 prefix = "right" if label == "Right" else "left"
 
                 drum_payload[f"{prefix}DrumHit"] = True
                 drum_payload[f"{prefix}DrumType"] = zone.note
 
-                active_triggered_zones.add(zone_name)
+                active_triggered_zones.add(hand_zone_key)
 
     return drum_payload, active_zone_names, displayed_hand_positions
 
