@@ -36,6 +36,8 @@ left_hand_bottom_notes = {}
 
 # Keep track of the last finger-to-wrist Y-distance to detect a "press"
 last_finger_wrist_dist = {} # {(hand_label, finger_name): distance}
+latched_finger_zones = {} # {(hand_label, finger_name): KeyboardZone}
+finger_press_armed = {} # {(hand_label, finger_name): bool}
 
 # Threshold for detecting a "press" (finger moving towards wrist)
 # A negative value means the finger is moving closer to the wrist.
@@ -138,7 +140,8 @@ def find_key_zone(x: float, y: float) -> KeyboardZone | None:
 
 
 def detect_key_strokes(detection_result):
-    global right_hand_top_notes, right_hand_bottom_notes, left_hand_top_notes, left_hand_bottom_notes, last_finger_wrist_dist
+    global right_hand_top_notes, right_hand_bottom_notes, left_hand_top_notes, left_hand_bottom_notes
+    global last_finger_wrist_dist, latched_finger_zones, finger_press_armed
 
     keyboard_payload = {
         "instrument": "keyboard",
@@ -163,6 +166,7 @@ def detect_key_strokes(detection_result):
     current_left_top_notes = {}
     current_left_bottom_notes = {}
     current_finger_distances = {}
+    seen_finger_ids: set[tuple[str, str]] = set()
 
     if detection_result.handedness:
         processed_labels = set()
@@ -189,6 +193,7 @@ def detect_key_strokes(detection_result):
                 keyboard_payload[f"{prefix}_{name}_Y"] = tip.y
                 
                 finger_id = (label, name)
+                seen_finger_ids.add(finger_id)
                 
                 current_dist = tip.y - wrist_landmark.y
                 current_finger_distances[finger_id] = current_dist
@@ -198,27 +203,48 @@ def detect_key_strokes(detection_result):
 
                 mirrored_x = 1.0 - tip.x
                 zone = find_key_zone(mirrored_x, tip.y)
+                latched_zone = latched_finger_zones.get(finger_id)
+                finger_lifted = dist_velocity < LIFT_DISTANCE_THRESHOLD
+                zone_matches_latch = (
+                    latched_zone is not None
+                    and zone is not None
+                    and zone.name == latched_zone.name
+                    and zone.note == latched_zone.note
+                )
 
-                # Determine if the note for this finger is currently "on"
-                is_top = zone.name.endswith("+") if zone else False
-                is_note_on = (label == "Right" and zone and zone.note in (right_hand_top_notes if is_top else right_hand_bottom_notes)) or \
-                             (label == "Left"  and zone and zone.note in (left_hand_top_notes  if is_top else left_hand_bottom_notes))
+                if latched_zone is not None and (finger_lifted or not zone_matches_latch):
+                    latched_finger_zones.pop(finger_id, None)
+                    latched_zone = None
+                    zone_matches_latch = False
 
-                if zone:
-                    #press
-                    finger_pressed = dist_velocity > PRESS_DISTANCE_THRESHOLD
-                    # The 'finger_lifted' and 'finger_repressed' variables are no longer needed here.
+                active_zone = latched_zone if zone_matches_latch else None
 
-                    # We only care about a new press. If a press is detected, the note is 'on' for this frame.
-                    # If it's not detected, the note is 'off'. Simple as that.
+                # Rearm only after the finger actually lifts or leaves the key area.
+                if active_zone is None and (zone is None or finger_lifted):
+                    finger_press_armed[finger_id] = True
+
+                if active_zone is None and zone is not None:
+                    finger_pressed = finger_press_armed.get(finger_id, True) and dist_velocity > PRESS_DISTANCE_THRESHOLD
                     if finger_pressed:
+                        latched_finger_zones[finger_id] = zone
+                        finger_press_armed[finger_id] = False
+                        active_zone = zone
                         active_zone_names.add(zone.name)
-                        if label == "Right":
-                            (current_right_top_notes if is_top else current_right_bottom_notes)[zone.note] = True
-                        else:
-                            (current_left_top_notes if is_top else current_left_bottom_notes)[zone.note] = True
-                
-                # REMOVE THE ENTIRE 'elif is_note_on:' BLOCK
+
+                if active_zone is not None:
+                    is_top = active_zone.name.endswith("+")
+                    if label == "Right":
+                        (current_right_top_notes if is_top else current_right_bottom_notes)[active_zone.note] = True
+                    else:
+                        (current_left_top_notes if is_top else current_left_bottom_notes)[active_zone.note] = True
+
+    lost_finger_ids = set(latched_finger_zones) - seen_finger_ids
+    for finger_id in lost_finger_ids:
+        latched_finger_zones.pop(finger_id, None)
+        finger_press_armed.pop(finger_id, None)
+
+    for finger_id in set(last_finger_wrist_dist) - seen_finger_ids:
+        last_finger_wrist_dist.pop(finger_id, None)
 
     # Update the last known distances for the next frame
     last_finger_wrist_dist = current_finger_distances

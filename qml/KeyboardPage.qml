@@ -11,7 +11,8 @@ Item {
     readonly property bool engineReady: typeof appEngine !== "undefined"
     readonly property int k1Octave: engineReady ? appEngine.topKeyboardOctave : 3
     readonly property int k2Octave: engineReady ? appEngine.bottomKeyboardOctave : 5
-    readonly property var activeKeyboardNotes: engineReady ? appEngine.activeKeyboardNotes : []
+    readonly property var activeTopKeyboardNotes: engineReady ? appEngine.activeTopKeyboardNotes : []
+    readonly property var activeBottomKeyboardNotes: engineReady ? appEngine.activeBottomKeyboardNotes : []
     readonly property var whiteKeySteps: [
         { label: "C", semitone: 0 },
         { label: "D", semitone: 2 },
@@ -42,8 +43,9 @@ Item {
     property int counterFlashKeyboard: 0
     property int counterFlashDelta: 0
 
-    function noteActive(midiNote) {
-        return activeKeyboardNotes.indexOf(midiNote) !== -1
+    function noteActive(keyboardIndex, midiNote) {
+        const notes = keyboardIndex === 1 ? activeTopKeyboardNotes : activeBottomKeyboardNotes
+        return notes.indexOf(midiNote) !== -1
     }
 
     function handInsideItem(item, x, y) {
@@ -273,6 +275,7 @@ Item {
         readonly property real whiteKeyWidth: width / root.whiteKeySteps.length
         readonly property real blackKeyWidth: whiteKeyWidth * 0.6
         readonly property int octaveShift: (currentOctave - defaultOctave) * 12
+        clip: true
 
         function triggerOctaveChange(delta) {
             if (delta === 0)
@@ -301,43 +304,53 @@ Item {
             Behavior on border.width { NumberAnimation { duration: 140 } }
         }
 
-        Repeater {
-            model: root.whiteKeySteps
+        Row {
+            id: whiteKeyRow
+            anchors.fill: parent
+            spacing: 0
 
-            delegate: Rectangle {
-                readonly property int midiNote: zone.baseMidiNote + modelData.semitone + zone.octaveShift
-                readonly property bool noteActive: root.noteActive(midiNote)
+            Repeater {
+                model: root.whiteKeySteps
 
-                x: index * zone.whiteKeyWidth
-                y: 0
-                width: zone.whiteKeyWidth
-                height: zone.height
-                radius: Math.min(8, width * 0.12)
-                color: noteActive ? Qt.rgba(0.878, 0.478, 0.149, 0.82)
-                                  : Qt.rgba(0.985, 0.988, 0.995, 0.68)
-                border.width: noteActive ? 2 : 1
-                border.color: noteActive ? "#FFD2A8" : Qt.rgba(0.18, 0.2, 0.26, 0.55)
+                delegate: Rectangle {
+                    required property var modelData
+                    readonly property int midiNote: zone.baseMidiNote + modelData.semitone + zone.octaveShift
+                    readonly property bool noteActive: root.noteActive(zone.keyboardIndex, midiNote)
+
+                    width: zone.whiteKeyWidth
+                    height: zone.height
+                    radius: Math.min(8, width * 0.12)
+                    color: noteActive ? Qt.rgba(0.878, 0.478, 0.149, 0.22)
+                                      : Qt.rgba(0.985, 0.988, 0.995, 0.12)
+                    border.width: noteActive ? 2 : 1
+                    border.color: noteActive ? "#FFD2A8" : Qt.rgba(0.18, 0.2, 0.26, 0.55)
+                }
             }
         }
 
-        Repeater {
-            model: root.blackKeySteps
+        Item {
+            anchors.fill: parent
+            z: 2
 
-            delegate: Rectangle {
-                readonly property int midiNote: zone.baseMidiNote + modelData.semitone + zone.octaveShift
-                readonly property bool noteActive: root.noteActive(midiNote)
-                readonly property real centerX: zone.whiteKeyWidth * modelData.boundaryIndex
+            Repeater {
+                model: root.blackKeySteps
 
-                x: centerX - (width / 2)
-                y: 0
-                width: zone.blackKeyWidth
-                height: zone.height * zone.blackKeyHeightRatio
-                radius: Math.min(7, width * 0.16)
-                z: 2
-                color: noteActive ? Qt.rgba(0.898, 0.502, 0.149, 0.92)
-                                  : Qt.rgba(0.04, 0.055, 0.08, 0.92)
-                border.width: 1
-                border.color: noteActive ? "#FFE0B8" : Qt.rgba(1, 1, 1, 0.18)
+                delegate: Rectangle {
+                    required property var modelData
+                    readonly property int midiNote: zone.baseMidiNote + modelData.semitone + zone.octaveShift
+                    readonly property bool noteActive: root.noteActive(zone.keyboardIndex, midiNote)
+                    readonly property real centerX: zone.whiteKeyWidth * modelData.boundaryIndex
+
+                    x: centerX - (width / 2)
+                    y: 0
+                    width: zone.blackKeyWidth
+                    height: zone.height * zone.blackKeyHeightRatio
+                    radius: Math.min(7, width * 0.16)
+                    color: noteActive ? Qt.rgba(0.898, 0.502, 0.149, 0.28)
+                                      : Qt.rgba(0.04, 0.055, 0.08, 0.18)
+                    border.width: 1
+                    border.color: noteActive ? "#FFE0B8" : Qt.rgba(1, 1, 1, 0.18)
+                }
             }
         }
 

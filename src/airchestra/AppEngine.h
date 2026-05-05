@@ -40,6 +40,8 @@ class AppEngine : public QObject {
     Q_PROPERTY(int topKeyboardOctave READ topKeyboardOctave NOTIFY keyboardOctavesChanged)
     Q_PROPERTY(int bottomKeyboardOctave READ bottomKeyboardOctave NOTIFY keyboardOctavesChanged)
     Q_PROPERTY(QVariantList activeKeyboardNotes READ activeKeyboardNotes NOTIFY activeKeyboardNotesChanged)
+    Q_PROPERTY(QVariantList activeTopKeyboardNotes READ activeTopKeyboardNotes NOTIFY activeKeyboardNotesChanged)
+    Q_PROPERTY(QVariantList activeBottomKeyboardNotes READ activeBottomKeyboardNotes NOTIFY activeKeyboardNotesChanged)
 
 public:
     AppEngine(GlobalState* gState, HeadlessAudioEngine* aEngine, QObject *parent = nullptr);
@@ -101,6 +103,8 @@ public:
     int topKeyboardOctave() const { return m_topKeyboardOctave; }
     int bottomKeyboardOctave() const { return m_bottomKeyboardOctave; }
     QVariantList activeKeyboardNotes() const { return m_activeKeyboardNotes; }
+    QVariantList activeTopKeyboardNotes() const { return m_activeTopKeyboardNotes; }
+    QVariantList activeBottomKeyboardNotes() const { return m_activeBottomKeyboardNotes; }
 
     std::vector<std::pair<std::string, std::string>> getAvailableMidiDevices();
 
@@ -142,6 +146,8 @@ private:
     int m_topKeyboardOctave = 3;
     int m_bottomKeyboardOctave = 5;
     QVariantList m_activeKeyboardNotes;
+    QVariantList m_activeTopKeyboardNotes;
+    QVariantList m_activeBottomKeyboardNotes;
 };
 
 } // namespace airchestra
