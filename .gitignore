@@ -1,9 +1,12 @@
 /build/*
+/vcpkg/*
+/vcpkg_installed/*
+/build-delete/*
+/vcpkg-delete/*
+/vcpkg_installed-delete/*
 .vscode/*
 /.vs/*
 /out/*
-/vcpkg/*
-/vcpkg_installed/*
 /src/mediapipe/__pycache__/*
 /Instruments/*
 /venv/*
