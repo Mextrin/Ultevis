@@ -23,11 +23,11 @@ class AppEngine : public QObject {
     Q_PROPERTY(QString currentMidiDevice READ getCurrentMidiDevice NOTIFY currentMidiDeviceChanged)
 
     // Hand-tracking state mirrored from GlobalState so QML can bind to it.
-    Q_PROPERTY(bool leftHandVisible READ leftHandVisible NOTIFY handStateChanged)
-    Q_PROPERTY(bool rightHandVisible READ rightHandVisible NOTIFY handStateChanged)
-    Q_PROPERTY(qreal leftHandX READ leftHandX NOTIFY handStateChanged)
-    Q_PROPERTY(qreal leftHandY READ leftHandY NOTIFY handStateChanged)
-    Q_PROPERTY(qreal rightHandX READ rightHandX NOTIFY handStateChanged)
+    Q_PROPERTY(bool leftHandVisible READ leftHandVisible WRITE setLeftHandVisible NOTIFY handStateChanged)
+    Q_PROPERTY(bool rightHandVisible READ rightHandVisible WRITE setRightHandVisible NOTIFY handStateChanged)
+    Q_PROPERTY(qreal leftHandX READ leftHandX  NOTIFY handStateChanged)
+    Q_PROPERTY(qreal leftHandY READ leftHandY WRITE setLeftHandY NOTIFY handStateChanged)
+    Q_PROPERTY(qreal rightHandX READ rightHandX WRITE setRightHandX NOTIFY handStateChanged)
     Q_PROPERTY(qreal rightHandY READ rightHandY NOTIFY handStateChanged)
     Q_PROPERTY(bool leftPinch READ leftPinch NOTIFY handStateChanged)
     Q_PROPERTY(bool rightPinch READ rightPinch NOTIFY handStateChanged)
@@ -79,6 +79,12 @@ public:
     Q_INVOKABLE void setGuitarSound(int soundID);
     Q_INVOKABLE void triggerGuitarStrum(int velocity);
 
+    // --- ADDED SETTERS for theremin jingle---
+    Q_INVOKABLE void setRightHandVisible(bool visible);
+    Q_INVOKABLE void setLeftHandVisible(bool visible);
+    Q_INVOKABLE void setRightHandX(qreal x);
+    Q_INVOKABLE void setLeftHandY(qreal y);
+    // ---------------------
 
     bool leftHandVisible() const { return m_leftHandVisible; }
     bool rightHandVisible() const { return m_rightHandVisible; }
