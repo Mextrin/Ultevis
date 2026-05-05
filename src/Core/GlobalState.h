@@ -30,11 +30,6 @@ enum class GuitarSound {
    Acoustic = 2
 };
 
-enum class GuitarStrumDirection {
-   Down = 0,
-   Up = 1
-};
-
 enum class GuitarChordRoot {
    C = 0,
    D = 1,
@@ -87,10 +82,6 @@ public:
 
    // --- KEYBOARD STATE ---
    std::array<std::atomic<bool>, 128> keyboardState {};
-   std::array<std::atomic<bool>, 128> keyboardTopLeftState {};
-   std::array<std::atomic<bool>, 128> keyboardTopRightState {};
-   std::array<std::atomic<bool>, 128> keyboardBottomLeftState {};
-   std::array<std::atomic<bool>, 128> keyboardBottomRightState {};
    /// Last MIDI velocity (1–127) for noteOn; set from camera UDP using left/right hand master %.
    std::array<std::atomic<int>, 128> keyboardNoteVelocity {};
    std::atomic<int> leftKeyboardVelocity { 100 };   // % 0–100 (UI), same semantics as drum hands
@@ -107,7 +98,6 @@ public:
    // --- GUITAR STATE ---
    std::atomic<GuitarSound> currentGuitarSound { GuitarSound::CleanElectric };
    std::atomic<bool> guitarStrumHit { false };
-   std::atomic<GuitarStrumDirection> guitarStrumDirection { GuitarStrumDirection::Down };
    std::atomic<GuitarChordRoot> currentGuitarRoot { GuitarChordRoot::C };
    std::atomic<GuitarChordQuality> currentGuitarQuality { GuitarChordQuality::Major };
    std::atomic<int> guitarVelocity { 100 };

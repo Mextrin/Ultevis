@@ -5,43 +5,6 @@
 
 namespace
 {
-    bool looksLikeProjectRoot(const juce::File& directory)
-    {
-        return directory.isDirectory()
-            && directory.getChildFile("CMakeLists.txt").existsAsFile()
-            && directory.getChildFile("src").isDirectory()
-            && directory.getChildFile("qml").isDirectory();
-    }
-
-    juce::File searchUpwardsForProjectRoot(juce::File directory)
-    {
-        while (directory.isDirectory()) {
-            if (looksLikeProjectRoot(directory))
-                return directory;
-
-            const juce::File parent = directory.getParentDirectory();
-            if (parent == directory)
-                break;
-
-            directory = parent;
-        }
-
-        return {};
-    }
-
-    juce::File resolvedProjectFile(const juce::String& relativePath)
-    {
-        juce::File file(relativePath);
-        if (juce::File::isAbsolutePath(relativePath))
-            return file;
-
-        juce::File projectRoot = searchUpwardsForProjectRoot(juce::File::getCurrentWorkingDirectory());
-        if (!projectRoot.exists())
-            projectRoot = searchUpwardsForProjectRoot(juce::File::getSpecialLocation(juce::File::currentExecutableFile).getParentDirectory());
-
-        return projectRoot.exists() ? projectRoot.getChildFile(relativePath) : file;
-    }
-
     int midiVelocityFromKeyboardStore(int stored)
     {
         return std::clamp(stored, 1, 127);
@@ -60,10 +23,6 @@ void HeadlessAudioEngine::resetKeyboardPlaybackState()
     // Turn off all 128 notes
     for (int i = 0; i < 128; ++i) {
         globalState->keyboardState[i].store(false);
-        globalState->keyboardTopLeftState[i].store(false);
-        globalState->keyboardTopRightState[i].store(false);
-        globalState->keyboardBottomLeftState[i].store(false);
-        globalState->keyboardBottomRightState[i].store(false);
         globalState->keyboardNoteVelocity[i].store(100);
         if (internalKeyboardState[i]) {
             keyboardSynth.noteOff(0, i, 0);
@@ -115,17 +74,9 @@ void HeadlessAudioEngine::loadKeyboardSound(int keyboardInstrumentID)
 
     resetKeyboardPlaybackState();
 
-    const juce::File sfzFile = resolvedProjectFile(sfzToLoad);
-    const juce::String resolvedSfzPath = sfzFile.getFullPathName();
+    std::cout << "Loading keyboard SFZ: " << sfzToLoad << std::endl;
 
-    if (!sfzFile.existsAsFile()) {
-        std::cerr << "ERROR: Keyboard SFZ file not found: "
-                  << resolvedSfzPath << std::endl;
-        return;
-    }
-
-    std::cout << "Loading keyboard SFZ: " << resolvedSfzPath << std::endl;
-
+    juce::File sfzFile(sfzToLoad);
     juce::String content = sfzFile.loadFileAsString();
 
     //inject sustain values into sfz files for violin, flute, organ
@@ -139,7 +90,7 @@ void HeadlessAudioEngine::loadKeyboardSound(int keyboardInstrumentID)
     bool loaded = keyboardSynth.loadSfzString(sfzFile.getFullPathName().toStdString(), content.toStdString());
 
     if (!loaded) {
-        std::cerr << "ERROR: Failed to load SFZ: " << resolvedSfzPath << std::endl;
+        std::cerr << "ERROR: Failed to load SFZ: " << sfzToLoad << std::endl;
         return;
     }
 

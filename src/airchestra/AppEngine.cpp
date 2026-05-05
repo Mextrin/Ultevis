@@ -1,7 +1,6 @@
 #include "AppEngine.h"
 #include "../Core/GlobalState.h"
 #include "../Audio/AudioEngine.h"
-#include "../platform/CameraPermission.h"
 
 #include <QCoreApplication>
 #include <QtGlobal>
@@ -100,7 +99,7 @@ AppEngine::AppEngine(GlobalState* gState, HeadlessAudioEngine* aEngine, QObject 
     : QObject(parent), globalState(gState), audioEngine(aEngine) 
 {
     logger.log(AppEventType::AppStarted, {{"mode", "interactive"}});
-    cameraPermissionStatus = requestCameraAccessIfNeeded() ? "granted" : "denied";
+    cameraPermissionStatus = "granted";
 
     midiDeviceNames.append("None");
     midiDeviceIds.push_back("");
@@ -125,7 +124,7 @@ void AppEngine::setCameraPermissionStatus(const QString &value) {
 }
 
 void AppEngine::requestCameraPermission() {
-    setCameraPermissionStatus(requestCameraAccessIfNeeded() ? "granted" : "denied");
+    setCameraPermissionStatus("granted");
 }
 
 void AppEngine::proceed() {
@@ -136,10 +135,6 @@ void AppEngine::proceed() {
 void AppEngine::goBack() {
     for (int i = 0; i < 128; ++i) {
         globalState->keyboardState[i].store(false);
-        globalState->keyboardTopLeftState[i].store(false);
-        globalState->keyboardTopRightState[i].store(false);
-        globalState->keyboardBottomLeftState[i].store(false);
-        globalState->keyboardBottomRightState[i].store(false);
         globalState->keyboardNoteVelocity[i].store(100);
     }
     state.setCurrentScreen(static_cast<int>(AppScreen::Session));
@@ -214,7 +209,6 @@ void AppEngine::selectInstrument(const QString &name) {
         chordIndex++;
 
         globalState->guitarVelocity.store(110);
-        globalState->guitarStrumDirection.store(GuitarStrumDirection::Down);
         globalState->guitarStrumHit.store(true);
 
         sendCommandToPython("guitar");
@@ -460,33 +454,14 @@ void AppEngine::refreshTrackedState() {
         emit keyboardOctavesChanged();
 
     QVariantList nextActiveKeyboardNotes;
-    QVariantList nextActiveTopKeyboardNotes;
-    QVariantList nextActiveBottomKeyboardNotes;
     for (int note = 0; note < 128; ++note) {
-        const bool topActive =
-            globalState->keyboardTopLeftState[note].load() ||
-            globalState->keyboardTopRightState[note].load();
-        const bool bottomActive =
-            globalState->keyboardBottomLeftState[note].load() ||
-            globalState->keyboardBottomRightState[note].load();
-
-        if (topActive) {
-            nextActiveTopKeyboardNotes.append(note);
-        }
-        if (bottomActive) {
-            nextActiveBottomKeyboardNotes.append(note);
-        }
         if (globalState->keyboardState[note].load()) {
             nextActiveKeyboardNotes.append(note);
         }
     }
 
-    if (m_activeKeyboardNotes != nextActiveKeyboardNotes ||
-        m_activeTopKeyboardNotes != nextActiveTopKeyboardNotes ||
-        m_activeBottomKeyboardNotes != nextActiveBottomKeyboardNotes) {
+    if (m_activeKeyboardNotes != nextActiveKeyboardNotes) {
         m_activeKeyboardNotes = nextActiveKeyboardNotes;
-        m_activeTopKeyboardNotes = nextActiveTopKeyboardNotes;
-        m_activeBottomKeyboardNotes = nextActiveBottomKeyboardNotes;
         emit activeKeyboardNotesChanged();
     }
 }
@@ -498,7 +473,6 @@ void AppEngine::setGuitarSound(int soundID) {
 
 void AppEngine::triggerGuitarStrum(int velocity) {
     globalState->guitarVelocity.store(qBound(0, velocity, 127));
-    globalState->guitarStrumDirection.store(GuitarStrumDirection::Down);
     globalState->guitarStrumHit.store(true);
 }
 
