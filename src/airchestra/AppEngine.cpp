@@ -476,4 +476,30 @@ void AppEngine::triggerGuitarStrum(int velocity) {
     globalState->guitarStrumHit.store(true);
 }
 
+// --- ADDED SETTER IMPLEMENTATIONS for Theremin Jingle ---
+void AppEngine::setRightHandVisible(bool visible) {
+    if (globalState) {
+        globalState->rightHandVisible.store(visible);
+    }
+}
+
+void AppEngine::setLeftHandVisible(bool visible) {
+    if (globalState) {
+        globalState->leftHandVisible.store(visible);
+    }
+}
+
+void AppEngine::setRightHandX(qreal x) {
+    if (globalState) {
+        globalState->rightHandX.store(x);
+    }
+}
+
+void AppEngine::setLeftHandY(qreal y) {
+    if (globalState) {
+        globalState->leftHandY.store(y);
+    }
+}
+// ------------------------------------
+
 } // namespace airchestra
