@@ -57,7 +57,7 @@ Item {
             ctx.strokeStyle = Qt.rgba(0.922, 0.929, 0.941, 0.8) 
             ctx.lineWidth = 6
             ctx.setLineDash([6, 8])
-            const x = Math.round(width * 0.30) + 0.5
+            const x = Math.round(width * 0.365) + 0.5
             ctx.beginPath()
             ctx.moveTo(x, 0)
             ctx.lineTo(x, height)
