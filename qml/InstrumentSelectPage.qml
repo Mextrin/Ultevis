@@ -162,7 +162,26 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 font.family: figTreeVariable.name
-                onClicked: root.instrumentSelected("keyboard")
+                onClicked: {
+                    root.instrumentSelected("keyboard");
+                    appEngine.setSustainPedal(true);
+                    // Play a C-major chord for 1.5s
+                    appEngine.triggerKeyboardNote(60, 100);
+                    appEngine.triggerKeyboardNote(64, 100);
+                    appEngine.triggerKeyboardNote(67, 100);
+                    chordTimer.start();
+                }
+
+                Timer {
+                    id: chordTimer
+                    interval: 1500
+                    onTriggered: {
+                        appEngine.releaseKeyboardNote(60);
+                        appEngine.releaseKeyboardNote(64);
+                        appEngine.releaseKeyboardNote(67);
+                        appEngine.setSustainPedal(false);
+                    }
+                }
             }
 
             InstrumentCard {
@@ -180,7 +199,29 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 font.family: figTreeVariable.name
-                onClicked: root.instrumentSelected("drums")
+                onClicked: {
+                    root.instrumentSelected("drums");
+                    drumBeatTimer.start();
+                }
+
+                Timer {
+                    id: drumBeatTimer
+                    interval: 150 // ms between hits
+                    repeat: true
+                    property int step: 0
+                    onTriggered: {
+                        if (step === 0) {
+                            appEngine.triggerDrumHit(36, 100); // Bass Drum
+                        } else if (step === 1) {
+                            appEngine.triggerDrumHit(38, 100); // Snare
+                        } else if (step === 2) {
+                            appEngine.triggerDrumHit(49, 80); // Crash Cymbal
+                            stop();
+                            step = 0; // Reset for next time
+                        }
+                        step++;
+                    }
+                }
             }
 
             InstrumentCard {
