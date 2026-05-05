@@ -1,5 +1,4 @@
 /build/*
-/vcpkg/*
 /vcpkg_installed/*
 /build-delete/*
 /vcpkg-delete/*
@@ -10,5 +9,4 @@
 /src/mediapipe/__pycache__/*
 /Instruments/*
 /venv/*
-/vcpkg/*
 .DS_Store
