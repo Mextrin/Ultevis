@@ -215,16 +215,7 @@ def main():
                     cv2.circle(display_frame, (cx, cy), 10, (0, 180, 255), -1)
 
             elif CAMERA_MODE == "guitar":
-                for label, pos in displayed_hand_positions.items():
-                    cx, cy = int(pos[0] * frame_width), int(pos[1] * frame_height)
-                    
-                    color = (0, 255, 0)
-                    if label == "Right" and payload.get("guitarStrumHit", False):
-                        color = (0, 0, 255)
-                    elif label == "Left" and payload.get("leftPinch", False):
-                        color = (0, 165, 255)
-                        
-                    cv2.circle(display_frame, (cx, cy), 15, color, -1)
+                pass
 
             elif CAMERA_MODE == "drums":
                 get_drum_hit_coordinates(display_frame, frame_height, frame_width, active_zone_names, displayed_hand_positions)
