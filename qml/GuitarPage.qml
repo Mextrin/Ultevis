@@ -207,6 +207,41 @@ Item {
                         height: 38
                     }
 
+                    // Chord name — floats in the gap between fretboard and strum zone
+                    Item {
+                        visible: root.selectedChordRoot >= 0
+                        anchors.top:    fretboardBars.bottom
+                        anchors.bottom: strumZone.top
+                        anchors.left:   parent.left
+                        anchors.right:  parent.right
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width:  chordLabel.implicitWidth + 32
+                            height: chordLabel.implicitHeight + 16
+                            radius: 10
+                            color:        Qt.rgba(0.063, 0.071, 0.094, 0.50)
+                            border.color: Qt.rgba(0.878, 0.471, 0.149, 0.40)
+                            border.width: 1
+
+                            Text {
+                                id: chordLabel
+                                anchors.centerIn: parent
+                                text: root.selectedChordRoot >= 0
+                                      ? (root.sharpsEnabled
+                                         ? ["A","A#","B","C","C#","D","D#","E","F","F#","G","G#"][root.selectedChordRoot]
+                                         : ["A","B","C","D","E","F","G"][root.selectedChordRoot])
+                                        + "  "
+                                        + ["Maj","Min","7","Maj7","Min7","Sus2","Sus4"][root.selectedChordQuality]
+                                      : ""
+                                font.family:    figTreeVariable.name
+                                font.pixelSize: 40
+                                font.weight:    Font.Bold
+                                color:          "#E07826"
+                            }
+                        }
+                    }
+
                     // Strum zone — anchored to the bottom
                     StrumZone {
                         id: strumZone
@@ -218,6 +253,7 @@ Item {
 
                     // Fretboard — sits just below the neck counter chip
                     FretboardBars {
+                        id: fretboardBars
                         anchors.left:       parent.left
                         anchors.leftMargin: 6
                         anchors.right:      parent.right
@@ -583,11 +619,11 @@ Item {
                         ctx.arc(barW, scY, innerR + 1, endA, startA, true)
                         ctx.closePath()
 
-                        ctx.fillStyle = isSelQ ? "rgba(47,225,116,0.72)"
-                                      : isHovQ ? "rgba(47,225,116,0.30)"
+                        ctx.fillStyle = isSelQ ? "rgba(224,120,38,0.82)"
+                                      : isHovQ ? "rgba(224,120,38,0.28)"
                                       : "rgba(20,24,36,0.82)"
                         ctx.fill()
-                        ctx.strokeStyle = (isSelQ || isHovQ) ? "#2FE174" : "rgba(255,255,255,0.09)"
+                        ctx.strokeStyle = (isSelQ || isHovQ) ? "#E07826" : "rgba(255,255,255,0.09)"
                         ctx.lineWidth   = isSelQ ? 2 : 1
                         ctx.stroke()
 
@@ -600,7 +636,7 @@ Item {
                         ctx.font         = (isSelQ ? "700 " : "500 ") + qfs + "px sans-serif"
                         ctx.textAlign    = "center"
                         ctx.textBaseline = "middle"
-                        ctx.fillStyle    = isSelQ ? "#FFFFFF" : isHovQ ? "#B0FFD0" : "rgba(200,212,225,0.85)"
+                        ctx.fillStyle    = isSelQ ? "#FFFFFF" : isHovQ ? "#FFD4A0" : "rgba(200,212,225,0.85)"
                         ctx.fillText(cs.qualities[q], lx, ly)
                     }
 
@@ -654,32 +690,6 @@ Item {
             }
         }
 
-        // Current chord badge — bottom of the selector area
-        Rectangle {
-            visible:             root.selectedChordRoot >= 0
-            anchors.bottom:      parent.bottom
-            anchors.bottomMargin: 10
-            anchors.left:        parent.left
-            anchors.leftMargin:  6
-            width:  chordBadge.implicitWidth + 20
-            height: chordBadge.implicitHeight + 10
-            radius: 8
-            color:        Qt.rgba(0.015, 0.018, 0.025, 0.75)
-            border.color: "#E07826"
-            border.width: 1
-
-            Text {
-                id: chordBadge
-                anchors.centerIn: parent
-                text: root.selectedChordRoot >= 0
-                      ? cs.roots[root.selectedChordRoot] + "  " + cs.qualities[root.selectedChordQuality]
-                      : ""
-                font.family:    figTreeVariable.name
-                font.pixelSize: 15
-                font.weight:    Font.Medium
-                color:          "#E07826"
-            }
-        }
     }
 
     // ── Header ───────────────────────────────────────────────────────────────
