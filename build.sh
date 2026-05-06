@@ -3,17 +3,10 @@ set -euo pipefail
 
 BUILD_DIR="build"
 BUILD_CONFIG="Release"
-EXE_PATH="${BUILD_DIR}/Airchestra_artefacts/${BUILD_CONFIG}/Airchestra"
+APP_ARTEFACT_DIR="${BUILD_DIR}/Airchestra_artefacts/${BUILD_CONFIG}"
+EXE_PATH="${APP_ARTEFACT_DIR}/Airchestra"
+APP_BUNDLE_EXE="${APP_ARTEFACT_DIR}/Airchestra.app/Contents/MacOS/Airchestra"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HAND_DETECTOR_SCRIPT="${SCRIPT_DIR}/src/mediapipe/hand_detector.py"
-
-case "$(uname -s)" in
-    MINGW*|MSYS*|CYGWIN*)
-        if command -v cygpath >/dev/null 2>&1; then
-            HAND_DETECTOR_SCRIPT="$(cygpath -w "${HAND_DETECTOR_SCRIPT}")"
-        fi
-        ;;
-esac
 
 # --- NEW HELPER FUNCTION ---
 setup_and_activate_python() {
@@ -28,6 +21,57 @@ setup_and_activate_python() {
     source "${SCRIPT_DIR}/venv/bin/activate"
 }
 
+app_executable() {
+    if [ -x "${APP_BUNDLE_EXE}" ]; then
+        printf '%s\n' "${APP_BUNDLE_EXE}"
+    else
+        printf '%s\n' "${EXE_PATH}"
+    fi
+}
+
+app_runtime_dir() {
+    dirname "$(app_executable)"
+}
+
+copy_runtime_dir() {
+    local source_dir="$1"
+    local destination_dir="$2"
+    local label="$3"
+
+    if [ ! -d "${source_dir}" ]; then
+        echo "[copy-runtime] Missing source directory for ${label}: ${source_dir}"
+        return 1
+    fi
+
+    mkdir -p "${destination_dir}"
+    if command -v rsync >/dev/null 2>&1; then
+        rsync -a --delete --exclude '.git' --exclude '__pycache__' "${source_dir}/" "${destination_dir}/"
+    else
+        rm -rf "${destination_dir}"
+        mkdir -p "${destination_dir}"
+        cp -R "${source_dir}/." "${destination_dir}/"
+        find "${destination_dir}" \( -name .git -o -name __pycache__ \) -prune -exec rm -rf {} +
+    fi
+}
+
+copy_runtime_files() {
+    local runtime_dir
+    runtime_dir="$(app_runtime_dir)"
+
+    copy_runtime_dir "${SCRIPT_DIR}/src/mediapipe" "${runtime_dir}/mediapipe" "MediaPipe scripts"
+
+    if [ -d "${SCRIPT_DIR}/Instruments" ]; then
+        copy_runtime_dir "${SCRIPT_DIR}/Instruments" "${runtime_dir}/Instruments" "Instruments"
+    else
+        echo "[copy-runtime] Instruments folder not found at ${SCRIPT_DIR}/Instruments; skipping instrument copy."
+    fi
+}
+
+build_app() {
+    cmake --build "${BUILD_DIR}" --config "${BUILD_CONFIG}"
+    copy_runtime_files
+}
+
 case "${1:-}" in
     build-all)
         git submodule update --init --recursive
@@ -38,35 +82,27 @@ case "${1:-}" in
         fi
 
         cmake -B "${BUILD_DIR}" -DCMAKE_BUILD_TYPE="${BUILD_CONFIG}"
-        cmake --build "${BUILD_DIR}" --config "${BUILD_CONFIG}"
+        build_app
         ;;
 
     compile)
-        cmake --build "${BUILD_DIR}" --config "${BUILD_CONFIG}"
+        build_app
         ;;
 
     run)
         setup_and_activate_python
-
-        # Tell the C++ app NOT to launch a second hidden instance
-        export ULTEVIS_LAUNCH_HAND_DETECTOR=0
-        export ULTEVIS_HAND_DETECTOR_SCRIPT="${HAND_DETECTOR_SCRIPT}"
         
         # Run C++ app in the current terminal
-        "./${EXE_PATH}"
+        "$(app_executable)"
         ;;
 
     compile-and-run)
-        cmake --build "${BUILD_DIR}" --config "${BUILD_CONFIG}"
+        build_app
         
         setup_and_activate_python
-
-        # Tell the C++ app NOT to launch a second hidden instance
-        export ULTEVIS_LAUNCH_HAND_DETECTOR=0
-        export ULTEVIS_HAND_DETECTOR_SCRIPT="${HAND_DETECTOR_SCRIPT}"
         
         # Run C++ app in the current terminal
-        "./${EXE_PATH}"
+        "$(app_executable)"
         ;;
 
     clean)
@@ -76,12 +112,9 @@ case "${1:-}" in
     clean-build-run)
         rm -rf "${BUILD_DIR}"
         cmake -B "${BUILD_DIR}" -DCMAKE_BUILD_TYPE="${BUILD_CONFIG}"
-        cmake --build "${BUILD_DIR}" --config "${BUILD_CONFIG}"
+        build_app
 
-        export ULTEVIS_LAUNCH_HAND_DETECTOR=1
-        export ULTEVIS_HAND_DETECTOR_SCRIPT="${HAND_DETECTOR_SCRIPT}"
-
-        "./${EXE_PATH}"
+        "$(app_executable)"
         ;;
 
     *)
