@@ -346,16 +346,14 @@ Item {
             Behavior on border.color { ColorAnimation { duration: 120 } }
         }
 
-        // Guitar image — bottom-aligned, fills full zone width
+        // Guitar image — stretches to fill the entire strum zone
         Image {
-            anchors.fill:        parent
-            source:              "qrc:/assets/icons/display_guitar.png"
-            fillMode:            Image.PreserveAspectFit
-            verticalAlignment:   Image.AlignBottom
-            horizontalAlignment: Image.AlignHCenter
-            smooth: true
-            mipmap: true
-            opacity: 0.88
+            anchors.fill: parent
+            source:       "qrc:/assets/icons/display_guitar.png"
+            fillMode:     Image.Stretch
+            smooth:       true
+            mipmap:       true
+            opacity:      0.88
         }
     }
 
