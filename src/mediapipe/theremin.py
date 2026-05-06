@@ -80,7 +80,7 @@ def detect_hands(detection_result):
                 else:
                     X_LEFT_MIN = 0.67
                     X_LEFT_MAX = 1.0
-                    X_LEFT_KILL = 0.60
+                    X_LEFT_KILL = 0.53
                     # Left hand controls volume only inside its allowed zone.
                     # Outside this zone, leftHandVisible remains False, so volume does not update.
                     if X_LEFT_KILL <= index_tip.x <= X_LEFT_MAX:
