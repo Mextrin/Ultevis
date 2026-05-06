@@ -69,8 +69,8 @@ def open_camera_safely():
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
         else:
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 10000)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 10000)
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
         if not cap.isOpened():
             cap.release()

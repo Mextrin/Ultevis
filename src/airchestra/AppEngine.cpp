@@ -579,6 +579,12 @@ void AppEngine::setRightHandX(qreal x) {
     }
 }
 
+void AppEngine::setRightHandY(qreal y) {
+    if (globalState) {
+        globalState->rightHandY.store(y);
+    }
+}
+
 void AppEngine::setLeftHandY(qreal y) {
     if (globalState) {
         globalState->leftHandY.store(y);
