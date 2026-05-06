@@ -13,7 +13,7 @@ inline QString cameraFramePath() {
 }
 
 inline QImage makeBlackCameraFrame() {
-    QImage image(640, 480, QImage::Format_RGB888);
+    QImage image(640, 360, QImage::Format_RGB888);
     image.fill(Qt::black);
     return image;
 }

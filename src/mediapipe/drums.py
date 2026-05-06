@@ -38,25 +38,21 @@ class DrumZone:
     bottom: float
 
     def contains(self, x: float, y: float) -> bool:
-        center_x = (self.left + self.right) / 2.0
-        center_y = (self.top + self.bottom) / 2.0
-        raw_radius_x = (self.right - self.left) / 2.0
-        raw_radius_y = (self.bottom - self.top) / 2.0
-
         if self.name == "Kick":
-            radius_x = raw_radius_x
-            radius_y = raw_radius_y
-        else:
-            radius = min(raw_radius_x, raw_radius_y) * 1.1
-            radius_x = radius
-            radius_y = radius
-
-        if radius_x <= 0.0 or radius_y <= 0.0:
-            return False
-
-        dx = (x - center_x) / radius_x
-        dy = (y - center_y) / radius_y
-        return (dx * dx) + (dy * dy) <= 1.0
+            return self.left <= x <= self.right and self.top <= y <= self.bottom
+            
+        bWidth = (self.right - self.left) * 16.0
+        bHeight = (self.bottom - self.top) * 9.0
+        
+        cx = (self.left * 16.0) + (bWidth / 2.0)
+        cy = (self.top * 9.0) + (bHeight / 2.0)
+        
+        radius = (min(bWidth, bHeight) * 1.1) / 2.0
+        
+        px = x * 16.0
+        py = y * 9.0
+        
+        return (px - cx)**2 + (py - cy)**2 <= radius**2
 
     def pixel_rect(self, width: int, height: int) -> tuple[int, int, int, int]:
         return (

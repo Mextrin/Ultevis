@@ -115,7 +115,7 @@ def send_mute_payload(sock):
     sock.sendto(json.dumps(mute_payload).encode(), (UDP_IP, UDP_PORT))
 
 def write_black_frame():
-    black_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+    black_frame = np.zeros((360, 640, 3), dtype=np.uint8)
     cv2.imwrite(TEMP_FRAME_PATH, black_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
     safe_replace(TEMP_FRAME_PATH, FINAL_FRAME_PATH)
 

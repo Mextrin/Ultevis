@@ -20,20 +20,38 @@ Item {
     readonly property real circularZoneScale: 1.2
 
     function zoneContains(zone, x, y) {
-        const centerX = (zone.left + zone.right) / 2
-        const centerY = (zone.top + zone.bottom) / 2
-        const rawRadiusX = (zone.right - zone.left) / 2
-        const rawRadiusY = (zone.bottom - zone.top) / 2
-        const radius = zone.name === "Kick" ? 0 : Math.min(rawRadiusX, rawRadiusY)
-        const radiusX = zone.name === "Kick" ? rawRadiusX : radius
-        const radiusY = zone.name === "Kick" ? rawRadiusY : radius
+        // 1. Convert normalized hand coordinates to exact pixel coordinates on the stage
+        const px = x * drumStage.width
+        const py = y * drumStage.height
 
-        if (radiusX <= 0 || radiusY <= 0)
-            return false
+        // 2. Calculate the raw bounding box in pixels
+        const bLeft = zone.left * drumStage.width
+        const bTop = zone.top * drumStage.height
+        const bWidth = (zone.right - zone.left) * drumStage.width
+        const bHeight = (zone.bottom - zone.top) * drumStage.height
 
-        const dx = (x - centerX) / radiusX
-        const dy = (y - centerY) / radiusY
-        return (dx * dx) + (dy * dy) <= 1.0
+        if (zone.name === "Kick") {
+            // Kick is a standard rectangle
+            return px >= bLeft && px <= bLeft + bWidth &&
+                   py >= bTop && py <= bTop + bHeight
+        }
+
+        // 3. Recreate the exact math used by the UI to draw the circle
+        const circleSize = Math.min(bWidth, bHeight)
+        const scaledCircleSize = Math.min(
+            Math.min(drumStage.width, drumStage.height),
+            circleSize * root.circularZoneScale // Includes the 1.2x scale!
+        )
+
+        // 4. Find the absolute pixel center and radius of the drawn circle
+        const cx = bLeft + (bWidth / 2)
+        const cy = bTop + (bHeight / 2)
+        const radius = scaledCircleSize / 2
+
+        // 5. Standard circular distance check
+        const dx = px - cx
+        const dy = py - cy
+        return (dx * dx) + (dy * dy) <= (radius * radius)
     }
 
     function isZoneActive(zone) {
