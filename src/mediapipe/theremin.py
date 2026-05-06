@@ -70,13 +70,15 @@ def detect_hands(detection_result):
                 if label == "Right":
                     X_RIGHT_MIN = 0.0
                     X_RIGHT_MAX = 0.67
+                    X_RIGHT_KILL = 0.80
 
-                    # Do NOT clamp. If the right hand is outside its valid zone,
-                    # reject this frame instead of forcing it onto the divider.
-                    if X_RIGHT_MIN <= index_tip.x <= X_RIGHT_MAX:
+                    if X_RIGHT_MIN <= index_tip.x <= X_RIGHT_KILL:
+                        # Sound stays on until 0.80,
+                        # but pitch/control value is clamped at 0.67.
                         theremin_payload["rightHandVisible"] = True
-                        theremin_payload["rightHandX"] = index_tip.x
+                        theremin_payload["rightHandX"] = min(index_tip.x, X_RIGHT_MAX)
                         theremin_payload["rightHandY"] = index_tip.y
+
                 else:
                     theremin_payload["leftHandVisible"] = True
                     theremin_payload["leftHandX"] = index_tip.x
