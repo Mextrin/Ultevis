@@ -1,4 +1,5 @@
 #include "AppEngine.h"
+#include "VideoReceiver.h"
 #include "../Core/GlobalState.h"
 #include "../Audio/AudioEngine.h"
 
@@ -100,6 +101,9 @@ AppEngine::AppEngine(GlobalState* gState, HeadlessAudioEngine* aEngine, QObject 
 {
     logger.log(AppEventType::AppStarted, {{"mode", "interactive"}});
     cameraPermissionStatus = "granted";
+    cameraModeDelayTimer.setSingleShot(true);
+    cameraModeDelayTimer.setInterval(500);
+    connect(&cameraModeDelayTimer, &QTimer::timeout, this, &AppEngine::launchPendingCameraMode);
 
     midiDeviceNames.append("None");
     midiDeviceIds.push_back("");
@@ -112,10 +116,15 @@ AppEngine::AppEngine(GlobalState* gState, HeadlessAudioEngine* aEngine, QObject 
     connect(&handStatePollTimer, &QTimer::timeout, this, &AppEngine::refreshTrackedState);
     handStatePollTimer.start(33);
 
+    writeBlackCameraFrame();
     sendCommandToPython("none");
 }
 
-AppEngine::~AppEngine() {}
+AppEngine::~AppEngine() {
+    cameraModeDelayTimer.stop();
+    writeBlackCameraFrame();
+    sendCommandToPython("none");
+}
 
 void AppEngine::setCameraPermissionStatus(const QString &value) {
     if (cameraPermissionStatus == value) return;
@@ -133,6 +142,10 @@ void AppEngine::proceed() {
 }
 
 void AppEngine::goBack() {
+    cameraModeDelayTimer.stop();
+    pendingCameraMode = "none";
+    writeBlackCameraFrame();
+
     for (int i = 0; i < 128; ++i) {
         globalState->keyboardState[i].store(false);
         globalState->keyboardTopLeftState[i].store(false);
@@ -146,11 +159,30 @@ void AppEngine::goBack() {
     sendCommandToPython("none");
 }
 
+void AppEngine::scheduleCameraModeStart(const QString& mode) {
+    pendingCameraMode = mode;
+    cameraModeDelayTimer.start();
+}
+
+void AppEngine::launchPendingCameraMode() {
+    if (pendingCameraMode == "none" || pendingCameraMode.isEmpty()) {
+        return;
+    }
+
+    sendCommandToPython(pendingCameraMode.toStdString());
+    pendingCameraMode = "none";
+}
+
 void AppEngine::selectInstrument(const QString &name) {
+    cameraModeDelayTimer.stop();
+    pendingCameraMode = "none";
+    writeBlackCameraFrame();
+    sendCommandToPython("none");
+
     if (name == QStringLiteral("theremin")) {
         state.setCurrentScreen(static_cast<int>(AppScreen::Theremin));
         globalState->currentInstrument.store(ActiveInstrument::Theremin);
-        sendCommandToPython("theremin");
+        scheduleCameraModeStart(QStringLiteral("theremin"));
     }
     else if (name == QStringLiteral("drums")) {
         state.setCurrentScreen(static_cast<int>(AppScreen::Drums)); 
@@ -160,14 +192,14 @@ void AppEngine::selectInstrument(const QString &name) {
         
         audioEngine->loadDrumSound(liteSfz.toStdString()); 
         
-        sendCommandToPython("drums");
+        scheduleCameraModeStart(QStringLiteral("drums"));
     }
     else if (name == QStringLiteral("keyboard")) {
         state.setCurrentScreen(static_cast<int>(AppScreen::Keyboard));
         globalState->currentInstrument.store(ActiveInstrument::Keyboard);
         globalState->currentKeyboardInstrument.store(KeyboardSound::GrandPiano);
         audioEngine->loadKeyboardSound(0);
-        sendCommandToPython("keyboard");
+        scheduleCameraModeStart(QStringLiteral("keyboard"));
     }
     else if (name == QStringLiteral("guitar")) {
         globalState->currentInstrument.store(ActiveInstrument::Guitar);
@@ -216,7 +248,7 @@ void AppEngine::selectInstrument(const QString &name) {
         globalState->guitarStrumDirection.store(GuitarStrumDirection::Down);
         globalState->guitarStrumHit.store(true);
 
-        sendCommandToPython("guitar");
+        scheduleCameraModeStart(QStringLiteral("guitar"));
     }
 }
 

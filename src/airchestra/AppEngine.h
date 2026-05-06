@@ -125,6 +125,8 @@ signals:
 private:
     void setCameraPermissionStatus(const QString &value);
     void refreshTrackedState();
+    void scheduleCameraModeStart(const QString& mode);
+    void launchPendingCameraMode();
 
     QString cameraPermissionStatus{"undetermined"};
     ViewState state;
@@ -136,6 +138,8 @@ private:
     QStringList midiDeviceNames;
     std::vector<std::string> midiDeviceIds;
     QString m_currentMidiDevice = "None";
+    QTimer cameraModeDelayTimer;
+    QString pendingCameraMode = "none";
     QTimer handStatePollTimer;
 
     bool m_leftHandVisible = false;

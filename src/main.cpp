@@ -63,6 +63,9 @@ int main(int argc, char* argv[])
     app.setApplicationVersion("0.2.0");
     app.setWindowIcon(QIcon(":/assets/icons/app-icon.png"));
     QQuickStyle::setStyle("Basic");
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, []() {
+        airchestra::writeBlackCameraFrame();
+    });
 
     //BOOT JUCE
     juce::ScopedJuceInitialiser_GUI juceInit;
