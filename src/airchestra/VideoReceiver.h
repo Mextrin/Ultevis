@@ -2,17 +2,42 @@
 #include <QObject>
 #include <QImage>
 #include <QTimer>
+#include <QSaveFile>
 #include <QStandardPaths>
 #include <QQuickImageProvider>
 
 namespace airchestra {
 
+inline QString cameraFramePath() {
+    return QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/airchestra_frame.jpg";
+}
+
+inline QImage makeBlackCameraFrame() {
+    QImage image(640, 480, QImage::Format_RGB888);
+    image.fill(Qt::black);
+    return image;
+}
+
+inline bool writeBlackCameraFrame() {
+    QSaveFile frameFile(cameraFramePath());
+    if (!frameFile.open(QIODevice::WriteOnly)) {
+        return false;
+    }
+
+    const QImage blackFrame = makeBlackCameraFrame();
+    if (!blackFrame.save(&frameFile, "JPG", 95)) {
+        frameFile.cancelWriting();
+        return false;
+    }
+
+    return frameFile.commit();
+}
+
 // 1. The Provider that hands the image to QML
 class CameraImageProvider : public QQuickImageProvider {
 public:
     CameraImageProvider() : QQuickImageProvider(QQuickImageProvider::Image) {
-        currentImage = QImage(640, 480, QImage::Format_RGB888);
-        currentImage.fill(Qt::black);
+        currentImage = makeBlackCameraFrame();
     }
 
     QImage requestImage(const QString& id, QSize* size, const QSize& requestedSize) override {
@@ -21,6 +46,7 @@ public:
     }
 
     void updateImage(const QImage& img) { currentImage = img; }
+    void resetToBlack() { currentImage = makeBlackCameraFrame(); }
 
 private:
     QImage currentImage;
@@ -33,8 +59,12 @@ public:
     VideoReceiver(CameraImageProvider* provider, QObject* parent = nullptr) 
         : QObject(parent), imgProvider(provider) 
     {
-        // Get the exact same cross-platform Temp Directory Python is using
-        framePath = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/airchestra_frame.jpg";
+        // Reset the shared temp frame on every launch so stale images cannot survive app restarts.
+        framePath = cameraFramePath();
+        writeBlackCameraFrame();
+        if (imgProvider != nullptr) {
+            imgProvider->resetToBlack();
+        }
         
         connect(&timer, &QTimer::timeout, this, &VideoReceiver::grabFrame);
         timer.start(33); // Check for new frames ~30 times a second
