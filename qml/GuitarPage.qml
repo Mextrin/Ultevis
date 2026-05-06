@@ -89,13 +89,13 @@ Item {
 
             if (!root.neckCooldown) {
                 if (up && !root.prevThumbUp) {
-                    root.neckPosition   = Math.max(0, root.neckPosition - 1)
+                    root.neckPosition   = Math.min(2, root.neckPosition + 1)
                     root.neckFlashDelta = +1
                     neckFlashTimer.restart()
                     root.neckCooldown = true
                     neckCooldownTimer.restart()
                 } else if (down && !root.prevThumbDown) {
-                    root.neckPosition   = Math.min(2, root.neckPosition + 1)
+                    root.neckPosition   = Math.max(0, root.neckPosition - 1)
                     root.neckFlashDelta = -1
                     neckFlashTimer.restart()
                     root.neckCooldown = true
