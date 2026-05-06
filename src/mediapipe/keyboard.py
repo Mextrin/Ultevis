@@ -34,10 +34,13 @@ right_hand_bottom_notes = {}
 left_hand_top_notes = {}
 left_hand_bottom_notes = {}
 
-
+# Keep track of individual finger states for holding notes and preventing flickering
 active_finger_presses = {} # {(hand_label, finger_name): bool}
-locked_finger_zones = {}   # {(hand_label, finger_name): KeyboardZone}
 
+# --- NEW KINEMATIC BEND THRESHOLDS ---
+# We calculate the ratio of the direct distance (Wrist to Tip) vs the path (Wrist -> Knuckle -> Tip).
+# 1.0 means perfectly straight. Lower numbers mean the knuckle is bent.
+# This topological approach makes the trigger 100% immune to hand rotation.
 PRESS_ON_BEND_RATIO = 0.85  # Must bend knuckle significantly to trigger (roughly 65 degrees)
 PRESS_OFF_BEND_RATIO = 0.91 # Must straighten hand to release (roughly 45 degrees)
 
@@ -160,10 +163,6 @@ def is_finger_pressed(hand_label: str, finger_name: str, hand_landmarks, tip_y: 
     on_threshold = PRESS_ON_BEND_RATIO
     off_threshold = PRESS_OFF_BEND_RATIO
 
-    if finger_name == "index":
-        on_threshold += 0.045
-        off_threshold += 0.045
-
     if finger_name == "pinky":
         on_threshold += 0.035
         off_threshold += 0.035
@@ -171,9 +170,6 @@ def is_finger_pressed(hand_label: str, finger_name: str, hand_landmarks, tip_y: 
     if tip_y < 0.5:
         on_threshold += 0.05
         off_threshold += 0.05
-
-    on_threshold = min(0.95, on_threshold)
-    off_threshold = min(0.98, off_threshold)
 
     finger_id = (hand_label, finger_name)
     is_pressed = active_finger_presses.get(finger_id, False)
@@ -191,7 +187,6 @@ def is_finger_pressed(hand_label: str, finger_name: str, hand_landmarks, tip_y: 
 
 def detect_key_strokes(detection_result):
     global right_hand_top_notes, right_hand_bottom_notes, left_hand_top_notes, left_hand_bottom_notes
-    global locked_finger_zones, active_finger_presses
 
     keyboard_payload = {
         "instrument": "keyboard",
@@ -240,33 +235,17 @@ def detect_key_strokes(detection_result):
                 keyboard_payload[f"{prefix}_{name}_Y"] = tip.y
                 
                 mirrored_x = 1.0 - tip.x
-                current_zone = find_key_zone(mirrored_x, tip.y)
+                zone = find_key_zone(mirrored_x, tip.y)
 
-                finger_id = (label, name)
-                was_pressed = active_finger_presses.get(finger_id, False)
-                is_pressed = is_finger_pressed(label, name, hand_landmarks, tip.y)
+                is_top = zone.name.endswith("+") if zone else False
 
-                if is_pressed:
-                    if not was_pressed:
-                        # The exact moment the finger presses down, lock the note!
-                        locked_finger_zones[finger_id] = current_zone
-                        active_zone = current_zone
-                    else:
-                        # The finger is holding the note. Ignore its current X/Y coordinates
-                        # and force it to use the locked note from memory.
-                        active_zone = locked_finger_zones.get(finger_id, current_zone)
-
-                    if active_zone:
-                        is_top = active_zone.name.endswith("+")
-                        active_zone_names.add(active_zone.name)
+                if zone:
+                    if is_finger_pressed(label, name, hand_landmarks, tip.y):
+                        active_zone_names.add(zone.name)
                         if label == "Right":
-                            (current_right_top_notes if is_top else current_right_bottom_notes)[active_zone.note] = True
+                            (current_right_top_notes if is_top else current_right_bottom_notes)[zone.note] = True
                         else:
-                            (current_left_top_notes if is_top else current_left_bottom_notes)[active_zone.note] = True
-                else:
-                    # Finger lifted, clear the lock so it can press a new key next time
-                    if finger_id in locked_finger_zones:
-                        del locked_finger_zones[finger_id]
+                            (current_left_top_notes if is_top else current_left_bottom_notes)[zone.note] = True
 
     # Determine which notes to turn ON
     right_top_on = [n for n in current_right_top_notes if n not in right_hand_top_notes]
