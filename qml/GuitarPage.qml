@@ -10,22 +10,18 @@ Item {
 
     readonly property bool engineReady: typeof appEngine !== "undefined"
 
-    // ── Neck position state ──────────────────────────────────────────────────
-    property int  neckPosition:   0   // 0 = frets 1–7 · 1 = frets 8–15 · 2 = frets 16–24
-    property int  neckFlashDelta: 0   // +1 = green (thumb up) · -1 = red (thumb down) · 0 = idle
+    property int  neckPosition:   0   
+    property int  neckFlashDelta: 0   
     property bool strumFlash:     false
 
-    // Rising-edge + cooldown state for neck gestures
     property bool prevThumbUp:   false
     property bool prevThumbDown: false
     property bool neckCooldown:  false
 
-    // ── Chord wheel state ────────────────────────────────────────────────────
     property bool sharpsEnabled:        false
-    property int  selectedChordRoot:    -1   // index into roots array, -1 = no chord
-    property int  selectedChordQuality:  0   // index into qualities array
+    property int  selectedChordRoot:    -1   // 0 to 11 globally linked to C++
+    property int  selectedChordQuality:  0   
 
-    // ── Helper functions (identical to KeyboardPage) ─────────────────────────
     function handInsideItem(item, x, y) {
         if (!item || cameraViewport.width <= 0 || cameraViewport.height <= 0)
             return false
@@ -59,7 +55,6 @@ Item {
                 && handInsideItem(item, appEngine.rightHandX, appEngine.rightHandY))
     }
 
-    // ── Timers ───────────────────────────────────────────────────────────────
     Timer {
         id: neckFlashTimer
         interval: 420
@@ -74,7 +69,6 @@ Item {
         onTriggered: root.strumFlash = false
     }
 
-    // Neck cooldown — 700 ms between neck position changes to prevent double-fire
     Timer {
         id: neckCooldownTimer
         interval: 700
@@ -82,8 +76,6 @@ Item {
         onTriggered: root.neckCooldown = false
     }
 
-    // ── Neck gesture detection (rising-edge + cooldown, same pattern as strum) ─
-    // Detection zone = entire right half so the user doesn't need to hit a tiny area.
     Connections {
         target: root.engineReady ? appEngine : null
         function onHandStateChanged() {
@@ -94,12 +86,16 @@ Item {
 
             if (!root.neckCooldown) {
                 if (up && !root.prevThumbUp) {
+                    if (appEngine.adjustGuitarVoicing) appEngine.adjustGuitarVoicing(1)
+                    
                     root.neckPosition   = Math.min(2, root.neckPosition + 1)
                     root.neckFlashDelta = +1
                     neckFlashTimer.restart()
                     root.neckCooldown = true
                     neckCooldownTimer.restart()
                 } else if (down && !root.prevThumbDown) {
+                    if (appEngine.adjustGuitarVoicing) appEngine.adjustGuitarVoicing(-1)
+                    
                     root.neckPosition   = Math.max(0, root.neckPosition - 1)
                     root.neckFlashDelta = -1
                     neckFlashTimer.restart()
@@ -113,7 +109,6 @@ Item {
         }
     }
 
-    // ── Fonts / background ───────────────────────────────────────────────────
     FontLoader {
         id: figTreeVariable
         source: "../assets/fonts/Figtree-VariableFont_wght.ttf"
@@ -124,7 +119,6 @@ Item {
         color: "#101218"
     }
 
-    // ── Camera feed (fills entire area below header, aspect-fit) ─────────────
     Image {
         id: cameraFeed
         anchors.top:    header.bottom
@@ -145,7 +139,6 @@ Item {
         }
     }
 
-    // ── Camera viewport — tracks the actual painted region ───────────────────
     Item {
         id: cameraViewport
         readonly property real contentWidth:  cameraFeed.paintedWidth  > 0 ? cameraFeed.paintedWidth  : cameraFeed.width
@@ -156,137 +149,129 @@ Item {
         height: contentHeight
         z: 5
 
-            // ── Guitar overlay ───────────────────────────────────────────────
-            Item {
-                id: guitarOverlay
-                anchors.fill: parent
+        Item {
+            id: guitarOverlay
+            anchors.fill: parent
 
-                // Left half: chord selector (vertical bar + pop-out semi-circle)
-                ChordSelector {
-                    x:      0
-                    y:      0
-                    width:  parent.width  * 0.50
-                    height: parent.height
+            ChordSelector {
+                x:      0
+                y:      0
+                width:  parent.width  * 0.50
+                height: parent.height
+            }
+
+            Item {
+                id: rightHalf
+                x:      parent.width * 0.50
+                y:      0
+                width:  parent.width  * 0.50
+                height: parent.height
+
+                NeckCounter {
+                    id: neckCounter
+                    anchors.top:        parent.top
+                    anchors.topMargin:  10
+                    anchors.left:       parent.left
+                    anchors.leftMargin: 8
+                    anchors.right:      parent.right
+                    anchors.rightMargin: 8
+                    height: 50
                 }
 
-                // Right half: NeckCounter (top) → FretboardBars → StrumZone (bottom)
                 Item {
-                    id: rightHalf
-                    x:      parent.width * 0.50
-                    y:      0
-                    width:  parent.width  * 0.50
-                    height: parent.height
+                    visible: root.selectedChordRoot >= 0
+                    anchors.top:    fretboardBars.bottom
+                    anchors.bottom: strumZone.top
+                    anchors.left:   parent.left
+                    anchors.right:  parent.right
 
-                    // Neck position counter — compact single-line chip at top
-                    NeckCounter {
-                        id: neckCounter
-                        anchors.top:        parent.top
-                        anchors.topMargin:  10
-                        anchors.left:       parent.left
-                        anchors.leftMargin: 8
-                        anchors.right:      parent.right
-                        anchors.rightMargin: 8
-                        height: 50
-                    }
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width:  chordLabel.implicitWidth + 32
+                        height: chordLabel.implicitHeight + 16
+                        radius: 10
+                        color:        Qt.rgba(0.063, 0.071, 0.094, 0.50)
+                        border.color: Qt.rgba(0.878, 0.471, 0.149, 0.40)
+                        border.width: 1
 
-                    // Chord name — floats in the gap between fretboard and strum zone
-                    Item {
-                        visible: root.selectedChordRoot >= 0
-                        anchors.top:    fretboardBars.bottom
-                        anchors.bottom: strumZone.top
-                        anchors.left:   parent.left
-                        anchors.right:  parent.right
-
-                        Rectangle {
+                        Text {
+                            id: chordLabel
                             anchors.centerIn: parent
-                            width:  chordLabel.implicitWidth + 32
-                            height: chordLabel.implicitHeight + 16
-                            radius: 10
-                            color:        Qt.rgba(0.063, 0.071, 0.094, 0.50)
-                            border.color: Qt.rgba(0.878, 0.471, 0.149, 0.40)
-                            border.width: 1
-
-                            Text {
-                                id: chordLabel
-                                anchors.centerIn: parent
-                                text: root.selectedChordRoot >= 0
-                                      ? (root.sharpsEnabled
-                                         ? ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"][root.selectedChordRoot]
-                                         : ["C","D","E","F","G","A","B"][root.selectedChordRoot])
-                                        + "  "
-                                        + ["Maj","Min","7","Maj7","Min7","Sus2","Sus4","Dim","Aug","min7b5"][root.selectedChordQuality]
-                                      : ""
-                                font.family:    figTreeVariable.name
-                                font.pixelSize: 40
-                                font.weight:    Font.Bold
-                                color:          "#E07826"
-                            }
+                            text: root.selectedChordRoot >= 0
+                                  ? ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"][root.selectedChordRoot]
+                                    + "  "
+                                    + ["Maj","Min","7","Maj7","Min7","Sus2","Sus4"][root.selectedChordQuality]
+                                  : ""
+                            font.family:    figTreeVariable.name
+                            font.pixelSize: 40
+                            font.weight:    Font.Bold
+                            color:          "#E07826"
                         }
                     }
-
-                    // Strum zone — anchored to the bottom
-                    StrumZone {
-                        id: strumZone
-                        anchors.left:   parent.left
-                        anchors.right:  parent.right
-                        anchors.rightMargin: 20
-                        anchors.bottom: parent.bottom
-                        anchors.bottomMargin: 30
-                        height: parent.height * 0.45
-                    }
-
-                    // Fretboard — sits just below the neck counter chip
-                    FretboardBars {
-                        id: fretboardBars
-                        anchors.left:       parent.left
-                        anchors.leftMargin: 6
-                        anchors.right:      parent.right
-                        anchors.rightMargin: 6
-                        anchors.top:        neckCounter.bottom
-                        anchors.topMargin:  8
-                        height: width * (370.0 / 2090.0)
-                    }
                 }
-            }
 
-            // ── Hand position dots ────────────────────────────────────────────
-            Rectangle {
-                visible: root.engineReady && appEngine.leftHandVisible
-                width: 28; height: 28; radius: 14
-                color:        root.engineReady && appEngine.leftPinch ? "#e07826" : "#deab84"
-                border.color: "#FFFFFF"
-                border.width: 2
-                x: root.engineReady ? appEngine.leftHandX  * cameraViewport.width  - 14 : 0
-                y: root.engineReady ? appEngine.leftHandY  * cameraViewport.height - 14 : 0
-                z: 10
-            }
+                StrumZone {
+                    id: strumZone
+                    anchors.left:   parent.left
+                    anchors.right:  parent.right
+                    anchors.rightMargin: 20
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 30
+                    height: parent.height * 0.45
+                }
 
-            Rectangle {
-                visible: root.engineReady && appEngine.rightHandVisible
-                width: 28; height: 28; radius: 14
-                color:        root.engineReady && appEngine.rightPinch ? "#e07826" : "#deab84"
-                border.color: "#FFFFFF"
-                border.width: 2
-                x: root.engineReady ? appEngine.rightHandX * cameraViewport.width  - 14 : 0
-                y: root.engineReady ? appEngine.rightHandY * cameraViewport.height - 14 : 0
-                z: 10
+                FretboardBars {
+                    id: fretboardBars
+                    anchors.left:       parent.left
+                    anchors.leftMargin: 6
+                    anchors.right:      parent.right
+                    anchors.rightMargin: 6
+                    anchors.top:        neckCounter.bottom
+                    anchors.topMargin:  8
+                    height: width * (370.0 / 2090.0)
+                }
             }
         }
 
-    // ── Inline component: StrumZone ──────────────────────────────────────────
-    // Pinch (either hand) inside the zone → rising edge triggers strum.
-    // Guitar image is bottom-aligned and fills the entire zone.
+        Rectangle {
+            visible: root.engineReady && appEngine.leftHandVisible
+            width: 28; height: 28; radius: 14
+            color:        root.engineReady && appEngine.leftPinch ? "#e07826" : "#deab84"
+            border.color: "#FFFFFF"
+            border.width: 2
+            x: root.engineReady ? appEngine.leftHandX  * cameraViewport.width  - 14 : 0
+            y: root.engineReady ? appEngine.leftHandY  * cameraViewport.height - 14 : 0
+            z: 10
+        }
+
+        Rectangle {
+            visible: root.engineReady && appEngine.rightHandVisible
+            width: 28; height: 28; radius: 14
+            color:        root.engineReady && appEngine.rightPinch ? "#e07826" : "#deab84"
+            border.color: "#FFFFFF"
+            border.width: 2
+            x: root.engineReady ? appEngine.rightHandX * cameraViewport.width  - 14 : 0
+            y: root.engineReady ? appEngine.rightHandY * cameraViewport.height - 14 : 0
+            z: 10
+        }
+    }
+
     component StrumZone: Item {
         id: sz
 
-        property bool prevLeftPinch:  false
-        property bool prevRightPinch: false
-        property bool strumCooldown:  false
-        property bool canStrum:       true
+        property real rightStrumAnchorY: -1
+        property int  rightStrumDirection: 0
+        property real prevRightY: -1
+
+        property real leftStrumAnchorY: -1
+        property int  leftStrumDirection: 0
+        property real prevLeftY: -1
+
+        property bool strumCooldown: false
 
         Timer {
             id: strumCooldownTimer
-            interval: 350   // ms before another strum can fire
+            interval: 180 
             repeat:   false
             onTriggered: sz.strumCooldown = false
         }
@@ -296,43 +281,88 @@ Item {
             function onHandStateChanged() {
                 if (!root.engineReady) return
 
+                const threshold = sz.height * 0.20 
+
                 const rightHandInZone = root.rightHandInside(sz)
-
-                if (!rightHandInZone) {
-                    sz.canStrum = true
-                }
-
                 const rPinch = appEngine.rightPinch && rightHandInZone
 
-                // Rising edge + cooldown + canStrum state → fire strum
-                if (!sz.strumCooldown && sz.canStrum) {
-                    if (rPinch && !sz.prevRightPinch) {
-                        appEngine.triggerGuitarStrum(100)
-                        root.strumFlash = true
-                        strumFlashTimer.restart()
-                        sz.strumCooldown = true
-                        strumCooldownTimer.restart()
-                        sz.canStrum = false // Strum used, must exit and re-enter
-                    }
-                }
-                sz.prevRightPinch = rPinch
+                if (rPinch) {
+                    const localRPt = sz.mapFromItem(cameraViewport, appEngine.rightHandX * cameraViewport.width, appEngine.rightHandY * cameraViewport.height)
+                    const currentY = localRPt.y
 
-                // Allow left-hand pinch to work as before, if needed.
-                const lPinch = appEngine.leftPinch && root.leftHandInside(sz)
-                if (!sz.strumCooldown) {
-                    if (lPinch && !sz.prevLeftPinch) {
-                        appEngine.triggerGuitarStrum(100)
-                        root.strumFlash = true
-                        strumFlashTimer.restart()
-                        sz.strumCooldown = true
-                        strumCooldownTimer.restart()
+                    if (sz.rightStrumAnchorY === -1 || sz.prevRightY === -1) {
+                        sz.rightStrumAnchorY = currentY
+                        sz.rightStrumDirection = 0
+                    } else {
+                        if (sz.rightStrumDirection === 1 && currentY < sz.prevRightY) {
+                            sz.rightStrumAnchorY = sz.prevRightY
+                            sz.rightStrumDirection = -1
+                        } else if (sz.rightStrumDirection === -1 && currentY > sz.prevRightY) {
+                            sz.rightStrumAnchorY = sz.prevRightY
+                            sz.rightStrumDirection = 1
+                        } else if (sz.rightStrumDirection === 0) {
+                            sz.rightStrumDirection = currentY > sz.prevRightY ? 1 : -1
+                        }
+
+                        if (Math.abs(currentY - sz.rightStrumAnchorY) > threshold) {
+                            if (!sz.strumCooldown && root.selectedChordRoot >= 0) {
+                                appEngine.triggerGuitarStrum(100)
+                                root.strumFlash = true
+                                strumFlashTimer.restart()
+                                sz.strumCooldown = true
+                                strumCooldownTimer.restart()
+                            }
+                            sz.rightStrumAnchorY = currentY 
+                        }
                     }
+                    sz.prevRightY = currentY
+                } else {
+                    sz.rightStrumAnchorY = -1
+                    sz.rightStrumDirection = 0
+                    sz.prevRightY = -1
                 }
-                sz.prevLeftPinch = lPinch
+
+                const leftHandInZone = root.leftHandInside(sz)
+                const lPinch = appEngine.leftPinch && leftHandInZone
+
+                if (lPinch) {
+                    const localLPt = sz.mapFromItem(cameraViewport, appEngine.leftHandX * cameraViewport.width, appEngine.leftHandY * cameraViewport.height)
+                    const currentY = localLPt.y
+
+                    if (sz.leftStrumAnchorY === -1 || sz.prevLeftY === -1) {
+                        sz.leftStrumAnchorY = currentY
+                        sz.leftStrumDirection = 0
+                    } else {
+                        if (sz.leftStrumDirection === 1 && currentY < sz.prevLeftY) {
+                            sz.leftStrumAnchorY = sz.prevLeftY
+                            sz.leftStrumDirection = -1
+                        } else if (sz.leftStrumDirection === -1 && currentY > sz.prevLeftY) {
+                            sz.leftStrumAnchorY = sz.prevLeftY
+                            sz.leftStrumDirection = 1
+                        } else if (sz.leftStrumDirection === 0) {
+                            sz.leftStrumDirection = currentY > sz.prevLeftY ? 1 : -1
+                        }
+
+                        if (Math.abs(currentY - sz.leftStrumAnchorY) > threshold) {
+                            if (!sz.strumCooldown && root.selectedChordRoot >= 0) {
+                                appEngine.triggerGuitarStrum(100)
+                                root.strumFlash = true
+                                strumFlashTimer.restart()
+                                sz.strumCooldown = true
+                                strumCooldownTimer.restart()
+                            }
+                            sz.leftStrumAnchorY = currentY
+                        }
+                    }
+                    sz.prevLeftY = currentY
+                } else {
+                    sz.leftStrumAnchorY = -1
+                    sz.leftStrumDirection = 0
+                    sz.prevLeftY = -1
+                }
             }
         }
 
-        // Zone border — flashes orange on strum, very subtle at rest
         Rectangle {
             anchors.fill: parent
             color: root.strumFlash
@@ -348,7 +378,6 @@ Item {
             Behavior on border.color { ColorAnimation { duration: 120 } }
         }
 
-        // Drawn guitar — horizontal orientation (rotated 90°), strings + sound hole only
         Canvas {
             id: guitarCanvas
             anchors.fill: parent
@@ -364,7 +393,6 @@ Item {
                 var bodyLeft  = W * 0.02
                 var bodyRight = W * 0.98
 
-                // ── Sound hole rosette ─────────────────────────────────────
                 var shCX = W * 0.62
                 var shR  = Math.min(W * 0.26, H * 0.44)
 
@@ -380,29 +408,24 @@ Item {
                 ctx.lineWidth   = 1.5
                 ctx.beginPath(); ctx.arc(shCX, cy, shR + 4,  0, Math.PI * 2); ctx.stroke()
 
-                // Sound hole fill
                 ctx.fillStyle = "#040305"
                 ctx.beginPath(); ctx.arc(shCX, cy, shR, 0, Math.PI * 2); ctx.fill()
 
-                // Sound hole rim
                 ctx.strokeStyle = "rgba(224,120,38,0.60)"
                 ctx.lineWidth   = 1.5
                 ctx.beginPath(); ctx.arc(shCX, cy, shR, 0, Math.PI * 2); ctx.stroke()
 
-                // ── Saddle (left side — string anchor) ────────────────────
                 var saddleX = W * 0.10
                 var saddleH = H * 0.60
                 ctx.fillStyle = "rgba(205,215,228,0.55)"
                 ctx.fillRect(saddleX - 1.5, cy - saddleH * 0.5, 3, saddleH)
 
-                // ── Strings (horizontal, left to right) ───────────────────
                 var numStrings = 6
                 var strSpacing = H * 0.11
                 var s0y        = cy - (numStrings - 1) * strSpacing * 0.5
 
                 for (var s = 0; s < numStrings; s++) {
                     var sy = s0y + s * strSpacing
-                    // String 0 = high E (thinnest), string 5 = low E (thickest)
                     ctx.strokeStyle = "rgba(195,208,224,0.65)"
                     ctx.lineWidth   = 1.8 + s * 0.45
                     ctx.beginPath()
@@ -414,9 +437,6 @@ Item {
         }
     }
 
-    // ── Inline component: NeckCounter ────────────────────────────────────────
-    // Compact single-line chip showing the current fret range.
-    // Flashes green (thumb up) or red (thumb down). Detection covers entire rightHalf.
     component NeckCounter: Item {
         id: nc
 
@@ -470,9 +490,6 @@ Item {
         }
     }
 
-    // ── Inline component: FretboardBars ──────────────────────────────────────
-    // Drawn fretboard: equal-temperament fret spacing, 6 strings, position dots.
-    // Zones 0/1/2 (frets 1–7 / 8–15 / 16–24) highlighted in orange.
     component FretboardBars: Item {
         id: fb
 
@@ -480,7 +497,6 @@ Item {
             id: fbCanvas
             anchors.fill: parent
 
-            // Reactive mirror — any change triggers repaint
             property int  pNeckPos: root.neckPosition
             property int  pFlash:   root.neckFlashDelta
             onPNeckPosChanged: requestPaint()
@@ -497,21 +513,16 @@ Item {
                 var numFrets   = 24
                 var numStrings = 6
 
-                // Equal-temperament fret positions, normalised to [0, W]
-                // pos(n) = distance from nut to fret n
-                var scale24 = 1.0 - Math.pow(0.5, 24.0 / 12.0)   // ≈ 0.75
+                var scale24 = 1.0 - Math.pow(0.5, 24.0 / 12.0)
                 function fretX(n) {
                     return (1.0 - Math.pow(0.5, n / 12.0)) / scale24 * W
                 }
 
-                // Zone boundaries (fret indices that delimit each zone)
                 var zoneBounds = [[0, 7], [7, 15], [15, 24]]
 
-                // ── Background ───────────────────────────────────────────
                 ctx.fillStyle = "rgba(14,16,22,0.92)"
                 ctx.fillRect(0, 0, W, H)
 
-                // ── Zone highlights ───────────────────────────────────────
                 for (var z = 0; z < 3; z++) {
                     var x1 = fretX(zoneBounds[z][0])
                     var x2 = fretX(zoneBounds[z][1])
@@ -524,11 +535,9 @@ Item {
                     }
                 }
 
-                // ── Fret lines ────────────────────────────────────────────
                 for (var f = 0; f <= numFrets; f++) {
                     var fx = fretX(f)
                     if (f === 0) {
-                        // Nut — thick, bright
                         ctx.strokeStyle = "rgba(200,212,230,0.90)"
                         ctx.lineWidth   = 3
                     } else {
@@ -541,7 +550,6 @@ Item {
                     ctx.stroke()
                 }
 
-                // ── Strings ───────────────────────────────────────────────
                 var strPad = H * 0.14
                 for (var s = 0; s < numStrings; s++) {
                     var sy = strPad + (s / (numStrings - 1)) * (H - 2 * strPad)
@@ -553,7 +561,6 @@ Item {
                     ctx.stroke()
                 }
 
-                // ── Outer border ──────────────────────────────────────────
                 ctx.strokeStyle = "rgba(255,255,255,0.08)"
                 ctx.lineWidth   = 1
                 ctx.strokeRect(0.5, 0.5, W - 1, H - 1)
@@ -561,42 +568,35 @@ Item {
         }
     }
 
-    // ── Inline component: ChordSelector ──────────────────────────────────────
-    // Narrow root column sits toward the centre of the left half (not at the
-    // far-left edge).  Pinch + hold on a root locks it and a left-facing
-    // semicircle fans open to the left — staying entirely within the left half
-    // and never crossing the centre line.  Moving the hand around the arc
-    // sweeps through qualities; releasing commits the chord.
     component ChordSelector: Item {
         id: cs
 
-        // ── Data ──────────────────────────────────────────────────────────
         readonly property var naturalRoots: ["C","D","E","F","G","A","B"]
+        readonly property var naturalIndices: [0, 2, 4, 5, 7, 9, 11]
+        
         readonly property var sharpRoots:   ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"]
-        readonly property var roots:     root.sharpsEnabled ? sharpRoots : naturalRoots
-        readonly property int numRoots:  roots.length
+        readonly property var sharpIndices: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+
+        // --- MAP THE CORRECT ARRAYS TO THE TOGGLE ---
+        readonly property var roots:       root.sharpsEnabled ? sharpRoots : naturalRoots
+        readonly property var rootIndices: root.sharpsEnabled ? sharpIndices : naturalIndices
+        readonly property int numRoots:    roots.length
+
         readonly property var qualities: ["Maj","Min","7","Maj7","Min7","Sus2","Sus4"]
         readonly property int numQ:      7
 
-        // ── Geometry ──────────────────────────────────────────────────────
-        // Column hugs the left edge; semicircle fans RIGHT from the column's
-        // right edge and is capped so it never crosses the half-line (cs.width).
-        readonly property real colX:   width * 0.08   // left edge of root column
-        readonly property real colW:   width * 0.18   // column width
-        readonly property real semiCX: colX + colW    // semicircle centre X (right edge of column)
-        readonly property real semiCY: height * 0.50  // semicircle always vertically centred
+        readonly property real colX:   width * 0.08   
+        readonly property real colW:   width * 0.18   
+        readonly property real semiCX: colX + colW    
+        readonly property real semiCY: height * 0.50  
         readonly property real rowH:   height / numRoots
-        // semiR: fills as much of the remaining left half as possible
         readonly property real semiR:  Math.min((width - semiCX) * 0.92, height * 0.46)
         readonly property real innerR: semiR * 0.28
 
-        // ── Interaction state ─────────────────────────────────────────────
         property int  hovRoot:     -1
-        property int  dragQuality:  0
         property bool dragging:    false
         property bool prevLPinch:  false
 
-        // ── Helpers ───────────────────────────────────────────────────────
         function localPt(nx, ny) {
             return cs.mapFromItem(cameraViewport,
                                   nx * cameraViewport.width,
@@ -604,27 +604,22 @@ Item {
         }
 
         function rootAtY(py) {
-            return Math.max(0, Math.min(cs.numRoots - 1,
-                            Math.floor(py / cs.height * cs.numRoots)))
+            return Math.max(0, Math.min(cs.numRoots - 1, Math.floor(py / cs.height * cs.numRoots)))
         }
 
-        // Map an angle in the RIGHT semicircle to a quality index.
-        // Right semicircle spans -π/2 (top) to +π/2 (bottom) via 0 (right).
-        // atan2 returns values directly in that range when dx >= 0.
         function qualityFromAngle(dx, dy) {
-            var angle = Math.atan2(dy, dx)                 // in [-π/2, +π/2] for right half
-            var norm  = (angle + Math.PI / 2) / Math.PI   // 0 (top) → 1 (bottom)
+            var angle = Math.atan2(dy, dx)
+            var norm  = (angle + Math.PI / 2) / Math.PI
             return Math.max(0, Math.min(cs.numQ - 1, Math.floor(norm * cs.numQ)))
         }
 
-        // ── Input ─────────────────────────────────────────────────────────
         Connections {
             target: root.engineReady ? appEngine : null
 
             function onHandStateChanged() {
                 if (!root.engineReady || !appEngine.leftHandVisible) {
                     if (cs.dragging) {
-                        root.selectedChordQuality = cs.dragQuality
+                        root.selectedChordRoot = -1
                         cs.dragging = false
                     }
                     cs.hovRoot    = -1
@@ -637,35 +632,43 @@ Item {
 
                 if (cs.dragging) {
                     if (lp) {
-                        // While pinching: update quality from position in semicircle
                         if (root.selectedChordRoot >= 0) {
                             var dx   = pt.x - cs.semiCX
                             var dy   = pt.y - cs.semiCY
-                            var dist = Math.sqrt(dx * dx + dy * dy)
-                            // Only update when hand is inside the right-facing arc
-                            if (dx >= 0 && dist >= cs.innerR && dist <= cs.semiR)
-                                cs.dragQuality = cs.qualityFromAngle(dx, dy)
+                            
+                            // THE FIX: We completely removed the strict distance requirements! 
+                            // As long as you are basically on the right half of the wheel, it instantly snaps to the quality!
+                            if (dx >= -(cs.colW)) {
+                                var newQuality = cs.qualityFromAngle(dx, dy)
+                                if (root.selectedChordQuality !== newQuality) {
+                                    root.selectedChordQuality = newQuality
+                                    
+                                    if (appEngine.setGuitarChord) {
+                                        appEngine.setGuitarChord(root.selectedChordRoot, newQuality)
+                                    }
+                                }
+                            }
                         }
                     } else {
-                        // Pinch released — commit
-                        root.selectedChordQuality = cs.dragQuality
+                        root.selectedChordRoot = -1
                         cs.dragging = false
                     }
                 } else {
-                    // Hover on root column
-                    var inCol = pt.x >= cs.colX && pt.x <= cs.colX + cs.colW &&
-                                pt.y >= 0 && pt.y <= cs.height
+                    var inCol = pt.x >= cs.colX && pt.x <= cs.colX + cs.colW && pt.y >= 0 && pt.y <= cs.height
                     cs.hovRoot = inCol ? cs.rootAtY(pt.y) : -1
 
-                    // Rising-edge pinch on column → lock root, open semicircle
                     if (lp && !cs.prevLPinch && inCol) {
                         var ri = cs.rootAtY(pt.y)
-                        if (root.selectedChordRoot === ri) {
-                            root.selectedChordRoot = -1   // tap same root = deselect
-                        } else {
-                            root.selectedChordRoot = ri
-                            cs.dragQuality = root.selectedChordQuality
-                            cs.dragging    = true
+                        
+                        // Map the visual column row perfectly to the global C++ Index (0 through 11)
+                        var actualRootIndex = cs.rootIndices[ri]
+                        
+                        root.selectedChordRoot = actualRootIndex
+                        root.selectedChordQuality = 0 
+                        cs.dragging = true
+                        
+                        if (appEngine.setGuitarChord) {
+                            appEngine.setGuitarChord(actualRootIndex, 0)
                         }
                     }
                 }
@@ -674,7 +677,6 @@ Item {
             }
         }
 
-        // ── Canvas ────────────────────────────────────────────────────────
         Canvas {
             id: csCanvas
             anchors.fill: parent
@@ -682,7 +684,6 @@ Item {
             property int    pSelRoot:   root.selectedChordRoot
             property int    pSelQual:   root.selectedChordQuality
             property int    pHovRoot:   cs.hovRoot
-            property int    pDragQual:  cs.dragQuality
             property bool   pDragging:  cs.dragging
             property int    pNumRoots:  cs.numRoots
             property bool   pSharps:    root.sharpsEnabled
@@ -691,7 +692,6 @@ Item {
             onPSelRootChanged:  requestPaint()
             onPSelQualChanged:  requestPaint()
             onPHovRootChanged:  requestPaint()
-            onPDragQualChanged: requestPaint()
             onPDraggingChanged: requestPaint()
             onPNumRootsChanged: requestPaint()
             onPSharpsChanged:   requestPaint()
@@ -711,16 +711,13 @@ Item {
                 var sR     = root.selectedChordRoot
                 var sQ     = root.selectedChordQuality
                 var hR     = cs.hovRoot
-                var dQ     = cs.dragQuality
                 var isDrag = cs.dragging
                 var pad    = 3
 
-                // ── Right-facing semicircle (drawn behind column) ─────────
-                var scX = cs.semiCX   // static: right edge of column
-                var scY = cs.semiCY   // static: vertical centre
+                var scX = cs.semiCX  
+                var scY = cs.semiCY  
 
                 if (sR >= 0) {
-                    // Backdrop: right-facing pie slice
                     ctx.beginPath()
                     ctx.moveTo(scX, scY)
                     ctx.arc(scX, scY, semiR, -Math.PI / 2, Math.PI / 2, false)
@@ -728,40 +725,34 @@ Item {
                     ctx.fillStyle = "rgba(8,10,16,0.72)"
                     ctx.fill()
 
-                    // Quality segments — annular sectors from -π/2 (top) to +π/2 (bottom)
                     for (var q = 0; q < nQ; q++) {
                         var startA  = -Math.PI / 2 + (q / nQ) * Math.PI
                         var endA    = -Math.PI / 2 + ((q + 1) / nQ) * Math.PI
-                        var isSelQ  = (q === sQ) && !isDrag
-                        var isDragQ = isDrag && (q === dQ)
+                        var isSelQ  = (q === sQ)
 
                         ctx.beginPath()
                         ctx.arc(scX, scY, semiR - 1, startA, endA)
                         ctx.arc(scX, scY, innerR + 1, endA, startA, true)
                         ctx.closePath()
 
-                        ctx.fillStyle   = isDragQ ? "rgba(224,120,38,0.88)"
-                                        : isSelQ  ? "rgba(224,120,38,0.60)"
-                                        : "rgba(20,24,34,0.80)"
+                        ctx.fillStyle   = isSelQ ? "rgba(224,120,38,0.88)" : "rgba(20,24,34,0.80)"
                         ctx.fill()
-                        ctx.strokeStyle = (isDragQ || isSelQ) ? "#E07826" : "rgba(255,255,255,0.08)"
-                        ctx.lineWidth   = (isDragQ || isSelQ) ? 2 : 1
+                        ctx.strokeStyle = isSelQ ? "#E07826" : "rgba(255,255,255,0.08)"
+                        ctx.lineWidth   = isSelQ ? 2 : 1
                         ctx.stroke()
 
-                        // Quality label at arc midpoint
                         var midA   = (startA + endA) / 2
                         var labelR = (semiR + innerR) / 2
                         var lx = scX + Math.cos(midA) * labelR
                         var ly = scY + Math.sin(midA) * labelR
                         var qfs = Math.max(9, Math.min(15, (semiR - innerR) * 0.24))
-                        ctx.font         = ((isDragQ || isSelQ) ? "700 " : "500 ") + qfs + "px '" + csCanvas.pFont + "'"
+                        ctx.font         = (isSelQ ? "700 " : "500 ") + qfs + "px '" + csCanvas.pFont + "'"
                         ctx.textAlign    = "center"
                         ctx.textBaseline = "middle"
-                        ctx.fillStyle    = (isDragQ || isSelQ) ? "#FFFFFF" : "rgba(190,202,218,0.80)"
+                        ctx.fillStyle    = isSelQ ? "#FFFFFF" : "rgba(190,202,218,0.80)"
                         ctx.fillText(cs.qualities[q], lx, ly)
                     }
 
-                    // Donut hole — right half only, so it doesn't bleed into the column
                     ctx.beginPath()
                     ctx.moveTo(scX, scY)
                     ctx.arc(scX, scY, innerR, -Math.PI / 2, Math.PI / 2, false)
@@ -769,7 +760,6 @@ Item {
                     ctx.fillStyle = "rgba(10,12,18,0.92)"
                     ctx.fill()
 
-                    // Dashed connector rightward from column edge to inner radius
                     ctx.strokeStyle = "#E07826"
                     ctx.lineWidth   = 1.5
                     ctx.setLineDash([4, 4])
@@ -780,10 +770,11 @@ Item {
                     ctx.setLineDash([])
                 }
 
-                // ── Root column (drawn on top of semicircle) ──────────────
                 for (var i = 0; i < n; i++) {
                     var ry    = i * rowH
-                    var isSel = (i === sR)
+                    
+                    // The visual row must check against the absolute C++ mapped index
+                    var isSel = (cs.rootIndices[i] === sR)
                     var isHov = (i === hR)
 
                     ctx.fillStyle = isSel ? "rgba(224,120,38,0.88)"
@@ -806,10 +797,8 @@ Item {
                 }
             }
         }
-
     }
 
-    // ── Header ───────────────────────────────────────────────────────────────
     Item {
         id: header
         anchors.top:   parent.top
@@ -899,7 +888,6 @@ Item {
         }
     }
 
-    // ── Settings overlay backdrop ────────────────────────────────────────────
     MouseArea {
         anchors.top:    header.bottom
         anchors.left:   parent.left
@@ -910,7 +898,6 @@ Item {
         z: 20
     }
 
-    // ── Settings panel ───────────────────────────────────────────────────────
     SettingsPanel {
         id: settingsPanel
         title: "Guitar Settings"
@@ -927,6 +914,7 @@ Item {
             font.weight: Font.DemiBold; font.letterSpacing: 1.5; color: "#E07826"
         }
 
+        // --- RESTORED: The settings toggle to show 12 roots instead of 7! ---
         SettingsToggle {
             label:   "Show Sharps / Flats"
             checked: root.sharpsEnabled
