@@ -94,12 +94,16 @@ Item {
 
             if (!root.neckCooldown) {
                 if (up && !root.prevThumbUp) {
+                    if (root.engineReady) appEngine.adjustGuitarVoicing(1) // <-- ADD THIS
+                    
                     root.neckPosition   = Math.min(2, root.neckPosition + 1)
                     root.neckFlashDelta = +1
                     neckFlashTimer.restart()
                     root.neckCooldown = true
                     neckCooldownTimer.restart()
                 } else if (down && !root.prevThumbDown) {
+                    if (root.engineReady) appEngine.adjustGuitarVoicing(-1) // <-- ADD THIS
+                    
                     root.neckPosition   = Math.max(0, root.neckPosition - 1)
                     root.neckFlashDelta = -1
                     neckFlashTimer.restart()
@@ -644,19 +648,24 @@ Item {
                 var lp = appEngine.leftPinch  && active
                 var rp = appEngine.rightPinch && active
 
+                // --- THIS IS THE EXACT BLOCK YOU REPLACE ---
                 if ((lp && !cs.prevLPinch) || (rp && !cs.prevRPinch)) {
                     if (hit.zone === "bar") {
                         // Toggle root selection
-                        if (root.selectedChordRoot === hit.index)
+                        if (root.selectedChordRoot === hit.index) {
                             root.selectedChordRoot = -1
-                        else {
+                            if (root.engineReady) appEngine.setGuitarChord(-1, 0) // <-- ADD THIS
+                        } else {
                             root.selectedChordRoot    = hit.index
                             root.selectedChordQuality = 0
+                            if (root.engineReady) appEngine.setGuitarChord(hit.index, 0) // <-- ADD THIS
                         }
                     } else if (hit.zone === "semi") {
                         root.selectedChordQuality = hit.index
+                        if (root.engineReady) appEngine.setGuitarChord(root.selectedChordRoot, hit.index) // <-- ADD THIS
                     }
                 }
+                // -------------------------------------------
 
                 cs.prevLPinch = lp
                 cs.prevRPinch = rp

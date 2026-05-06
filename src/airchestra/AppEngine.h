@@ -84,6 +84,9 @@ public:
     Q_INVOKABLE void setGuitarSound(int soundID);
     Q_INVOKABLE void triggerGuitarStrum(int velocity);
 
+    Q_INVOKABLE void setGuitarChord(int rootIndex, int qualityIndex);
+    Q_INVOKABLE void adjustGuitarVoicing(int delta);
+
     bool guitarNeckUp()   const { return m_guitarNeckUp;   }
     bool guitarNeckDown() const { return m_guitarNeckDown; }
     bool guitarStrumHit() const { return m_guitarStrumHit; }

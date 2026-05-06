@@ -52,7 +52,11 @@ enum class GuitarChordQuality {
    Maj7 = 3,
    Min7 = 4,
    Sus2 = 5,
-   Sus4 = 6
+   Sus4 = 6,
+   Diminished = 7, 
+   Min7b5 = 8,    
+   Augmented = 9
+   
 };
 
 class GlobalState {
@@ -110,6 +114,7 @@ public:
    std::atomic<GuitarStrumDirection> guitarStrumDirection { GuitarStrumDirection::Down };
    std::atomic<GuitarChordRoot> currentGuitarRoot { GuitarChordRoot::C };
    std::atomic<GuitarChordQuality> currentGuitarQuality { GuitarChordQuality::Major };
+   std::atomic<int> currentGuitarVoicing { 0 };
    std::atomic<int> guitarVelocity { 100 };
    std::atomic<bool> guitarNeckUp   { false };
    std::atomic<bool> guitarNeckDown { false };

@@ -560,6 +560,26 @@ void AppEngine::triggerGuitarStrum(int velocity) {
     globalState->guitarStrumHit.store(true);
 }
 
+void AppEngine::setGuitarChord(int rootIndex, int qualityIndex) {
+    if (globalState) {
+        globalState->currentGuitarRoot.store(static_cast<GuitarChordRoot>(rootIndex));
+        globalState->currentGuitarQuality.store(static_cast<GuitarChordQuality>(qualityIndex));
+    }
+}
+
+void AppEngine::adjustGuitarVoicing(int delta) {
+    if (globalState && delta != 0) {
+        int current = globalState->currentGuitarVoicing.load();
+        
+        // Lock the voicing between 0 (Open) and 2 (High Frets)
+        int next = qBound(0, current + delta, 2); 
+        
+        if (next != current) {
+            globalState->currentGuitarVoicing.store(next);
+        }
+    }
+}
+
 // --- ADDED SETTER IMPLEMENTATIONS for Theremin Jingle ---
 void AppEngine::setRightHandVisible(bool visible) {
     if (globalState) {
