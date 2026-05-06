@@ -199,30 +199,40 @@ Item {
 
                 Timer {
                     id: thereminJingleTimer
-                    interval: 200
+                    interval: 120
                     repeat: true
                     property int step: 0
+                    readonly property var aPath: [
+                        { x: 0.36, y: 0.82 }, // left foot
+                        { x: 0.42, y: 0.64 },
+                        { x: 0.47, y: 0.44 },
+                        { x: 0.50, y: 0.24 }, // apex
+                        { x: 0.53, y: 0.44 },
+                        { x: 0.58, y: 0.64 },
+                        { x: 0.64, y: 0.82 }, // right foot
+                        { x: 0.44, y: 0.54 }, // crossbar start
+                        { x: 0.56, y: 0.54 }  // crossbar end
+                    ]
                     onTriggered: {
                         if (step === 0) {
                             appEngine.setRightHandVisible(true);
                             appEngine.setLeftHandVisible(true);
+                            appEngine.setLeftHandY(0.32);
+                        }
 
-                            appEngine.setRightHandX(0.3); // Play a note
-                            appEngine.setLeftHandY(0.5);
-                            
-                        } else if (step === 1) {
-                           appEngine.setRightHandX(0.5); // Play another note
-                        } else if (step === 2) {
-                            appEngine.setRightHandX(0.7); // And another
+                        if (step < aPath.length) {
+                            const point = aPath[step]
+                            appEngine.setRightHandX(point.x);
+                            appEngine.setRightHandY(point.y);
                         } else {
                             appEngine.setRightHandVisible(false); // Stop sound
                             appEngine.setLeftHandVisible(false)
 
                             appEngine.setRightHandX(0.0);
+                            appEngine.setRightHandY(0.0);
                             appEngine.setLeftHandY(0.0);
 
                             stop();
-                            // No need to reset step here anymore
                         }
                         step++;
                     }

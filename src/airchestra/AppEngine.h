@@ -92,6 +92,7 @@ public:
     Q_INVOKABLE void setRightHandVisible(bool visible);
     Q_INVOKABLE void setLeftHandVisible(bool visible);
     Q_INVOKABLE void setRightHandX(qreal x);
+    Q_INVOKABLE void setRightHandY(qreal y);
     Q_INVOKABLE void setLeftHandY(qreal y);
     // ---------------------
 
