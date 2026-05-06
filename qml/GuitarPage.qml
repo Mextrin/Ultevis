@@ -232,7 +232,7 @@ Item {
                         anchors.rightMargin: 20
                         anchors.bottom: parent.bottom
                         anchors.bottomMargin: 30
-                        height: parent.height * 0.25
+                        height: parent.height * 0.45
                     }
 
                     // Fretboard — sits just below the neck counter chip
@@ -366,19 +366,19 @@ Item {
 
                 // ── Sound hole rosette ─────────────────────────────────────
                 var shCX = W * 0.62
-                var shR  = Math.min(W * 0.18, H * 0.44)
+                var shR  = Math.min(W * 0.26, H * 0.44)
 
                 ctx.strokeStyle = "rgba(255,255,255,0.04)"
                 ctx.lineWidth   = 1
-                ctx.beginPath(); ctx.arc(shCX, cy, shR + 10, 0, Math.PI * 2); ctx.stroke()
+                ctx.beginPath(); ctx.arc(shCX, cy, shR + 14, 0, Math.PI * 2); ctx.stroke()
 
                 ctx.strokeStyle = "rgba(224,120,38,0.18)"
                 ctx.lineWidth   = 1
-                ctx.beginPath(); ctx.arc(shCX, cy, shR + 7,  0, Math.PI * 2); ctx.stroke()
+                ctx.beginPath(); ctx.arc(shCX, cy, shR + 10, 0, Math.PI * 2); ctx.stroke()
 
                 ctx.strokeStyle = "rgba(224,120,38,0.40)"
                 ctx.lineWidth   = 1.5
-                ctx.beginPath(); ctx.arc(shCX, cy, shR + 3,  0, Math.PI * 2); ctx.stroke()
+                ctx.beginPath(); ctx.arc(shCX, cy, shR + 4,  0, Math.PI * 2); ctx.stroke()
 
                 // Sound hole fill
                 ctx.fillStyle = "#040305"
@@ -391,13 +391,13 @@ Item {
 
                 // ── Saddle (left side — string anchor) ────────────────────
                 var saddleX = W * 0.10
-                var saddleH = H * 0.38
+                var saddleH = H * 0.60
                 ctx.fillStyle = "rgba(205,215,228,0.55)"
                 ctx.fillRect(saddleX - 1.5, cy - saddleH * 0.5, 3, saddleH)
 
                 // ── Strings (horizontal, left to right) ───────────────────
                 var numStrings = 6
-                var strSpacing = H * 0.072
+                var strSpacing = H * 0.11
                 var s0y        = cy - (numStrings - 1) * strSpacing * 0.5
 
                 for (var s = 0; s < numStrings; s++) {
@@ -561,16 +561,12 @@ Item {
         }
     }
 
-    // ── Inline component: ChordWheel ─────────────────────────────────────────
-    // Two-level selection:
-    //   1. Pinch outer ring  → select root (C, D# …)
-    //   2. Pinch inner ring  → select quality (Maj, Min, 7 …)
-    //   3. Pinch centre      → clear selection (no chord)
-    // Sharps mode (toggle in settings) swaps 7 natural roots for all 12.
     // ── Inline component: ChordSelector ──────────────────────────────────────
-    // Left side: vertical bar of root notes (A–G or chromatic with sharps).
-    // Pinch a root → semi-circle fans out to the RIGHT showing chord qualities.
-    // Pinch a quality → chord locked in. Pinch root again → deselect.
+    // Narrow root column sits toward the centre of the left half (not at the
+    // far-left edge).  Pinch + hold on a root locks it and a left-facing
+    // semicircle fans open to the left — staying entirely within the left half
+    // and never crossing the centre line.  Moving the hand around the arc
+    // sweeps through qualities; releasing commits the chord.
     component ChordSelector: Item {
         id: cs
 
@@ -583,85 +579,98 @@ Item {
         readonly property int numQ:      10
 
         // ── Geometry ──────────────────────────────────────────────────────
-        // Bar: left edge, full height, fixed width
-        readonly property real barW:    Math.max(44, width * 0.24)
-        // Semi-circle: always centred vertically in the component
-        readonly property real semiCY:  height / 2
-        readonly property real semiR:   Math.min(width - barW, height * 0.52)
-        readonly property real innerR:  semiR * 0.38    // larger dead zone near centre
-        readonly property real rowH:    height / numRoots
+        // Column hugs the left edge; semicircle fans RIGHT from the column's
+        // right edge and is capped so it never crosses the half-line (cs.width).
+        readonly property real colX:   width * 0.08   // left edge of root column
+        readonly property real colW:   width * 0.18   // column width
+        readonly property real semiCX: colX + colW    // semicircle centre X (right edge of column)
+        readonly property real semiCY: height * 0.50  // semicircle always vertically centred
+        readonly property real rowH:   height / numRoots
+        // semiR: fills as much of the remaining left half as possible
+        readonly property real semiR:  Math.min((width - semiCX) * 0.92, height * 0.46)
+        readonly property real innerR: semiR * 0.28
 
         // ── Interaction state ─────────────────────────────────────────────
-        property int  hovRoot:    -1   // index or -1
-        property int  hovQuality: -1
-        property bool prevLPinch: false
-        property bool prevRPinch: false
+        property int  hovRoot:     -1
+        property int  dragQuality:  0
+        property bool dragging:    false
+        property bool prevLPinch:  false
 
-        // Returns { zone: "bar"|"semi"|"none",  index: N }
-        function hitTest(nx, ny) {
-            var pt = cs.mapFromItem(cameraViewport,
-                                    nx * cameraViewport.width,
-                                    ny * cameraViewport.height)
-            // Bar zone
-            if (pt.x >= 0 && pt.x < cs.barW && pt.y >= 0 && pt.y < cs.height) {
-                var ri = Math.min(cs.numRoots - 1,
-                                  Math.floor(pt.y / cs.height * cs.numRoots))
-                return { zone: "bar", index: ri }
-            }
-            // Semi-circle zone (only when a root is selected)
-            if (root.selectedChordRoot >= 0) {
-                var cy = cs.semiCY
-                var dx = pt.x - cs.barW
-                var dy = pt.y - cy
-                var dist = Math.sqrt(dx * dx + dy * dy)
-                if (dx >= 0 && dist >= cs.innerR && dist <= cs.semiR) {
-                    var angle = Math.atan2(dy, dx)   // −π/2 … +π/2 for right half
-                    if (angle >= -Math.PI / 2 && angle <= Math.PI / 2) {
-                        var norm = (angle + Math.PI / 2) / Math.PI
-                        var qi   = Math.min(cs.numQ - 1, Math.floor(norm * cs.numQ))
-                        return { zone: "semi", index: qi }
-                    }
-                }
-            }
-            return { zone: "none", index: -1 }
+        // ── Helpers ───────────────────────────────────────────────────────
+        function localPt(nx, ny) {
+            return cs.mapFromItem(cameraViewport,
+                                  nx * cameraViewport.width,
+                                  ny * cameraViewport.height)
         }
 
-        // Connections — hover tracking + pinch rising-edge selection
+        function rootAtY(py) {
+            return Math.max(0, Math.min(cs.numRoots - 1,
+                            Math.floor(py / cs.height * cs.numRoots)))
+        }
+
+        // Map an angle in the RIGHT semicircle to a quality index.
+        // Right semicircle spans -π/2 (top) to +π/2 (bottom) via 0 (right).
+        // atan2 returns values directly in that range when dx >= 0.
+        function qualityFromAngle(dx, dy) {
+            var angle = Math.atan2(dy, dx)                 // in [-π/2, +π/2] for right half
+            var norm  = (angle + Math.PI / 2) / Math.PI   // 0 (top) → 1 (bottom)
+            return Math.max(0, Math.min(cs.numQ - 1, Math.floor(norm * cs.numQ)))
+        }
+
+        // ── Input ─────────────────────────────────────────────────────────
         Connections {
             target: root.engineReady ? appEngine : null
 
             function onHandStateChanged() {
-                if (!root.engineReady) return
+                if (!root.engineReady || !appEngine.leftHandVisible) {
+                    if (cs.dragging) {
+                        root.selectedChordQuality = cs.dragQuality
+                        cs.dragging = false
+                    }
+                    cs.hovRoot    = -1
+                    cs.prevLPinch = false
+                    return
+                }
 
-                var hit = { zone: "none", index: -1 }
-                if (appEngine.leftHandVisible)
-                    hit = cs.hitTest(appEngine.leftHandX, appEngine.leftHandY)
-                if (hit.zone === "none" && appEngine.rightHandVisible)
-                    hit = cs.hitTest(appEngine.rightHandX, appEngine.rightHandY)
+                var pt = cs.localPt(appEngine.leftHandX, appEngine.leftHandY)
+                var lp = appEngine.leftPinch
 
-                cs.hovRoot    = hit.zone === "bar"  ? hit.index : -1
-                cs.hovQuality = hit.zone === "semi" ? hit.index : -1
-
-                var active = hit.zone !== "none"
-                var lp = appEngine.leftPinch  && active
-                var rp = appEngine.rightPinch && active
-
-                if ((lp && !cs.prevLPinch) || (rp && !cs.prevRPinch)) {
-                    if (hit.zone === "bar") {
-                        // Toggle root selection
-                        if (root.selectedChordRoot === hit.index)
-                            root.selectedChordRoot = -1
-                        else {
-                            root.selectedChordRoot    = hit.index
-                            root.selectedChordQuality = 0
+                if (cs.dragging) {
+                    if (lp) {
+                        // While pinching: update quality from position in semicircle
+                        if (root.selectedChordRoot >= 0) {
+                            var dx   = pt.x - cs.semiCX
+                            var dy   = pt.y - cs.semiCY
+                            var dist = Math.sqrt(dx * dx + dy * dy)
+                            // Only update when hand is inside the right-facing arc
+                            if (dx >= 0 && dist >= cs.innerR && dist <= cs.semiR)
+                                cs.dragQuality = cs.qualityFromAngle(dx, dy)
                         }
-                    } else if (hit.zone === "semi") {
-                        root.selectedChordQuality = hit.index
+                    } else {
+                        // Pinch released — commit
+                        root.selectedChordQuality = cs.dragQuality
+                        cs.dragging = false
+                    }
+                } else {
+                    // Hover on root column
+                    var inCol = pt.x >= cs.colX && pt.x <= cs.colX + cs.colW &&
+                                pt.y >= 0 && pt.y <= cs.height
+                    cs.hovRoot = inCol ? cs.rootAtY(pt.y) : -1
+
+                    // Rising-edge pinch on column → lock root, open semicircle
+                    if (lp && !cs.prevLPinch && inCol) {
+                        var ri = cs.rootAtY(pt.y)
+                        if (root.selectedChordRoot === ri) {
+                            root.selectedChordRoot = -1   // tap same root = deselect
+                        } else {
+                            root.selectedChordRoot = ri
+                            cs.dragQuality = root.selectedChordQuality
+                            cs.dragging    = true
+                        }
                     }
                 }
 
                 cs.prevLPinch = lp
-                cs.prevRPinch = rp
             }
         }
 
@@ -670,129 +679,130 @@ Item {
             id: csCanvas
             anchors.fill: parent
 
-            property int    pSelRoot:  root.selectedChordRoot
-            property int    pSelQual:  root.selectedChordQuality
-            property int    pHovRoot:  cs.hovRoot
-            property int    pHovQual:  cs.hovQuality
-            property int    pNumRoots: cs.numRoots
-            property bool   pSharps:   root.sharpsEnabled
-            property string pFont:     figTreeVariable.name
+            property int    pSelRoot:   root.selectedChordRoot
+            property int    pSelQual:   root.selectedChordQuality
+            property int    pHovRoot:   cs.hovRoot
+            property int    pDragQual:  cs.dragQuality
+            property bool   pDragging:  cs.dragging
+            property int    pNumRoots:  cs.numRoots
+            property bool   pSharps:    root.sharpsEnabled
+            property string pFont:      figTreeVariable.name
 
             onPSelRootChanged:  requestPaint()
             onPSelQualChanged:  requestPaint()
             onPHovRootChanged:  requestPaint()
-            onPHovQualChanged:  requestPaint()
+            onPDragQualChanged: requestPaint()
+            onPDraggingChanged: requestPaint()
             onPNumRootsChanged: requestPaint()
             onPSharpsChanged:   requestPaint()
             onPFontChanged:     requestPaint()
 
             onPaint: {
-                var ctx = getContext("2d")
+                var ctx    = getContext("2d")
                 ctx.clearRect(0, 0, width, height)
 
-                var barW   = cs.barW
+                var colX   = cs.colX
+                var colW   = cs.colW
+                var rowH   = cs.rowH
                 var semiR  = cs.semiR
                 var innerR = cs.innerR
-                var rowH   = cs.rowH
                 var n      = cs.numRoots
                 var nQ     = cs.numQ
                 var sR     = root.selectedChordRoot
                 var sQ     = root.selectedChordQuality
                 var hR     = cs.hovRoot
-                var hQ     = cs.hovQuality
+                var dQ     = cs.dragQuality
+                var isDrag = cs.dragging
+                var pad    = 3
 
-                // ── Semi-circle (draw before bar so bar appears on top) ───
+                // ── Right-facing semicircle (drawn behind column) ─────────
+                var scX = cs.semiCX   // static: right edge of column
+                var scY = cs.semiCY   // static: vertical centre
+
                 if (sR >= 0) {
-                    var scY = cs.semiCY
-
-                    // Faint backdrop
+                    // Backdrop: right-facing pie slice
                     ctx.beginPath()
-                    ctx.moveTo(barW, scY)
-                    ctx.arc(barW, scY, semiR, -Math.PI / 2, Math.PI / 2)
+                    ctx.moveTo(scX, scY)
+                    ctx.arc(scX, scY, semiR, -Math.PI / 2, Math.PI / 2, false)
                     ctx.closePath()
-                    ctx.fillStyle = "rgba(8,11,18,0.65)"
+                    ctx.fillStyle = "rgba(8,10,16,0.72)"
                     ctx.fill()
 
-                    // Quality segments (annular sectors, right half)
+                    // Quality segments — annular sectors from -π/2 (top) to +π/2 (bottom)
                     for (var q = 0; q < nQ; q++) {
-                        var startA = -Math.PI / 2 + (q / nQ) * Math.PI
-                        var endA   = -Math.PI / 2 + ((q + 1) / nQ) * Math.PI
-
-                        var isSelQ = (q === sQ)
-                        var isHovQ = (q === hQ)
+                        var startA  = -Math.PI / 2 + (q / nQ) * Math.PI
+                        var endA    = -Math.PI / 2 + ((q + 1) / nQ) * Math.PI
+                        var isSelQ  = (q === sQ) && !isDrag
+                        var isDragQ = isDrag && (q === dQ)
 
                         ctx.beginPath()
-                        ctx.arc(barW, scY, semiR - 1, startA, endA)
-                        ctx.arc(barW, scY, innerR + 1, endA, startA, true)
+                        ctx.arc(scX, scY, semiR - 1, startA, endA)
+                        ctx.arc(scX, scY, innerR + 1, endA, startA, true)
                         ctx.closePath()
 
-                        ctx.fillStyle = isSelQ ? "rgba(224,120,38,0.82)"
-                                      : isHovQ ? "rgba(224,120,38,0.28)"
-                                      : "rgba(20,24,36,0.82)"
+                        ctx.fillStyle   = isDragQ ? "rgba(224,120,38,0.88)"
+                                        : isSelQ  ? "rgba(224,120,38,0.60)"
+                                        : "rgba(20,24,34,0.80)"
                         ctx.fill()
-                        ctx.strokeStyle = (isSelQ || isHovQ) ? "#E07826" : "rgba(255,255,255,0.09)"
-                        ctx.lineWidth   = isSelQ ? 2 : 1
+                        ctx.strokeStyle = (isDragQ || isSelQ) ? "#E07826" : "rgba(255,255,255,0.08)"
+                        ctx.lineWidth   = (isDragQ || isSelQ) ? 2 : 1
                         ctx.stroke()
 
-                        // Quality label
+                        // Quality label at arc midpoint
                         var midA   = (startA + endA) / 2
                         var labelR = (semiR + innerR) / 2
-                        var lx = barW + Math.cos(midA) * labelR
-                        var ly = scY  + Math.sin(midA) * labelR
-                        var qfs = Math.max(10, Math.min(16, (semiR - innerR) * 0.22))
-                        ctx.font         = (isSelQ ? "700 " : "500 ") + qfs + "px '" + csCanvas.pFont + "'"
+                        var lx = scX + Math.cos(midA) * labelR
+                        var ly = scY + Math.sin(midA) * labelR
+                        var qfs = Math.max(9, Math.min(15, (semiR - innerR) * 0.24))
+                        ctx.font         = ((isDragQ || isSelQ) ? "700 " : "500 ") + qfs + "px '" + csCanvas.pFont + "'"
                         ctx.textAlign    = "center"
                         ctx.textBaseline = "middle"
-                        ctx.fillStyle    = isSelQ ? "#FFFFFF" : isHovQ ? "#FFD4A0" : "rgba(200,212,225,0.85)"
+                        ctx.fillStyle    = (isDragQ || isSelQ) ? "#FFFFFF" : "rgba(190,202,218,0.80)"
                         ctx.fillText(cs.qualities[q], lx, ly)
                     }
 
-                    // Donut hole
+                    // Donut hole — right half only, so it doesn't bleed into the column
                     ctx.beginPath()
-                    ctx.arc(barW, scY, innerR, -Math.PI / 2, Math.PI / 2)
-                    ctx.arc(barW, scY, 0, Math.PI / 2, -Math.PI / 2, true)
+                    ctx.moveTo(scX, scY)
+                    ctx.arc(scX, scY, innerR, -Math.PI / 2, Math.PI / 2, false)
                     ctx.closePath()
-                    ctx.fillStyle = "rgba(10,13,20,0.92)"
+                    ctx.fillStyle = "rgba(10,12,18,0.92)"
                     ctx.fill()
 
-                    // Connector line from selected bar row to semi-circle
+                    // Dashed connector rightward from column edge to inner radius
                     ctx.strokeStyle = "#E07826"
                     ctx.lineWidth   = 1.5
                     ctx.setLineDash([4, 4])
                     ctx.beginPath()
-                    ctx.moveTo(barW, scY)
-                    ctx.lineTo(barW + innerR, scY)
+                    ctx.moveTo(scX, scY)
+                    ctx.lineTo(scX + innerR, scY)
                     ctx.stroke()
                     ctx.setLineDash([])
                 }
 
-                // ── Vertical bar ─────────────────────────────────────────
+                // ── Root column (drawn on top of semicircle) ──────────────
                 for (var i = 0; i < n; i++) {
-                    var y      = i * rowH
-                    var isSel  = (i === sR)
-                    var isHov  = (i === hR)
-                    var pad    = 4
+                    var ry    = i * rowH
+                    var isSel = (i === sR)
+                    var isHov = (i === hR)
 
-                    // Row background
-                    ctx.fillStyle = isSel ? "rgba(224,120,38,0.85)"
+                    ctx.fillStyle = isSel ? "rgba(224,120,38,0.88)"
                                   : isHov ? "rgba(224,120,38,0.32)"
-                                  : "rgba(16,20,30,0.80)"
+                                  : "rgba(16,20,30,0.82)"
                     ctx.beginPath()
-                    ctx.rect(pad, y + pad, barW - pad * 2, rowH - pad * 2)
+                    ctx.rect(colX + pad, ry + pad, colW - pad * 2, rowH - pad * 2)
                     ctx.fill()
 
-                    // Row border
                     ctx.strokeStyle = (isSel || isHov) ? "#E07826" : "rgba(255,255,255,0.10)"
                     ctx.lineWidth   = isSel ? 2 : 1
                     ctx.stroke()
 
-                    // Root label — big, bold
-                    var fs = Math.max(14, Math.min(30, rowH * 0.48))
-                    ctx.font         = "700 " + fs + "px '" + csCanvas.pFont + "'"
+                    var rfs = Math.max(12, Math.min(28, rowH * 0.44))
+                    ctx.font         = "700 " + rfs + "px '" + csCanvas.pFont + "'"
                     ctx.textAlign    = "center"
                     ctx.textBaseline = "middle"
                     ctx.fillStyle    = isSel ? "#FFFFFF" : isHov ? "#FFD4A0" : "rgba(235,237,240,0.90)"
-                    ctx.fillText(cs.roots[i], barW / 2, y + rowH / 2)
+                    ctx.fillText(cs.roots[i], colX + colW / 2, ry + rowH / 2)
                 }
             }
         }
