@@ -1,43 +1,31 @@
 from dataclasses import dataclass
 PINCH_THRESHOLD = 0.05
 
-# Define the layout for the keyboard zones.
-WHITE_KEYS_PER_KEYBOARD = 10
+WHITE_KEYS_PER_KEYBOARD = 14
 WHITE_KEY_WIDTH = 1.0 / WHITE_KEYS_PER_KEYBOARD
-BLACK_KEY_WIDTH = WHITE_KEY_WIDTH * 0.6
+BLACK_KEY_WIDTH = WHITE_KEY_WIDTH * 0.65
 
 WHITE_KEY_STEPS = (
-    ("C", 0),
-    ("D", 2),
-    ("E", 4),
-    ("F", 5),
-    ("G", 7),
-    ("A", 9),
-    ("B", 11),
-    ("C2", 12),
-    ("D2", 14),
-    ("E2", 16),
+    ("C", 0), ("D", 2), ("E", 4),
+    ("F", 5), ("G", 7), ("A", 9), ("B", 11),
+    ("C2", 12), ("D2", 14), ("E2", 16),
+    ("F2", 17), ("G2", 19), ("A2", 21), ("B2", 23),
 )
 
 BLACK_KEY_STEPS = (
-    ("C#", 1, 1),
-    ("D#", 3, 2),
-    ("F#", 6, 4),
-    ("G#", 8, 5),
-    ("A#", 10, 6),
-    ("C#2", 13, 8),
-    ("D#2", 15, 9),
+    ("C#", 1, 1), ("D#", 3, 2),
+    ("F#", 6, 4), ("G#", 8, 5), ("A#", 10, 6),
+    ("C#2", 13, 8), ("D#2", 15, 9),
+    ("F#2", 18, 11), ("G#2", 20, 12), ("A#2", 22, 13),
 )
 
-# Top Octave
 TOP_OCTAVE_Y_START = 0.12
-TOP_OCTAVE_WHITE_Y_END = 0.55
-TOP_OCTAVE_BLACK_Y_END = 0.32
+TOP_OCTAVE_WHITE_Y_END = 0.42
+TOP_OCTAVE_BLACK_Y_END = 0.28
 
-# Bottom Octave
-BOTTOM_OCTAVE_Y_START = 0.6
-BOTTOM_OCTAVE_WHITE_Y_END = 1
-BOTTOM_OCTAVE_BLACK_Y_END = 0.8
+BOTTOM_OCTAVE_Y_START = 0.55
+BOTTOM_OCTAVE_WHITE_Y_END = 0.85
+BOTTOM_OCTAVE_BLACK_Y_END = 0.71
 
 
 @dataclass(frozen=True)

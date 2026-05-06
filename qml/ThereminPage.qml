@@ -167,7 +167,7 @@ Item {
             width: 18; height: 18; radius: 9
             x: ((1.0 - appEngine.leftHandX) * parent.width) - width / 2
             y: (appEngine.leftHandY * parent.height) - height / 2
-            color: appEngine.leftPinch ? "#e07826" : "#deab84"
+            color: "#e07826"
             border.color: "#FFFFFF"
             border.width: 2
             Behavior on color { ColorAnimation { duration: 100 } }
@@ -178,7 +178,7 @@ Item {
             width: 18; height: 18; radius: 9
             x: ((1.0 - appEngine.rightHandX) * parent.width) - width / 2
             y: (appEngine.rightHandY * parent.height) - height / 2
-            color: appEngine.rightPinch ? "#e07826" : "#deab84"
+            color: "#e07826"
             border.color: "#FFFFFF"
             border.width: 2
             Behavior on color { ColorAnimation { duration: 100 } }

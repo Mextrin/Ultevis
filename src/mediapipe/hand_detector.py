@@ -237,12 +237,6 @@ def main():
             cv2.imwrite(TEMP_FRAME_PATH, resized_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
             safe_replace(TEMP_FRAME_PATH, FINAL_FRAME_PATH)
 
-            del mp_image
-            del recognition_result
-            del clean_frame
-
-            gc.collect()
-
     finally:
         if cap is not None:
             cap.release()

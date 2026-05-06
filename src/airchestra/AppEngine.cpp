@@ -378,6 +378,16 @@ void AppEngine::adjustKeyboardOctave(int keyboardIndex, int delta) {
         const int next = qBound(minOctave, current + delta, maxOctave);
         if (next == current)
             return;
+        
+        for (int i = 0; i < 128; ++i) {
+            globalState->keyboardTopLeftState[i].store(false);
+            globalState->keyboardTopRightState[i].store(false);
+            
+            globalState->keyboardState[i].store(
+                globalState->keyboardBottomLeftState[i].load() ||
+                globalState->keyboardBottomRightState[i].load()
+            );
+        }
 
         globalState->topKeyboardOctave.store(next);
         refreshTrackedState();
@@ -398,6 +408,16 @@ void AppEngine::adjustKeyboardOctave(int keyboardIndex, int delta) {
         const int next = qBound(minOctave, current + delta, maxOctave);
         if (next == current)
             return;
+
+        for (int i = 0; i < 128; ++i) {
+            globalState->keyboardBottomLeftState[i].store(false);
+            globalState->keyboardBottomRightState[i].store(false);
+            
+            globalState->keyboardState[i].store(
+                globalState->keyboardTopLeftState[i].load() ||
+                globalState->keyboardTopRightState[i].load()
+            );
+        }
 
         globalState->bottomKeyboardOctave.store(next);
         refreshTrackedState();

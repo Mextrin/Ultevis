@@ -14,33 +14,28 @@ Item {
     readonly property var activeKeyboardNotes: engineReady ? appEngine.activeKeyboardNotes : []
     readonly property var activeTopKeyboardNotes: engineReady ? appEngine.activeTopKeyboardNotes : []
     readonly property var activeBottomKeyboardNotes: engineReady ? appEngine.activeBottomKeyboardNotes : []
+
     readonly property var whiteKeySteps: [
-        { label: "C", semitone: 0 },
-        { label: "D", semitone: 2 },
-        { label: "E", semitone: 4 },
-        { label: "F", semitone: 5 },
-        { label: "G", semitone: 7 },
-        { label: "A", semitone: 9 },
-        { label: "B", semitone: 11 },
-        { label: "C", semitone: 12 },
-        { label: "D", semitone: 14 },
-        { label: "E", semitone: 16 }
+        { label: "C", semitone: 0 }, { label: "D", semitone: 2 }, { label: "E", semitone: 4 },
+        { label: "F", semitone: 5 }, { label: "G", semitone: 7 }, { label: "A", semitone: 9 }, { label: "B", semitone: 11 },
+        { label: "C", semitone: 12 }, { label: "D", semitone: 14 }, { label: "E", semitone: 16 },
+        { label: "F", semitone: 17 }, { label: "G", semitone: 19 }, { label: "A", semitone: 21 }, { label: "B", semitone: 23 }
     ]
     readonly property var blackKeySteps: [
-        { label: "C#", semitone: 1, boundaryIndex: 1 },
-        { label: "D#", semitone: 3, boundaryIndex: 2 },
-        { label: "F#", semitone: 6, boundaryIndex: 4 },
-        { label: "G#", semitone: 8, boundaryIndex: 5 },
-        { label: "A#", semitone: 10, boundaryIndex: 6 },
-        { label: "C#", semitone: 13, boundaryIndex: 8 },
-        { label: "D#", semitone: 15, boundaryIndex: 9 }
+        { label: "C#", semitone: 1, boundaryIndex: 1 }, { label: "D#", semitone: 3, boundaryIndex: 2 },
+        { label: "F#", semitone: 6, boundaryIndex: 4 }, { label: "G#", semitone: 8, boundaryIndex: 5 }, { label: "A#", semitone: 10, boundaryIndex: 6 },
+        { label: "C#", semitone: 13, boundaryIndex: 8 }, { label: "D#", semitone: 15, boundaryIndex: 9 },
+        { label: "F#", semitone: 18, boundaryIndex: 11 }, { label: "G#", semitone: 20, boundaryIndex: 12 }, { label: "A#", semitone: 22, boundaryIndex: 13 }
     ]
+    
+    // --- Made shorter and moved up to prevent camera clipping ---
     readonly property real keyboardTopStart: 0.12
-    readonly property real keyboardTopWhiteEnd: 0.55
-    readonly property real keyboardTopBlackEnd: 0.32
-    readonly property real keyboardBottomStart: 0.60
-    readonly property real keyboardBottomWhiteEnd: 1.0
-    readonly property real keyboardBottomBlackEnd: 0.80
+    readonly property real keyboardTopWhiteEnd: 0.42   
+    readonly property real keyboardTopBlackEnd: 0.29    
+    
+    readonly property real keyboardBottomStart: 0.55
+    readonly property real keyboardBottomWhiteEnd: 0.85 
+    readonly property real keyboardBottomBlackEnd: 0.72
     property int counterFlashKeyboard: 0
     property int counterFlashDelta: 0
 
@@ -274,7 +269,7 @@ Item {
         property bool octaveGestureActive: thumbUpHover || thumbDownHover
         property int octaveGestureDelta: thumbUpHover === thumbDownHover ? 0 : (thumbUpHover ? 1 : -1)
         readonly property real whiteKeyWidth: width / root.whiteKeySteps.length
-        readonly property real blackKeyWidth: whiteKeyWidth * 0.6
+        readonly property real blackKeyWidth: whiteKeyWidth * 0.65
         readonly property int octaveShift: (currentOctave - defaultOctave) * 12
 
         function triggerOctaveChange(delta) {

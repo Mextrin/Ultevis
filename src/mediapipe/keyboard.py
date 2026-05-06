@@ -29,22 +29,20 @@ recognizer = vision.GestureRecognizer.create_from_options(_keyboard_gesture_opti
 _thumb_tracker = ThumbGestureTracker()
 
 # --- State Tracking ---
-# Keep track of which notes are currently being played by each hand, split by keyboard
 right_hand_top_notes = {}
 right_hand_bottom_notes = {}
 left_hand_top_notes = {}
 left_hand_bottom_notes = {}
 
-# Keep track of the last finger-to-wrist Y-distance to detect a "press"
-last_finger_wrist_dist = {} # {(hand_label, finger_name): distance}
+# Keep track of individual finger states for holding notes and preventing flickering
+active_finger_presses = {} # {(hand_label, finger_name): bool}
 
-# Threshold for detecting a "press" from the finger moving down in screen space.
-PRESS_DISTANCE_THRESHOLD = 0.015
-
-# Require the finger direction to be mostly aligned with the camera axis.
-# This filters out fingers hovering parallel to the screen.
-FINGER_SCREEN_ORTHOGONAL_RATIO_THRESHOLD = 0.72
-MIN_DEPTH_COMPONENT = 0.03
+# --- NEW KINEMATIC BEND THRESHOLDS ---
+# We calculate the ratio of the direct distance (Wrist to Tip) vs the path (Wrist -> Knuckle -> Tip).
+# 1.0 means perfectly straight. Lower numbers mean the knuckle is bent.
+# This topological approach makes the trigger 100% immune to hand rotation.
+PRESS_ON_BEND_RATIO = 0.85  # Must bend knuckle significantly to trigger (roughly 65 degrees)
+PRESS_OFF_BEND_RATIO = 0.91 # Must straighten hand to release (roughly 45 degrees)
 
 FINGER_DIRECTION_LANDMARKS = {
     "thumb": (2, 4),
@@ -54,9 +52,15 @@ FINGER_DIRECTION_LANDMARKS = {
     "pinky": (17, 20),
 }
 
+
+def dist3d(p1, p2) -> float:
+    """Helper to safely calculate true 3D distance between two landmarks."""
+    return ((p1.x - p2.x)**2 + (p1.y - p2.y)**2 + (p1.z - p2.z)**2)**0.5
+
+
 def detect_keyboard_hands(detection_result):
     keyboard_payload = {
-        "instrument": "keyboard", # Optimization tag for C++!
+        "instrument": "keyboard", 
         "rightHandVisible": False,
         "leftHandVisible": False,
         "rightHandX": 0.0,
@@ -89,7 +93,6 @@ def detect_keyboard_hands(detection_result):
         thumb_tip = hand_landmarks[4]
         index_tip = hand_landmarks[8]
 
-        # Calculate distance between thumb and index finger
         pinch_distance = ((thumb_tip.x - index_tip.x) ** 2 + (thumb_tip.y - index_tip.y) ** 2) ** 0.5
         is_pinching = pinch_distance < PINCH_THRESHOLD
 
@@ -101,7 +104,6 @@ def detect_keyboard_hands(detection_result):
         hand_center_x = sum(landmark.x for landmark in hand_landmarks) / len(hand_landmarks)
         hand_center_y = sum(landmark.y for landmark in hand_landmarks) / len(hand_landmarks)
 
-        # The camera feed is mirrored for display, so QML hit-tests use display-space X.
         display_x = max(0.0, min(1.0, 1.0 - hand_center_x))
         display_y = max(0.0, min(1.0, hand_center_y))
 
@@ -120,8 +122,6 @@ def detect_keyboard_hands(detection_result):
             keyboard_payload["leftThumbUp"] = thumb_up
             keyboard_payload["leftThumbDown"] = thumb_down
 
-    # If a hand disappeared this frame, clear its debounce so a re-entry
-    # has to re-confirm a gesture from scratch instead of triggering on stale state.
     for label in ("Left", "Right"):
         if label not in seen_labels:
             _thumb_tracker.reset(label)
@@ -134,7 +134,6 @@ def draw_keyboard_zones(frame, active_zone_names: set[str]) -> None:
 
 
 def find_key_zone(x: float, y: float) -> KeyboardZone | None:
-    # Prioritize black keys in hit detection
     sorted_zones = sorted(KEYBOARD_ZONES, key=lambda z: "#" in z.name, reverse=True)
     for zone in sorted_zones:
         if zone.contains(x, y):
@@ -142,25 +141,52 @@ def find_key_zone(x: float, y: float) -> KeyboardZone | None:
     return None
 
 
-def is_finger_pointing_orthogonal_to_screen(hand_landmarks, finger_name: str) -> bool:
+def is_finger_pressed(hand_label: str, finger_name: str, hand_landmarks, tip_y: float) -> bool:
+    """Calculates if a finger is pressed using dynamic, perspective-aware skeleton topology."""
+    global active_finger_presses
+
     base_idx, tip_idx = FINGER_DIRECTION_LANDMARKS[finger_name]
+    wrist = hand_landmarks[0]
     base = hand_landmarks[base_idx]
     tip = hand_landmarks[tip_idx]
 
-    dx = tip.x - base.x
-    dy = tip.y - base.y
-    dz = tip.z - base.z
+    w_b = dist3d(wrist, base)
+    b_t = dist3d(base, tip)
+    w_t = dist3d(wrist, tip)
 
-    direction_length = math.sqrt((dx * dx) + (dy * dy) + (dz * dz))
-    if direction_length <= 1e-6:
+    path_len = w_b + b_t
+    if path_len < 1e-6:
         return False
 
-    orthogonal_ratio = abs(dz) / direction_length
-    return abs(dz) >= MIN_DEPTH_COMPONENT and orthogonal_ratio >= FINGER_SCREEN_ORTHOGONAL_RATIO_THRESHOLD
+    ratio = w_t / path_len
+    
+    on_threshold = PRESS_ON_BEND_RATIO
+    off_threshold = PRESS_OFF_BEND_RATIO
+
+    if finger_name == "pinky":
+        on_threshold += 0.035
+        off_threshold += 0.035
+    
+    if tip_y < 0.5:
+        on_threshold += 0.05
+        off_threshold += 0.05
+
+    finger_id = (hand_label, finger_name)
+    is_pressed = active_finger_presses.get(finger_id, False)
+
+    if is_pressed:
+        if ratio > off_threshold:
+            is_pressed = False
+    else:
+        if ratio < on_threshold:
+            is_pressed = True
+
+    active_finger_presses[finger_id] = is_pressed
+    return is_pressed
 
 
 def detect_key_strokes(detection_result):
-    global right_hand_top_notes, right_hand_bottom_notes, left_hand_top_notes, left_hand_bottom_notes, last_finger_wrist_dist
+    global right_hand_top_notes, right_hand_bottom_notes, left_hand_top_notes, left_hand_bottom_notes
 
     keyboard_payload = {
         "instrument": "keyboard",
@@ -176,7 +202,6 @@ def detect_key_strokes(detection_result):
         "rightBottomNotesOff": "",
     }
     
-    # This set is now ONLY for visual feedback on the frame of the press
     active_zone_names: set[str] = set()
     displayed_hand_positions: dict[str, tuple[float, float]] = {}
     
@@ -184,7 +209,6 @@ def detect_key_strokes(detection_result):
     current_right_bottom_notes = {}
     current_left_top_notes = {}
     current_left_bottom_notes = {}
-    current_finger_distances = {}
 
     if detection_result.handedness:
         processed_labels = set()
@@ -194,9 +218,8 @@ def detect_key_strokes(detection_result):
                 continue
             processed_labels.add(label)
 
-            wrist_landmark = hand_landmarks[0]
             finger_tips = {
-                "thumb": hand_landmarks[4], "index": hand_landmarks[8],
+                "index": hand_landmarks[8],
                 "middle": hand_landmarks[12], "ring": hand_landmarks[16], "pinky": hand_landmarks[20],
             }
 
@@ -206,38 +229,23 @@ def detect_key_strokes(detection_result):
 
             prefix = "right" if label == "Right" else "left"
             keyboard_payload[f"{prefix}HandVisible"] = True
+            
             for name, tip in finger_tips.items():
                 keyboard_payload[f"{prefix}_{name}_X"] = 1.0 - tip.x
                 keyboard_payload[f"{prefix}_{name}_Y"] = tip.y
                 
-                finger_id = (label, name)
-                
-                current_dist = tip.y - wrist_landmark.y
-                current_finger_distances[finger_id] = current_dist
-                
-                last_dist = last_finger_wrist_dist.get(finger_id, current_dist)
-                dist_velocity = current_dist - last_dist
-
                 mirrored_x = 1.0 - tip.x
                 zone = find_key_zone(mirrored_x, tip.y)
 
                 is_top = zone.name.endswith("+") if zone else False
 
                 if zone:
-                    finger_pressed = (
-                        dist_velocity > PRESS_DISTANCE_THRESHOLD
-                        and is_finger_pointing_orthogonal_to_screen(hand_landmarks, name)
-                    )
-
-                    if finger_pressed:
+                    if is_finger_pressed(label, name, hand_landmarks, tip.y):
                         active_zone_names.add(zone.name)
                         if label == "Right":
                             (current_right_top_notes if is_top else current_right_bottom_notes)[zone.note] = True
                         else:
                             (current_left_top_notes if is_top else current_left_bottom_notes)[zone.note] = True
-
-    # Update the last known distances for the next frame
-    last_finger_wrist_dist = current_finger_distances
 
     # Determine which notes to turn ON
     right_top_on = [n for n in current_right_top_notes if n not in right_hand_top_notes]
