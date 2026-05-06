@@ -575,8 +575,8 @@ Item {
         readonly property var sharpRoots:   ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"]
         readonly property var roots:     root.sharpsEnabled ? sharpRoots : naturalRoots
         readonly property int numRoots:  roots.length
-        readonly property var qualities: ["Maj","Min","7","Maj7","Min7","Sus2","Sus4","Dim","Aug","min7b5"]
-        readonly property int numQ:      10
+        readonly property var qualities: ["Maj","Min","7","Maj7","Min7","Sus2","Sus4"]
+        readonly property int numQ:      7
 
         // ── Geometry ──────────────────────────────────────────────────────
         // Column hugs the left edge; semicircle fans RIGHT from the column's
