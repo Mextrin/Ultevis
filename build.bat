@@ -20,6 +20,7 @@ if /I "%~1"=="build-all" (
 )
 if /I "%~1"=="compile" (
     call :compile-app
+    if defined BUILD_FAILED exit /b 1
     if errorlevel 1 exit /b 1
     exit /b 0
 )
@@ -29,6 +30,7 @@ if /I "%~1"=="run" (
 )
 if /I "%~1"=="compile-and-run" (
     call :compile-app
+    if defined BUILD_FAILED exit /b 1
     if errorlevel 1 exit /b 1
     call :run-app
     exit /b 0
@@ -90,18 +92,27 @@ exit /b
 :compile-app
     if not exist "%BUILD_DIR%\CMakeCache.txt" (
         echo Build directory is not configured. Run build.bat build-all first.
+        set "BUILD_FAILED=1"
         exit /b 1
     )
     rem Visual Studio is multi-config; pick Release explicitly to match EXE_DIR.
     cmake --build %BUILD_DIR% --config Release
-    if errorlevel 1 exit /b 1
+    if errorlevel 1 (
+        set "BUILD_FAILED=1"
+        exit /b 1
+    )
     call :copy-qt-platform-plugin
-    if errorlevel 1 exit /b 1
+    if defined BUILD_FAILED exit /b 1
+    if errorlevel 1 (
+        set "BUILD_FAILED=1"
+        exit /b 1
+    )
 exit /b
 
 :run-app
     set "ULTEVIS_LAUNCH_HAND_DETECTOR=1"
-    set "ULTEVIS_HAND_DETECTOR_SCRIPT=%~dp0src\mediapipe\hand_detector.py"
+    for %%F in ("%EXE_DIR%") do set "APP_OUTPUT_DIR=%%~dpF"
+    set "ULTEVIS_HAND_DETECTOR_SCRIPT=%APP_OUTPUT_DIR%mediapipe\hand_detector.py"
     "./%EXE_DIR%"
 exit /b
 
@@ -136,16 +147,25 @@ exit /b
     for %%F in ("%EXE_DIR%") do set "APP_OUTPUT_DIR=%%~dpF"
     if not exist "%APP_OUTPUT_DIR%" (
         echo [copy-qt] Output directory does not exist: %APP_OUTPUT_DIR%
+        set "BUILD_FAILED=1"
         exit /b 1
     )
     if not exist "%QT_PLATFORMS_DIR%\qwindows.dll" (
         echo [copy-qt] Missing Qt platform plugin: %QT_PLATFORMS_DIR%\qwindows.dll
         echo [copy-qt] Re-run `build.bat build-all` to install Qt via vcpkg.
+        set "BUILD_FAILED=1"
         exit /b 1
     )
-    xcopy /E /I /Y /Q "%QT_PLATFORMS_DIR%"    "%APP_OUTPUT_DIR%platforms"    >nul || exit /b 1
-    xcopy /E /I /Y /Q "%QT_IMAGEFORMATS_DIR%" "%APP_OUTPUT_DIR%imageformats" >nul || exit /b 1
-    xcopy /E /I /Y /Q "%QT_QML_DIR%"          "%APP_OUTPUT_DIR%qml"          >nul || exit /b 1
+    call :copy-runtime-dir "%QT_PLATFORMS_DIR%"    "%APP_OUTPUT_DIR%platforms"    "Qt platforms"
+    if errorlevel 1 exit /b 1
+    call :copy-runtime-dir "%QT_IMAGEFORMATS_DIR%" "%APP_OUTPUT_DIR%imageformats" "Qt imageformats"
+    if errorlevel 1 exit /b 1
+    call :copy-runtime-dir "%QT_QML_DIR%"          "%APP_OUTPUT_DIR%qml"          "Qt QML"
+    if errorlevel 1 exit /b 1
+    call :copy-runtime-dir "%~dp0src\mediapipe"    "%APP_OUTPUT_DIR%mediapipe"    "MediaPipe scripts"
+    if errorlevel 1 exit /b 1
+    call :copy-runtime-dir "%~dp0Instruments"      "%APP_OUTPUT_DIR%Instruments"  "Instruments"
+    if errorlevel 1 exit /b 1
     copy /Y "%QT_RELEASE_BIN%\Qt6*.dll"   "%APP_OUTPUT_DIR%" >nul
     copy /Y "%QT_RELEASE_BIN%\jpeg62.dll" "%APP_OUTPUT_DIR%" >nul
     copy /Y "%QT_RELEASE_BIN%\turbojpeg.dll" "%APP_OUTPUT_DIR%" >nul
@@ -153,3 +173,17 @@ exit /b
     >> "%APP_OUTPUT_DIR%qt.conf" echo Plugins = .
     >> "%APP_OUTPUT_DIR%qt.conf" echo Qml2Imports = qml
 exit /b
+
+:copy-runtime-dir
+    if not exist "%~1" (
+        echo [copy-runtime] Missing source directory for %~3: %~1
+        set "BUILD_FAILED=1"
+        exit /b 1
+    )
+    robocopy "%~1" "%~2" /E /R:2 /W:1 /NFL /NDL /NP /XD .git __pycache__ >nul
+    if %ERRORLEVEL% GEQ 8 (
+        echo [copy-runtime] Failed to copy %~3 from %~1 to %~2
+        set "BUILD_FAILED=1"
+        exit /b 1
+    )
+exit /b 0

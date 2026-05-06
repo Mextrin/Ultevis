@@ -3,13 +3,17 @@
 #include <QQmlContext>
 #include <QQuickStyle>
 #include <QIcon>
+#include <QFileInfo>
+#include <QDir>
 #include <thread>
 #include <cstdlib>
+#include <iostream>
 #include <string>
 #include <QProcess>
 
 // Frontend Headers
 #include "airchestra/AppEngine.h"
+#include "airchestra/RuntimePaths.h"
 #include "airchestra/VideoReceiver.h"
 
 // Backend Headers
@@ -21,15 +25,37 @@ extern void startCameraFeed(GlobalState* state);
 
 QProcess* pythonProcess = nullptr;
 
-void launchHandDetectorIfRequested(const GlobalState& state)
+bool startPythonProcess(const QString& program, const QStringList& arguments)
 {
-    if (std::getenv("ULTEVIS_LAUNCH_HAND_DETECTOR") == nullptr)
-        return;
+    pythonProcess->start(program, arguments);
+    if (pythonProcess->waitForStarted(3000))
+        return true;
+
+    std::cerr << "Failed to start " << program.toStdString()
+              << ": " << pythonProcess->errorString().toStdString() << std::endl;
+    return false;
+}
+
+void launchHandDetector(const GlobalState& state)
+{
+    const char* launchFlag = std::getenv("ULTEVIS_LAUNCH_HAND_DETECTOR");
+    if (launchFlag != nullptr) {
+        const QString value = QString::fromLocal8Bit(launchFlag).trimmed().toLower();
+        if (value == "0" || value == "false" || value == "off" || value == "no")
+            return;
+    }
 
     const char* detectorScript = std::getenv("ULTEVIS_HAND_DETECTOR_SCRIPT");
     const QString scriptPath = detectorScript != nullptr
         ? QString(detectorScript)
-        : "src/mediapipe/hand_detector.py"; 
+        : airchestra::runtimePath("mediapipe/hand_detector.py");
+
+    QFileInfo scriptInfo(scriptPath);
+    if (!scriptInfo.exists()) {
+        std::cerr << "ERROR: Hand detector script not found: "
+                  << QDir::toNativeSeparators(scriptPath).toStdString() << std::endl;
+        return;
+    }
 
     const QString cameraMode = state.currentInstrument.load() == ActiveInstrument::Drums
         ? "drums"
@@ -50,9 +76,14 @@ void launchHandDetectorIfRequested(const GlobalState& state)
     pythonProcess->setProcessEnvironment(env);
 
     pythonProcess->setProcessChannelMode(QProcess::ForwardedChannels);
-    
-    // Launch Python natively
-    pythonProcess->start("python", QStringList() << scriptPath);
+    pythonProcess->setWorkingDirectory(scriptInfo.absolutePath());
+
+    if (startPythonProcess("python", QStringList() << scriptPath))
+        return;
+
+#ifdef _WIN32
+    startPythonProcess("py", QStringList() << "-3" << scriptPath);
+#endif
 }
 
 int main(int argc, char* argv[])
@@ -76,7 +107,7 @@ int main(int argc, char* argv[])
     HeadlessAudioEngine audioEngine(&globalState, audioConfig);
 
     //START PYTHON AND UDP LISTENER
-    launchHandDetectorIfRequested(globalState);
+    launchHandDetector(globalState);
     std::thread udpThread([&globalState]() {
         startCameraFeed(&globalState);
     });

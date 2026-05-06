@@ -1,4 +1,5 @@
 #include "AppEngine.h"
+#include "RuntimePaths.h"
 #include "VideoReceiver.h"
 #include "../Core/GlobalState.h"
 #include "../Audio/AudioEngine.h"
@@ -188,7 +189,7 @@ void AppEngine::selectInstrument(const QString &name) {
         state.setCurrentScreen(static_cast<int>(AppScreen::Drums)); 
         globalState->currentInstrument.store(ActiveInstrument::Drums);
         
-        QString liteSfz = createTrimmedDrumSfz("Instruments/SMDrums_Sforzando_1.2/Programs/SM_Drums_kit.sfz");
+        QString liteSfz = createTrimmedDrumSfz(runtimePath("Instruments/SMDrums_Sforzando_1.2/Programs/SM_Drums_kit.sfz"));
         
         audioEngine->loadDrumSound(liteSfz.toStdString()); 
         

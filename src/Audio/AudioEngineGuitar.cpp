@@ -1,5 +1,6 @@
 #include "AudioEngine.h"
 #include "GuitarChords.h"
+#include "../airchestra/RuntimePaths.h"
 #include <iostream>
 
 void HeadlessAudioEngine::resetGuitarPlaybackState()
@@ -14,16 +15,17 @@ void HeadlessAudioEngine::resetGuitarPlaybackState()
 
 void HeadlessAudioEngine::loadGuitarSound(int guitarSoundID)
 {
+    const juce::String instrumentsPath = juce::String(airchestra::runtimePath("Instruments").toStdString()) + "/";
     juce::String sfzToLoad;
 
     if (guitarSoundID == 0) {
-        sfzToLoad = "Instruments/EGuitarFSBS-bridge-clean-SFZ-20220911/EGuitarFSBS-bridge-clean-20220911.sfz";
+        sfzToLoad = instrumentsPath + "EGuitarFSBS-bridge-clean-SFZ-20220911/EGuitarFSBS-bridge-clean-20220911.sfz";
     }
     else if (guitarSoundID == 1) {
-        sfzToLoad = "Instruments/EGuitarFSBS-bridge-dist1-SFZ-20220911/EGuitarFSBS-bridge-dist1-20220911.sfz";
+        sfzToLoad = instrumentsPath + "EGuitarFSBS-bridge-dist1-SFZ-20220911/EGuitarFSBS-bridge-dist1-20220911.sfz";
     }
     else if (guitarSoundID == 2) {
-        sfzToLoad = "Instruments/FSS-SteelStringGuitar-SFZ-20200521/FSS-SteelStringGuitar-20200521.sfz";
+        sfzToLoad = instrumentsPath + "FSS-SteelStringGuitar-SFZ-20200521/FSS-SteelStringGuitar-20200521.sfz";
     } else {
         std::cerr << "ERROR: Invalid guitar sound ID: "
                   << guitarSoundID << std::endl;

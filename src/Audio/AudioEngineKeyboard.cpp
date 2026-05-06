@@ -1,4 +1,5 @@
 #include "AudioEngine.h"
+#include "../airchestra/RuntimePaths.h"
 
 #include <algorithm>
 #include <iostream>
@@ -37,12 +38,13 @@ void HeadlessAudioEngine::resetKeyboardPlaybackState()
 // Loads selected keyboard instrument based on ID
 void HeadlessAudioEngine::loadKeyboardSound(int keyboardInstrumentID)
 {
-    juce::String baseOrchestraPath = "Instruments/VSCO-2-CE/";
+    const juce::String instrumentsPath = juce::String(airchestra::runtimePath("Instruments").toStdString()) + "/";
+    juce::String baseOrchestraPath = instrumentsPath + "VSCO-2-CE/";
     juce::String sfzToLoad = "";
 
     if (keyboardInstrumentID == 0) {
         // Grand Piano
-        sfzToLoad = "Instruments/AccurateSalamanderGrandPianoV6.2beta2_48khz24bit/sfz_live/Accurate-SalamanderGrandPiano_flat.Recommended.sfz";
+        sfzToLoad = instrumentsPath + "AccurateSalamanderGrandPianoV6.2beta2_48khz24bit/sfz_live/Accurate-SalamanderGrandPiano_flat.Recommended.sfz";
     }
     else if (keyboardInstrumentID == 1) {
         sfzToLoad = baseOrchestraPath + "OrganLoud.sfz";
