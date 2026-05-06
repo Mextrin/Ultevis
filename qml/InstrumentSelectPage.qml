@@ -162,23 +162,40 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 font.family: figTreeVariable.name
+
+                property var jingleChord: [60, 67, 75, 82, 86, 89]
+                property int noteIndex: 0
+
                 onClicked: {
                     root.instrumentSelected("keyboard");
                     appEngine.setSustainPedal(true);
-                    // Play a C-major chord for 1.5s
-                    appEngine.triggerKeyboardNote(60, 100);
-                    appEngine.triggerKeyboardNote(64, 100);
-                    appEngine.triggerKeyboardNote(67, 100);
-                    chordTimer.start();
+                    
+                    noteIndex = 0;
+                    arpTimer.restart();
+                    chordReleaseTimer.restart();
                 }
 
                 Timer {
-                    id: chordTimer
-                    interval: 1500
+                    id: arpTimer
+                    interval: 120 
+                    repeat: true
                     onTriggered: {
-                        appEngine.releaseKeyboardNote(60);
-                        appEngine.releaseKeyboardNote(64);
-                        appEngine.releaseKeyboardNote(67);
+                        if (parent.noteIndex < parent.jingleChord.length) {
+                            appEngine.triggerKeyboardNote(parent.jingleChord[parent.noteIndex], 100);
+                            parent.noteIndex++;
+                        } else {
+                            arpTimer.stop(); 
+                        }
+                    }
+                }
+
+                Timer {
+                    id: chordReleaseTimer
+                    interval: 2500
+                    onTriggered: {
+                        for (var i = 0; i < parent.jingleChord.length; i++) {
+                            appEngine.releaseKeyboardNote(parent.jingleChord[i]);
+                        }
                         appEngine.setSustainPedal(false);
                     }
                 }
@@ -252,7 +269,7 @@ Item {
 
                 Timer {
                     id: drumBeatTimer
-                    interval: 90
+                    interval: 120
                     repeat: true
                     property int step: 0
 
@@ -264,9 +281,6 @@ Item {
                             appEngine.triggerDrumHit(38, 115); // snare
                         }
                         else if (step === 2) {
-                            appEngine.triggerDrumHit(36, 105); // kick
-                        }
-                        else if (step === 3) {
                             appEngine.triggerDrumHit(49, 100); // crash accent
                             stop();
                             step = 0;
