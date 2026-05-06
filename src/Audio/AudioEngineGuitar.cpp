@@ -77,7 +77,7 @@ void HeadlessAudioEngine::processGuitar(juce::AudioBuffer<float>& buffer, int nu
         int activeVoicing = globalState->currentGuitarVoicing.load();
 
         // Bounds check (possible source of previous seg fault)
-        if (activeRoot >= 0 && activeRoot < 12 && activeQuality >= 0 && activeQuality < 10) {
+        if (activeRoot >= 0 && activeRoot < 12 && activeQuality >= 0 && activeQuality < 7) {
             
             const int* chord = airchestra::getGuitarChord(
                 globalState->currentGuitarRoot.load(),

@@ -52,11 +52,7 @@ enum class GuitarChordQuality {
    Maj7 = 3,
    Min7 = 4,
    Sus2 = 5,
-   Sus4 = 6,
-   Diminished = 7, 
-   Min7b5 = 8,    
-   Augmented = 9
-   
+   Sus4 = 6
 };
 
 class GlobalState {

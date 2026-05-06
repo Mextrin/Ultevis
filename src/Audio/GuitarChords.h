@@ -14,45 +14,36 @@ struct BarreShape {
 };
 
 // Standard E-Shape (Root on 6th String)
-constexpr BarreShape E_SHAPES[10] = {
+constexpr BarreShape E_SHAPES[7] = {
     {0, 2, 2, 1, 0, 0},    // 0: Major
     {0, 2, 2, 0, 0, 0},    // 1: Minor
     {0, 2, 0, 1, 0, 0},    // 2: Dom7
     {0, 2, 1, 1, 0, 0},    // 3: Maj7
     {0, 2, 0, 0, 0, 0},    // 4: Min7
     {0, 2, 4, -1, 0, 0},   // 5: Sus2
-    {0, 2, 2, 2, 0, 0},    // 6: Sus4
-    {0, 1, 2, 0, -1, -1},  // 7: Diminished
-    {0, 1, 0, 0, -1, -1},  // 8: Min7b5
-    {0, 3, 2, 1, -1, -1}   // 9: Augmented
+    {0, 2, 2, 2, 0, 0}     // 6: Sus4
 };
 
 // Standard A-Shape (Root on 5th String)
-constexpr BarreShape A_SHAPES[10] = {
+constexpr BarreShape A_SHAPES[7] = {
     {-1, 0, 2, 2, 2, 0},   // 0: Major
     {-1, 0, 2, 2, 1, 0},   // 1: Minor
     {-1, 0, 2, 0, 2, 0},   // 2: Dom7
     {-1, 0, 2, 1, 2, 0},   // 3: Maj7
     {-1, 0, 2, 0, 1, 0},   // 4: Min7
     {-1, 0, 2, 2, 0, 0},   // 5: Sus2
-    {-1, 0, 2, 2, 3, 0},   // 6: Sus4
-    {-1, 0, 1, 2, 1, -1},  // 7: Diminished
-    {-1, 0, 1, 0, 1, -1},  // 8: Min7b5
-    {-1, 0, 3, 2, 2, -1}   // 9: Augmented
+    {-1, 0, 2, 2, 3, 0}    // 6: Sus4
 };
 
 // Standard D-Shape (Root on 4th String)
-constexpr BarreShape D_SHAPES[10] = {
+constexpr BarreShape D_SHAPES[7] = {
     {-1, -1, 0, 2, 3, 2},  // 0: Major
     {-1, -1, 0, 2, 3, 1},  // 1: Minor
     {-1, -1, 0, 2, 1, 2},  // 2: Dom7
     {-1, -1, 0, 2, 2, 2},  // 3: Maj7
     {-1, -1, 0, 2, 1, 1},  // 4: Min7
     {-1, -1, 0, 2, 3, 0},  // 5: Sus2
-    {-1, -1, 0, 2, 3, 3},  // 6: Sus4
-    {-1, -1, 0, 1, 3, 1},  // 7: Diminished
-    {-1, -1, 0, 1, 1, 1},  // 8: Min7b5
-    {-1, -1, 0, 3, 3, 2}   // 9: Augmented
+    {-1, -1, 0, 2, 3, 3}   // 6: Sus4
 };
 
 enum ShapeType { SHAPE_E, SHAPE_A, SHAPE_D };
@@ -72,13 +63,13 @@ constexpr std::array<int, 6> applyShape(ShapeType type, int quality, int fret) {
 
 // Compile-time database holding [Root][Quality][Voicing][String]
 struct GuitarChordDb {
-    int chords[7][10][3][6];
+    int chords[7][7][3][6];
 
     constexpr GuitarChordDb() : chords{} {
         // 1. Maintain your original hand-crafted open chords for Voicing 1
-        int origC[7][6] = { { -1, 48, 52, 55, 60, 64 }, { -1, 48, 55, 60, 63, 67 }, { -1, 48, 52, 58, 60, 64 }, { -1, 48, 52, 55, 59, 64 }, { -1, 48, 55, 58, 63, 67 }, { -1, 48, 55, 60, 62, 67 }, { -1, 48, 55, 60, 65, 67 } };
+        int origC[7][6] = { { -1, 48, 52, 55, 60, 64 }, { -1, 48, 55, 60, 63, 67 }, { -1, 48, 52, 55, 58, 64 }, { -1, 48, 52, 55, 59, 64 }, { -1, 48, 55, 58, 63, 67 }, { -1, 48, 55, 60, 62, 67 }, { -1, 48, 55, 60, 65, 67 } };
         int origD[7][6] = { { -1, -1, 50, 57, 62, 66 }, { -1, -1, 50, 57, 62, 65 }, { -1, -1, 50, 57, 60, 66 }, { -1, -1, 50, 57, 61, 66 }, { -1, -1, 50, 57, 60, 65 }, { -1, -1, 50, 57, 62, 64 }, { -1, -1, 50, 57, 62, 67 } };
-        int origE[7][6] = { { 40, 47, 52, 56, 59, 64 }, { 40, 47, 52, 55, 59, 64 }, { 40, 47, 50, 56, 59, 64 }, { 40, 47, 51, 56, 59, 64 }, { 40, 47, 52, 55, 62, 64 }, { 40, 47, 54, 56, 59, 64 }, { 40, 47, 52, 57, 59, 64 } };
+        int origE[7][6] = { { 40, 47, 52, 56, 59, 64 }, { 40, 47, 52, 55, 59, 64 }, { 40, 47, 50, 56, 59, 64 }, { 40, 47, 51, 56, 59, 64 }, { 40, 47, 52, 55, 62, 64 }, { 40, 47, 54, -1, 59, 64 }, { 40, 47, 52, 57, 59, 64 } };
         int origF[7][6] = { { 41, 48, 53, 57, 60, 65 }, { 41, 48, 53, 56, 60, 65 }, { 41, 48, 51, 57, 60, 65 }, { -1, -1, 53, 57, 60, 64 }, { 41, 48, 51, 56, 60, 65 }, { 41, 48, 53, 55, 60, 65 }, { 41, 48, 53, 58, 60, 65 } };
         int origG[7][6] = { { 43, 47, 50, 55, 59, 67 }, { 43, 50, 55, 58, 62, 67 }, { 43, 47, 50, 55, 59, 65 }, { 43, 47, 50, 55, 59, 66 }, { 43, 50, 53, 58, 62, 67 }, { 43, 45, 50, 55, 62, 67 }, { 43, 48, 50, 55, 60, 67 } };
         int origA[7][6] = { { -1, 45, 52, 57, 61, 64 }, { -1, 45, 52, 57, 60, 64 }, { -1, 45, 52, 55, 61, 64 }, { -1, 45, 52, 56, 61, 64 }, { -1, 45, 52, 55, 60, 64 }, { -1, 45, 52, 57, 59, 64 }, { -1, 45, 52, 57, 62, 64 } };
@@ -108,16 +99,16 @@ struct GuitarChordDb {
             {2, 7, 14}   // B
         };
 
-        // 3. Compile-time Loop to build the 1,260 element table
+        // 3. Compile-time Loop to build the 882 element table
         for(int r = 0; r < 7; ++r) {
             for(int v = 0; v < 3; ++v) {
-                for(int q = 0; q < 10; ++q) {
+                for(int q = 0; q < 7; ++q) {
                     
-                    // Retain your custom voicings for the first 7 qualities of Voicing 1
-                    if (v == 0 && q < 7) {
+                    // Retain your custom voicings for Voicing 1
+                    if (v == 0) {
                         for(int s = 0; s < 6; ++s) chords[r][q][v][s] = origs[r][q][s];
                     } else {
-                        // Dynamically compute the rest using perfectly transposed standard shapes
+                        // Dynamically compute the rest using transposed standard shapes
                         auto c = applyShape(types[r][v], q, frets[r][v]);
                         for(int s = 0; s < 6; ++s) chords[r][q][v][s] = c[s];
                     }
