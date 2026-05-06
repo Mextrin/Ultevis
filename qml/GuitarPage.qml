@@ -204,7 +204,7 @@ Item {
                         anchors.leftMargin: 8
                         anchors.right:      parent.right
                         anchors.rightMargin: 8
-                        height: 38
+                        height: 50
                     }
 
                     // Chord name — floats in the gap between fretboard and strum zone
@@ -229,10 +229,10 @@ Item {
                                 anchors.centerIn: parent
                                 text: root.selectedChordRoot >= 0
                                       ? (root.sharpsEnabled
-                                         ? ["A","A#","B","C","C#","D","D#","E","F","F#","G","G#"][root.selectedChordRoot]
-                                         : ["A","B","C","D","E","F","G"][root.selectedChordRoot])
+                                         ? ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"][root.selectedChordRoot]
+                                         : ["C","D","E","F","G","A","B"][root.selectedChordRoot])
                                         + "  "
-                                        + ["Maj","Min","7","Maj7","Min7","Sus2","Sus4"][root.selectedChordQuality]
+                                        + ["Maj","Min","7","Maj7","Min7","Sus2","Sus4","Dim","Aug","min7b5"][root.selectedChordQuality]
                                       : ""
                                 font.family:    figTreeVariable.name
                                 font.pixelSize: 40
@@ -260,7 +260,7 @@ Item {
                         anchors.rightMargin: 6
                         anchors.top:        neckCounter.bottom
                         anchors.topMargin:  8
-                        height: width * (218.0 / 2090.0)
+                        height: width * (370.0 / 2090.0)
                     }
                 }
             }
@@ -346,14 +346,69 @@ Item {
             Behavior on border.color { ColorAnimation { duration: 120 } }
         }
 
-        // Guitar image — stretches to fill the entire strum zone
-        Image {
+        // Drawn guitar — horizontal orientation (rotated 90°), strings + sound hole only
+        Canvas {
+            id: guitarCanvas
             anchors.fill: parent
-            source:       "qrc:/assets/icons/display_guitar.png"
-            fillMode:     Image.Stretch
-            smooth:       true
-            mipmap:       true
-            opacity:      0.88
+            Component.onCompleted: requestPaint()
+
+            onPaint: {
+                var ctx = getContext("2d")
+                ctx.clearRect(0, 0, width, height)
+
+                var W  = width
+                var H  = height
+                var cy = H / 2
+                var bodyLeft  = W * 0.02
+                var bodyRight = W * 0.98
+
+                // ── Sound hole rosette ─────────────────────────────────────
+                var shCX = W * 0.62
+                var shR  = Math.min(W * 0.18, H * 0.44)
+
+                ctx.strokeStyle = "rgba(255,255,255,0.04)"
+                ctx.lineWidth   = 1
+                ctx.beginPath(); ctx.arc(shCX, cy, shR + 10, 0, Math.PI * 2); ctx.stroke()
+
+                ctx.strokeStyle = "rgba(224,120,38,0.18)"
+                ctx.lineWidth   = 1
+                ctx.beginPath(); ctx.arc(shCX, cy, shR + 7,  0, Math.PI * 2); ctx.stroke()
+
+                ctx.strokeStyle = "rgba(224,120,38,0.40)"
+                ctx.lineWidth   = 1.5
+                ctx.beginPath(); ctx.arc(shCX, cy, shR + 3,  0, Math.PI * 2); ctx.stroke()
+
+                // Sound hole fill
+                ctx.fillStyle = "#040305"
+                ctx.beginPath(); ctx.arc(shCX, cy, shR, 0, Math.PI * 2); ctx.fill()
+
+                // Sound hole rim
+                ctx.strokeStyle = "rgba(224,120,38,0.60)"
+                ctx.lineWidth   = 1.5
+                ctx.beginPath(); ctx.arc(shCX, cy, shR, 0, Math.PI * 2); ctx.stroke()
+
+                // ── Saddle (left side — string anchor) ────────────────────
+                var saddleX = W * 0.10
+                var saddleH = H * 0.38
+                ctx.fillStyle = "rgba(205,215,228,0.55)"
+                ctx.fillRect(saddleX - 1.5, cy - saddleH * 0.5, 3, saddleH)
+
+                // ── Strings (horizontal, left to right) ───────────────────
+                var numStrings = 6
+                var strSpacing = H * 0.072
+                var s0y        = cy - (numStrings - 1) * strSpacing * 0.5
+
+                for (var s = 0; s < numStrings; s++) {
+                    var sy = s0y + s * strSpacing
+                    // String 0 = high E (thinnest), string 5 = low E (thickest)
+                    ctx.strokeStyle = "rgba(195,208,224,0.65)"
+                    ctx.lineWidth   = 1.8 + s * 0.45
+                    ctx.beginPath()
+                    ctx.moveTo(bodyLeft,  sy)
+                    ctx.lineTo(bodyRight, sy)
+                    ctx.stroke()
+                }
+            }
         }
     }
 
@@ -414,42 +469,92 @@ Item {
     }
 
     // ── Inline component: FretboardBars ──────────────────────────────────────
-    // fretboard.png as the base image; one of three equal sections is
-    // highlighted orange based on neckPosition. No text labels.
+    // Drawn fretboard: equal-temperament fret spacing, 6 strings, position dots.
+    // Zones 0/1/2 (frets 1–7 / 8–15 / 16–24) highlighted in orange.
     component FretboardBars: Item {
         id: fb
 
-        // Base fretboard image stretched to fill
-        Image {
+        Canvas {
+            id: fbCanvas
             anchors.fill: parent
-            source:       "qrc:/assets/icons/fretboard.png"
-            fillMode:     Image.Stretch
-            smooth:       true
-            mipmap:       true
-        }
 
-        // Three highlight sections on top — only the active one is visible
-        Repeater {
-            model: 3
+            // Reactive mirror — any change triggers repaint
+            property int  pNeckPos: root.neckPosition
+            property int  pFlash:   root.neckFlashDelta
+            onPNeckPosChanged: requestPaint()
+            onPFlashChanged:   requestPaint()
 
-            delegate: Rectangle {
-                required property int index
-                x:      index * (fb.width / 3)
-                y:      0
-                width:  fb.width / 3
-                height: fb.height
+            Component.onCompleted: requestPaint()
 
-                color: index === root.neckPosition
-                       ? Qt.rgba(0.878, 0.471, 0.149, 0.45)
-                       : "transparent"
-                border.color: index === root.neckPosition
-                              ? "#E07826"
-                              : "transparent"
-                border.width: 2
-                radius: 4
+            onPaint: {
+                var ctx = getContext("2d")
+                ctx.clearRect(0, 0, width, height)
 
-                Behavior on color        { ColorAnimation { duration: 200 } }
-                Behavior on border.color { ColorAnimation { duration: 200 } }
+                var W = width
+                var H = height
+                var numFrets   = 24
+                var numStrings = 6
+
+                // Equal-temperament fret positions, normalised to [0, W]
+                // pos(n) = distance from nut to fret n
+                var scale24 = 1.0 - Math.pow(0.5, 24.0 / 12.0)   // ≈ 0.75
+                function fretX(n) {
+                    return (1.0 - Math.pow(0.5, n / 12.0)) / scale24 * W
+                }
+
+                // Zone boundaries (fret indices that delimit each zone)
+                var zoneBounds = [[0, 7], [7, 15], [15, 24]]
+
+                // ── Background ───────────────────────────────────────────
+                ctx.fillStyle = "rgba(14,16,22,0.92)"
+                ctx.fillRect(0, 0, W, H)
+
+                // ── Zone highlights ───────────────────────────────────────
+                for (var z = 0; z < 3; z++) {
+                    var x1 = fretX(zoneBounds[z][0])
+                    var x2 = fretX(zoneBounds[z][1])
+                    if (z === root.neckPosition) {
+                        ctx.fillStyle = "rgba(224,120,38,0.22)"
+                        ctx.fillRect(x1 + 1, 1, x2 - x1 - 2, H - 2)
+                        ctx.strokeStyle = "#E07826"
+                        ctx.lineWidth   = 1.5
+                        ctx.strokeRect(x1 + 1, 1, x2 - x1 - 2, H - 2)
+                    }
+                }
+
+                // ── Fret lines ────────────────────────────────────────────
+                for (var f = 0; f <= numFrets; f++) {
+                    var fx = fretX(f)
+                    if (f === 0) {
+                        // Nut — thick, bright
+                        ctx.strokeStyle = "rgba(200,212,230,0.90)"
+                        ctx.lineWidth   = 3
+                    } else {
+                        ctx.strokeStyle = "rgba(110,122,142,0.65)"
+                        ctx.lineWidth   = 1
+                    }
+                    ctx.beginPath()
+                    ctx.moveTo(fx, 0)
+                    ctx.lineTo(fx, H)
+                    ctx.stroke()
+                }
+
+                // ── Strings ───────────────────────────────────────────────
+                var strPad = H * 0.14
+                for (var s = 0; s < numStrings; s++) {
+                    var sy = strPad + (s / (numStrings - 1)) * (H - 2 * strPad)
+                    ctx.strokeStyle = "rgba(195,208,224,0.50)"
+                    ctx.lineWidth   = 0.7 + s * 0.22
+                    ctx.beginPath()
+                    ctx.moveTo(0, sy)
+                    ctx.lineTo(W, sy)
+                    ctx.stroke()
+                }
+
+                // ── Outer border ──────────────────────────────────────────
+                ctx.strokeStyle = "rgba(255,255,255,0.08)"
+                ctx.lineWidth   = 1
+                ctx.strokeRect(0.5, 0.5, W - 1, H - 1)
             }
         }
     }
@@ -468,12 +573,12 @@ Item {
         id: cs
 
         // ── Data ──────────────────────────────────────────────────────────
-        readonly property var naturalRoots: ["A","B","C","D","E","F","G"]
-        readonly property var sharpRoots:   ["A","A#","B","C","C#","D","D#","E","F","F#","G","G#"]
+        readonly property var naturalRoots: ["C","D","E","F","G","A","B"]
+        readonly property var sharpRoots:   ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"]
         readonly property var roots:     root.sharpsEnabled ? sharpRoots : naturalRoots
         readonly property int numRoots:  roots.length
-        readonly property var qualities: ["Maj","Min","7","Maj7","Min7","Sus2","Sus4"]
-        readonly property int numQ:      7
+        readonly property var qualities: ["Maj","Min","7","Maj7","Min7","Sus2","Sus4","Dim","Aug","min7b5"]
+        readonly property int numQ:      10
 
         // ── Geometry ──────────────────────────────────────────────────────
         // Bar: left edge, full height, fixed width
@@ -563,12 +668,13 @@ Item {
             id: csCanvas
             anchors.fill: parent
 
-            property int  pSelRoot:  root.selectedChordRoot
-            property int  pSelQual:  root.selectedChordQuality
-            property int  pHovRoot:  cs.hovRoot
-            property int  pHovQual:  cs.hovQuality
-            property int  pNumRoots: cs.numRoots
-            property bool pSharps:   root.sharpsEnabled
+            property int    pSelRoot:  root.selectedChordRoot
+            property int    pSelQual:  root.selectedChordQuality
+            property int    pHovRoot:  cs.hovRoot
+            property int    pHovQual:  cs.hovQuality
+            property int    pNumRoots: cs.numRoots
+            property bool   pSharps:   root.sharpsEnabled
+            property string pFont:     figTreeVariable.name
 
             onPSelRootChanged:  requestPaint()
             onPSelQualChanged:  requestPaint()
@@ -576,6 +682,7 @@ Item {
             onPHovQualChanged:  requestPaint()
             onPNumRootsChanged: requestPaint()
             onPSharpsChanged:   requestPaint()
+            onPFontChanged:     requestPaint()
 
             onPaint: {
                 var ctx = getContext("2d")
@@ -631,7 +738,7 @@ Item {
                         var lx = barW + Math.cos(midA) * labelR
                         var ly = scY  + Math.sin(midA) * labelR
                         var qfs = Math.max(10, Math.min(16, (semiR - innerR) * 0.22))
-                        ctx.font         = (isSelQ ? "700 " : "500 ") + qfs + "px sans-serif"
+                        ctx.font         = (isSelQ ? "700 " : "500 ") + qfs + "px '" + csCanvas.pFont + "'"
                         ctx.textAlign    = "center"
                         ctx.textBaseline = "middle"
                         ctx.fillStyle    = isSelQ ? "#FFFFFF" : isHovQ ? "#FFD4A0" : "rgba(200,212,225,0.85)"
@@ -679,7 +786,7 @@ Item {
 
                     // Root label — big, bold
                     var fs = Math.max(14, Math.min(30, rowH * 0.48))
-                    ctx.font         = "700 " + fs + "px sans-serif"
+                    ctx.font         = "700 " + fs + "px '" + csCanvas.pFont + "'"
                     ctx.textAlign    = "center"
                     ctx.textBaseline = "middle"
                     ctx.fillStyle    = isSel ? "#FFFFFF" : isHov ? "#FFD4A0" : "rgba(235,237,240,0.90)"

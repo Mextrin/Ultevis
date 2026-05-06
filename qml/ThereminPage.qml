@@ -107,7 +107,87 @@ Item {
         height: cameraFeed.paintedHeight
         anchors.centerIn: cameraFeed
         z: 5
-        opacity: 0.85 
+        opacity: 0.85
+        readonly property real zoneDividerX: width * 0.33
+
+        Item {
+            id: zoneLabels
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: 64
+            z: 2
+            readonly property real leftCenterX: interactionLayer.zoneDividerX / 2
+            readonly property real rightCenterX: interactionLayer.zoneDividerX + ((interactionLayer.width - interactionLayer.zoneDividerX) / 2)
+
+            Item {
+                id: volumeLabel
+                x: zoneLabels.leftCenterX - (width / 2)
+                y: 14
+                width: 144
+                height: 40
+
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 7
+
+                    Text {
+                        id: volumeTitle
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "VOLUME"
+                        font.family: figTreeVariable.name
+                        font.pixelSize: 12
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 2.8
+                        color: "#E07826"
+                        renderType: Text.NativeRendering
+                    }
+
+                    Rectangle {
+                        width: 56
+                        height: 2
+                        radius: 1
+                        color: "#E07A26"
+                        opacity: 0.92
+                        anchors.horizontalCenter: parent.horizontalCenter
+                    }
+                }
+            }
+
+            Item {
+                id: pitchLabel
+                x: zoneLabels.rightCenterX - (width / 2)
+                y: 14
+                width: 144
+                height: 40
+
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 7
+
+                    Text {
+                        id: pitchTitle
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "PITCH"
+                        font.family: figTreeVariable.name
+                        font.pixelSize: 12
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 2.8
+                        color: "#E07826"
+                        renderType: Text.NativeRendering
+                    }
+
+                    Rectangle {
+                        width: 48
+                        height: 2
+                        radius: 1
+                        color: "#E07A26"
+                        opacity: 0.92
+                        anchors.horizontalCenter: parent.horizontalCenter
+                    }
+                }
+            }
+        }
 
         Canvas {
             id: guideLine
@@ -116,7 +196,7 @@ Item {
             onPaint: {
                 const ctx = getContext("2d"); ctx.reset(); ctx.save()
                 ctx.strokeStyle = Qt.rgba(0.922, 0.929, 0.941, 0.6); ctx.lineWidth = 4; ctx.setLineDash([6, 8])
-                const x = Math.round(width * 0.33) + 0.5
+                const x = Math.round(interactionLayer.zoneDividerX) + 0.5
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke(); ctx.restore()
             }
         }
