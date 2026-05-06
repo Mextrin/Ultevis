@@ -244,7 +244,7 @@ Item {
 
             Text {
                 anchors.centerIn: parent
-                text: group.title + " " + group.octaveValue
+                text: group.title + " " + group.octaveValue + "-" + (group.octaveValue + 1)
                 font.family: figTreeVariable.name
                 font.pixelSize: Math.max(20, Math.min(34, parent.height * 0.48))
                 font.weight: Font.Medium

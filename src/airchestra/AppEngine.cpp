@@ -369,11 +369,11 @@ void AppEngine::adjustKeyboardOctave(int keyboardIndex, int delta) {
         int minOctave = 1, maxOctave = 8;
         switch (globalState->currentKeyboardInstrument.load())
         {
-            case KeyboardSound::GrandPiano: minOctave = 1; maxOctave = 7; break;
-            case KeyboardSound::Organ:      minOctave = 2; maxOctave = 6; break;
-            case KeyboardSound::Flute:      minOctave = 4; maxOctave = 6; break;
-            case KeyboardSound::Harp:       minOctave = 1; maxOctave = 7; break;
-            case KeyboardSound::Violin:     minOctave = 4; maxOctave = 6; break;
+            case KeyboardSound::GrandPiano: minOctave = 1; maxOctave = 6; break; 
+            case KeyboardSound::Organ:      minOctave = 2; maxOctave = 5; break; 
+            case KeyboardSound::Flute:      minOctave = 4; maxOctave = 5; break; 
+            case KeyboardSound::Harp:       minOctave = 1; maxOctave = 6; break; 
+            case KeyboardSound::Violin:     minOctave = 4; maxOctave = 5; break; 
         }
         const int next = qBound(minOctave, current + delta, maxOctave);
         if (next == current)
@@ -399,11 +399,11 @@ void AppEngine::adjustKeyboardOctave(int keyboardIndex, int delta) {
         int minOctave = 1, maxOctave = 8;
         switch (globalState->currentKeyboardInstrument.load())
         {
-            case KeyboardSound::GrandPiano: minOctave = 1; maxOctave = 7; break;
-            case KeyboardSound::Organ:      minOctave = 2; maxOctave = 6; break;
-            case KeyboardSound::Flute:      minOctave = 4; maxOctave = 6; break;
-            case KeyboardSound::Harp:       minOctave = 1; maxOctave = 7; break;
-            case KeyboardSound::Violin:     minOctave = 4; maxOctave = 6; break;
+            case KeyboardSound::GrandPiano: minOctave = 1; maxOctave = 6; break; 
+            case KeyboardSound::Organ:      minOctave = 2; maxOctave = 5; break; 
+            case KeyboardSound::Flute:      minOctave = 4; maxOctave = 5; break; 
+            case KeyboardSound::Harp:       minOctave = 1; maxOctave = 6; break; 
+            case KeyboardSound::Violin:     minOctave = 4; maxOctave = 5; break; 
         }
         const int next = qBound(minOctave, current + delta, maxOctave);
         if (next == current)
@@ -436,11 +436,11 @@ void AppEngine::setKeyboardInstrument(int instrumentID) {
     int minOctave = 1, maxOctave = 8;
     switch (static_cast<KeyboardSound>(instrumentID))
     {
-        case KeyboardSound::GrandPiano: minOctave = 1; maxOctave = 7; break;
-        case KeyboardSound::Organ:      minOctave = 2; maxOctave = 6; break;
-        case KeyboardSound::Flute:      minOctave = 4; maxOctave = 6; break;
-        case KeyboardSound::Harp:       minOctave = 1; maxOctave = 7; break;
-        case KeyboardSound::Violin:     minOctave = 4; maxOctave = 6; break;
+        case KeyboardSound::GrandPiano: minOctave = 1; maxOctave = 6; break; 
+        case KeyboardSound::Organ:      minOctave = 2; maxOctave = 5; break; 
+        case KeyboardSound::Flute:      minOctave = 4; maxOctave = 5; break; 
+        case KeyboardSound::Harp:       minOctave = 1; maxOctave = 6; break; 
+        case KeyboardSound::Violin:     minOctave = 4; maxOctave = 5; break; 
     }
 
     globalState->topKeyboardOctave.store(
