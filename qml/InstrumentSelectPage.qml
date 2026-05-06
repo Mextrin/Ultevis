@@ -252,19 +252,27 @@ Item {
 
                 Timer {
                     id: drumBeatTimer
-                    interval: 150 // ms between hits
+                    interval: 90
                     repeat: true
                     property int step: 0
+
                     onTriggered: {
                         if (step === 0) {
-                            appEngine.triggerDrumHit(36, 100); // Bass Drum
-                        } else if (step === 1) {
-                            appEngine.triggerDrumHit(38, 100); // Snare
-                        } else if (step === 2) {
-                            appEngine.triggerDrumHit(49, 80); // Crash Cymbal
-                            stop();
-                            step = 0; // Reset for next time
+                            appEngine.triggerDrumHit(36, 120); // kick
                         }
+                        else if (step === 1) {
+                            appEngine.triggerDrumHit(38, 115); // snare
+                        }
+                        else if (step === 2) {
+                            appEngine.triggerDrumHit(36, 105); // kick
+                        }
+                        else if (step === 3) {
+                            appEngine.triggerDrumHit(49, 100); // crash accent
+                            stop();
+                            step = 0;
+                            return;
+                        }
+
                         step++;
                     }
                 }
