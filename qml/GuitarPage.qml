@@ -20,6 +20,11 @@ Item {
     property bool prevThumbDown: false
     property bool neckCooldown:  false
 
+    // ── Chord wheel state ────────────────────────────────────────────────────
+    property bool sharpsEnabled:        false
+    property int  selectedChordRoot:    -1   // index into roots array, -1 = no chord
+    property int  selectedChordQuality:  0   // index into qualities array
+
     // ── Helper functions (identical to KeyboardPage) ─────────────────────────
     function handInsideItem(item, x, y) {
         if (!item || cameraViewport.width <= 0 || cameraViewport.height <= 0)
@@ -174,6 +179,14 @@ Item {
                 id: guitarOverlay
                 anchors.fill: parent
 
+                // Left half: chord selector (vertical bar + pop-out semi-circle)
+                ChordSelector {
+                    x:      0
+                    y:      0
+                    width:  parent.width  * 0.50
+                    height: parent.height
+                }
+
                 // Right half: NeckCounter (top) → FretboardBars → StrumZone (bottom)
                 Item {
                     id: rightHalf
@@ -182,13 +195,16 @@ Item {
                     width:  parent.width  * 0.50
                     height: parent.height
 
-                    // Neck position counter — large, takes top 42% of right half
+                    // Neck position counter — compact single-line chip at top
                     NeckCounter {
                         id: neckCounter
-                        anchors.top:   parent.top
-                        anchors.left:  parent.left
-                        anchors.right: parent.right
-                        height: parent.height * 0.42
+                        anchors.top:        parent.top
+                        anchors.topMargin:  10
+                        anchors.left:       parent.left
+                        anchors.leftMargin: 8
+                        anchors.right:      parent.right
+                        anchors.rightMargin: 8
+                        height: 38
                     }
 
                     // Strum zone — anchored to the bottom
@@ -200,14 +216,14 @@ Item {
                         height: parent.height * 0.50
                     }
 
-                    // Fretboard — sits between counter and strum zone, natural aspect ratio
+                    // Fretboard — sits just below the neck counter chip
                     FretboardBars {
-                        anchors.left:         parent.left
-                        anchors.leftMargin:   6
-                        anchors.right:        parent.right
-                        anchors.rightMargin:  6
-                        anchors.bottom:       strumZone.top
-                        anchors.bottomMargin: 4
+                        anchors.left:       parent.left
+                        anchors.leftMargin: 6
+                        anchors.right:      parent.right
+                        anchors.rightMargin: 6
+                        anchors.top:        neckCounter.bottom
+                        anchors.topMargin:  8
                         height: width * (218.0 / 2090.0)
                     }
                 }
@@ -308,69 +324,56 @@ Item {
     }
 
     // ── Inline component: NeckCounter ────────────────────────────────────────
-    // Mirrors OctaveGroup + KeyboardZone from KeyboardPage:
-    //   thumb up   inside this area → neck goes to lower frets  → green flash
-    //   thumb down inside this area → neck goes to higher frets → red flash
+    // Compact single-line chip showing the current fret range.
+    // Flashes green (thumb up) or red (thumb down). Detection covers entire rightHalf.
     component NeckCounter: Item {
         id: nc
 
-        readonly property var neckLabels: ["1 – 7", "8 – 15", "16 – 24"]
+        readonly property var neckLabels: ["Frets 1 – 7", "Frets 8 – 15", "Frets 16 – 24"]
 
-        // Background — flashes green / red
         Rectangle {
             anchors.fill: parent
-            color: root.neckFlashDelta > 0 ? Qt.rgba(0.12, 0.72, 0.36, 0.42)
-                 : root.neckFlashDelta < 0 ? Qt.rgba(0.9,  0.16, 0.16, 0.42)
-                 : Qt.rgba(0.015, 0.018, 0.024, 0.34)
+            radius: height / 2
+            color: root.neckFlashDelta > 0 ? Qt.rgba(0.12, 0.72, 0.36, 0.38)
+                 : root.neckFlashDelta < 0 ? Qt.rgba(0.9,  0.16, 0.16, 0.38)
+                 : Qt.rgba(0.015, 0.018, 0.024, 0.55)
             border.color: root.neckFlashDelta > 0 ? "#2FE174"
                         : root.neckFlashDelta < 0 ? "#FF4D4D"
-                        : Qt.rgba(1, 1, 1, 0.32)
+                        : Qt.rgba(1, 1, 1, 0.18)
             border.width: 1
 
             Behavior on color        { ColorAnimation { duration: 130 } }
             Behavior on border.color { ColorAnimation { duration: 130 } }
         }
 
-        Column {
+        Row {
             anchors.centerIn: parent
-            spacing: 8
+            spacing: 6
 
             Text {
-                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.verticalCenter: parent.verticalCenter
                 text:           "↑"
                 font.family:    figTreeVariable.name
-                font.pixelSize: Math.max(22, nc.height * 0.18)
-                color: root.neckFlashDelta > 0 ? "#2FE174" : Qt.rgba(1, 1, 1, 0.38)
+                font.pixelSize: 14
+                color: root.neckFlashDelta > 0 ? "#2FE174" : Qt.rgba(1, 1, 1, 0.30)
                 Behavior on color { ColorAnimation { duration: 130 } }
             }
 
             Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text:           "Neck"
-                font.family:    figTreeVariable.name
-                font.pixelSize: Math.max(16, nc.height * 0.13)
-                font.weight:    Font.Light
-                font.letterSpacing: 2
-                color:          Qt.rgba(1, 1, 1, 0.55)
-                horizontalAlignment: Text.AlignHCenter
-            }
-
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.verticalCenter: parent.verticalCenter
                 text:           nc.neckLabels[root.neckPosition]
                 font.family:    figTreeVariable.name
-                font.pixelSize: Math.max(24, nc.height * 0.22)
+                font.pixelSize: 14
                 font.weight:    Font.Medium
                 color:          "#EBEDF0"
-                horizontalAlignment: Text.AlignHCenter
             }
 
             Text {
-                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.verticalCenter: parent.verticalCenter
                 text:           "↓"
                 font.family:    figTreeVariable.name
-                font.pixelSize: Math.max(22, nc.height * 0.18)
-                color: root.neckFlashDelta < 0 ? "#FF4D4D" : Qt.rgba(1, 1, 1, 0.38)
+                font.pixelSize: 14
+                color: root.neckFlashDelta < 0 ? "#FF4D4D" : Qt.rgba(1, 1, 1, 0.30)
                 Behavior on color { ColorAnimation { duration: 130 } }
             }
         }
@@ -413,6 +416,268 @@ Item {
 
                 Behavior on color        { ColorAnimation { duration: 200 } }
                 Behavior on border.color { ColorAnimation { duration: 200 } }
+            }
+        }
+    }
+
+    // ── Inline component: ChordWheel ─────────────────────────────────────────
+    // Two-level selection:
+    //   1. Pinch outer ring  → select root (C, D# …)
+    //   2. Pinch inner ring  → select quality (Maj, Min, 7 …)
+    //   3. Pinch centre      → clear selection (no chord)
+    // Sharps mode (toggle in settings) swaps 7 natural roots for all 12.
+    // ── Inline component: ChordSelector ──────────────────────────────────────
+    // Left side: vertical bar of root notes (A–G or chromatic with sharps).
+    // Pinch a root → semi-circle fans out to the RIGHT showing chord qualities.
+    // Pinch a quality → chord locked in. Pinch root again → deselect.
+    component ChordSelector: Item {
+        id: cs
+
+        // ── Data ──────────────────────────────────────────────────────────
+        readonly property var naturalRoots: ["A","B","C","D","E","F","G"]
+        readonly property var sharpRoots:   ["A","A#","B","C","C#","D","D#","E","F","F#","G","G#"]
+        readonly property var roots:     root.sharpsEnabled ? sharpRoots : naturalRoots
+        readonly property int numRoots:  roots.length
+        readonly property var qualities: ["Maj","Min","7","Maj7","Min7","Sus2","Sus4"]
+        readonly property int numQ:      7
+
+        // ── Geometry ──────────────────────────────────────────────────────
+        // Bar: left edge, full height, fixed width
+        readonly property real barW:    Math.max(44, width * 0.24)
+        // Semi-circle: always centred vertically in the component
+        readonly property real semiCY:  height / 2
+        readonly property real semiR:   Math.min(width - barW, height * 0.52)
+        readonly property real innerR:  semiR * 0.38    // larger dead zone near centre
+        readonly property real rowH:    height / numRoots
+
+        // ── Interaction state ─────────────────────────────────────────────
+        property int  hovRoot:    -1   // index or -1
+        property int  hovQuality: -1
+        property bool prevLPinch: false
+        property bool prevRPinch: false
+
+        // Returns { zone: "bar"|"semi"|"none",  index: N }
+        function hitTest(nx, ny) {
+            var pt = cs.mapFromItem(cameraViewport,
+                                    nx * cameraViewport.width,
+                                    ny * cameraViewport.height)
+            // Bar zone
+            if (pt.x >= 0 && pt.x < cs.barW && pt.y >= 0 && pt.y < cs.height) {
+                var ri = Math.min(cs.numRoots - 1,
+                                  Math.floor(pt.y / cs.height * cs.numRoots))
+                return { zone: "bar", index: ri }
+            }
+            // Semi-circle zone (only when a root is selected)
+            if (root.selectedChordRoot >= 0) {
+                var cy = cs.semiCY
+                var dx = pt.x - cs.barW
+                var dy = pt.y - cy
+                var dist = Math.sqrt(dx * dx + dy * dy)
+                if (dx >= 0 && dist >= cs.innerR && dist <= cs.semiR) {
+                    var angle = Math.atan2(dy, dx)   // −π/2 … +π/2 for right half
+                    if (angle >= -Math.PI / 2 && angle <= Math.PI / 2) {
+                        var norm = (angle + Math.PI / 2) / Math.PI
+                        var qi   = Math.min(cs.numQ - 1, Math.floor(norm * cs.numQ))
+                        return { zone: "semi", index: qi }
+                    }
+                }
+            }
+            return { zone: "none", index: -1 }
+        }
+
+        // Connections — hover tracking + pinch rising-edge selection
+        Connections {
+            target: root.engineReady ? appEngine : null
+
+            function onHandStateChanged() {
+                if (!root.engineReady) return
+
+                var hit = { zone: "none", index: -1 }
+                if (appEngine.leftHandVisible)
+                    hit = cs.hitTest(appEngine.leftHandX, appEngine.leftHandY)
+                if (hit.zone === "none" && appEngine.rightHandVisible)
+                    hit = cs.hitTest(appEngine.rightHandX, appEngine.rightHandY)
+
+                cs.hovRoot    = hit.zone === "bar"  ? hit.index : -1
+                cs.hovQuality = hit.zone === "semi" ? hit.index : -1
+
+                var active = hit.zone !== "none"
+                var lp = appEngine.leftPinch  && active
+                var rp = appEngine.rightPinch && active
+
+                if ((lp && !cs.prevLPinch) || (rp && !cs.prevRPinch)) {
+                    if (hit.zone === "bar") {
+                        // Toggle root selection
+                        if (root.selectedChordRoot === hit.index)
+                            root.selectedChordRoot = -1
+                        else {
+                            root.selectedChordRoot    = hit.index
+                            root.selectedChordQuality = 0
+                        }
+                    } else if (hit.zone === "semi") {
+                        root.selectedChordQuality = hit.index
+                    }
+                }
+
+                cs.prevLPinch = lp
+                cs.prevRPinch = rp
+            }
+        }
+
+        // ── Canvas ────────────────────────────────────────────────────────
+        Canvas {
+            id: csCanvas
+            anchors.fill: parent
+
+            property int  pSelRoot:  root.selectedChordRoot
+            property int  pSelQual:  root.selectedChordQuality
+            property int  pHovRoot:  cs.hovRoot
+            property int  pHovQual:  cs.hovQuality
+            property int  pNumRoots: cs.numRoots
+            property bool pSharps:   root.sharpsEnabled
+
+            onPSelRootChanged:  requestPaint()
+            onPSelQualChanged:  requestPaint()
+            onPHovRootChanged:  requestPaint()
+            onPHovQualChanged:  requestPaint()
+            onPNumRootsChanged: requestPaint()
+            onPSharpsChanged:   requestPaint()
+
+            onPaint: {
+                var ctx = getContext("2d")
+                ctx.clearRect(0, 0, width, height)
+
+                var barW   = cs.barW
+                var semiR  = cs.semiR
+                var innerR = cs.innerR
+                var rowH   = cs.rowH
+                var n      = cs.numRoots
+                var nQ     = cs.numQ
+                var sR     = root.selectedChordRoot
+                var sQ     = root.selectedChordQuality
+                var hR     = cs.hovRoot
+                var hQ     = cs.hovQuality
+
+                // ── Semi-circle (draw before bar so bar appears on top) ───
+                if (sR >= 0) {
+                    var scY = cs.semiCY
+
+                    // Faint backdrop
+                    ctx.beginPath()
+                    ctx.moveTo(barW, scY)
+                    ctx.arc(barW, scY, semiR, -Math.PI / 2, Math.PI / 2)
+                    ctx.closePath()
+                    ctx.fillStyle = "rgba(8,11,18,0.65)"
+                    ctx.fill()
+
+                    // Quality segments (annular sectors, right half)
+                    for (var q = 0; q < nQ; q++) {
+                        var startA = -Math.PI / 2 + (q / nQ) * Math.PI
+                        var endA   = -Math.PI / 2 + ((q + 1) / nQ) * Math.PI
+
+                        var isSelQ = (q === sQ)
+                        var isHovQ = (q === hQ)
+
+                        ctx.beginPath()
+                        ctx.arc(barW, scY, semiR - 1, startA, endA)
+                        ctx.arc(barW, scY, innerR + 1, endA, startA, true)
+                        ctx.closePath()
+
+                        ctx.fillStyle = isSelQ ? "rgba(47,225,116,0.72)"
+                                      : isHovQ ? "rgba(47,225,116,0.30)"
+                                      : "rgba(20,24,36,0.82)"
+                        ctx.fill()
+                        ctx.strokeStyle = (isSelQ || isHovQ) ? "#2FE174" : "rgba(255,255,255,0.09)"
+                        ctx.lineWidth   = isSelQ ? 2 : 1
+                        ctx.stroke()
+
+                        // Quality label
+                        var midA   = (startA + endA) / 2
+                        var labelR = (semiR + innerR) / 2
+                        var lx = barW + Math.cos(midA) * labelR
+                        var ly = scY  + Math.sin(midA) * labelR
+                        var qfs = Math.max(10, Math.min(16, (semiR - innerR) * 0.22))
+                        ctx.font         = (isSelQ ? "700 " : "500 ") + qfs + "px sans-serif"
+                        ctx.textAlign    = "center"
+                        ctx.textBaseline = "middle"
+                        ctx.fillStyle    = isSelQ ? "#FFFFFF" : isHovQ ? "#B0FFD0" : "rgba(200,212,225,0.85)"
+                        ctx.fillText(cs.qualities[q], lx, ly)
+                    }
+
+                    // Donut hole
+                    ctx.beginPath()
+                    ctx.arc(barW, scY, innerR, -Math.PI / 2, Math.PI / 2)
+                    ctx.arc(barW, scY, 0, Math.PI / 2, -Math.PI / 2, true)
+                    ctx.closePath()
+                    ctx.fillStyle = "rgba(10,13,20,0.92)"
+                    ctx.fill()
+
+                    // Connector line from selected bar row to semi-circle
+                    ctx.strokeStyle = "#E07826"
+                    ctx.lineWidth   = 1.5
+                    ctx.setLineDash([4, 4])
+                    ctx.beginPath()
+                    ctx.moveTo(barW, scY)
+                    ctx.lineTo(barW + innerR, scY)
+                    ctx.stroke()
+                    ctx.setLineDash([])
+                }
+
+                // ── Vertical bar ─────────────────────────────────────────
+                for (var i = 0; i < n; i++) {
+                    var y      = i * rowH
+                    var isSel  = (i === sR)
+                    var isHov  = (i === hR)
+                    var pad    = 4
+
+                    // Row background
+                    ctx.fillStyle = isSel ? "rgba(224,120,38,0.85)"
+                                  : isHov ? "rgba(224,120,38,0.32)"
+                                  : "rgba(16,20,30,0.80)"
+                    ctx.beginPath()
+                    ctx.rect(pad, y + pad, barW - pad * 2, rowH - pad * 2)
+                    ctx.fill()
+
+                    // Row border
+                    ctx.strokeStyle = (isSel || isHov) ? "#E07826" : "rgba(255,255,255,0.10)"
+                    ctx.lineWidth   = isSel ? 2 : 1
+                    ctx.stroke()
+
+                    // Root label — big, bold
+                    var fs = Math.max(14, Math.min(30, rowH * 0.48))
+                    ctx.font         = "700 " + fs + "px sans-serif"
+                    ctx.textAlign    = "center"
+                    ctx.textBaseline = "middle"
+                    ctx.fillStyle    = isSel ? "#FFFFFF" : isHov ? "#FFD4A0" : "rgba(235,237,240,0.90)"
+                    ctx.fillText(cs.roots[i], barW / 2, y + rowH / 2)
+                }
+            }
+        }
+
+        // Current chord badge — bottom of the selector area
+        Rectangle {
+            visible:             root.selectedChordRoot >= 0
+            anchors.bottom:      parent.bottom
+            anchors.bottomMargin: 10
+            anchors.left:        parent.left
+            anchors.leftMargin:  6
+            width:  chordBadge.implicitWidth + 20
+            height: chordBadge.implicitHeight + 10
+            radius: 8
+            color:        Qt.rgba(0.015, 0.018, 0.025, 0.75)
+            border.color: "#E07826"
+            border.width: 1
+
+            Text {
+                id: chordBadge
+                anchors.centerIn: parent
+                text: root.selectedChordRoot >= 0
+                      ? cs.roots[root.selectedChordRoot] + "  " + cs.qualities[root.selectedChordQuality]
+                      : ""
+                font.family:    figTreeVariable.name
+                font.pixelSize: 15
+                font.weight:    Font.Medium
+                color:          "#E07826"
             }
         }
     }
@@ -528,6 +793,20 @@ Item {
         anchors.top:        header.bottom
         anchors.topMargin:  12
         z: 30
+
+        Text {
+            text: "CHORD WHEEL"
+            font.family: figTreeVariable.name; font.pixelSize: 11
+            font.weight: Font.DemiBold; font.letterSpacing: 1.5; color: "#E07826"
+        }
+
+        SettingsToggle {
+            label:   "Show Sharps / Flats"
+            checked: root.sharpsEnabled
+            onCheckedChanged: root.sharpsEnabled = checked
+        }
+
+        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
 
         Text {
             text: "VOLUME"
