@@ -71,18 +71,22 @@ def detect_hands(detection_result):
                     X_RIGHT_MIN = 0.0
                     X_RIGHT_MAX = 0.67
                     X_RIGHT_KILL = 0.80
-
                     if X_RIGHT_MIN <= index_tip.x <= X_RIGHT_KILL:
                         # Sound stays on until 0.80,
                         # but pitch/control value is clamped at 0.67.
                         theremin_payload["rightHandVisible"] = True
                         theremin_payload["rightHandX"] = min(index_tip.x, X_RIGHT_MAX)
                         theremin_payload["rightHandY"] = index_tip.y
-
                 else:
-                    theremin_payload["leftHandVisible"] = True
-                    theremin_payload["leftHandX"] = index_tip.x
-                    theremin_payload["leftHandY"] = index_tip.y
+                    X_LEFT_MIN = 0.67
+                    X_LEFT_MAX = 1.0
+                    X_LEFT_KILL = 0.60
+                    # Left hand controls volume only inside its allowed zone.
+                    # Outside this zone, leftHandVisible remains False, so volume does not update.
+                    if X_LEFT_KILL <= index_tip.x <= X_LEFT_MAX:
+                        theremin_payload["leftHandVisible"] = True
+                        theremin_payload["leftHandX"] = max(index_tip.x, X_LEFT_KILL)
+                        theremin_payload["leftHandY"] = index_tip.y
 
     # 2. Return the newly created payload, which is either updated or still in its default state.
     return theremin_payload
