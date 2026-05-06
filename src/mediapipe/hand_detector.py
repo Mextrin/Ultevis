@@ -233,7 +233,7 @@ def main():
                 pass
 
             # Downscale the final UI image here, so the original tracking stays accurate!
-            resized_frame = cv2.resize(display_frame, (640, 480))
+            resized_frame = cv2.resize(display_frame, (640, 360))
             cv2.imwrite(TEMP_FRAME_PATH, resized_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
             safe_replace(TEMP_FRAME_PATH, FINAL_FRAME_PATH)
 

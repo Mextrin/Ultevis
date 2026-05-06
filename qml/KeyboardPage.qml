@@ -124,40 +124,43 @@ Item {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
 
-        readonly property real cameraAspect: 4 / 3
-        readonly property real fittedWidth: height <= 0 ? 0 : (width / height > cameraAspect ? height * cameraAspect : width)
-        readonly property real fittedHeight: height <= 0 ? 0 : (width / height > cameraAspect ? height : width / cameraAspect)
-
         Rectangle {
             anchors.fill: parent
             color: "#0A0C10"
         }
 
-        Item {
-            id: cameraViewport
-            width: stage.fittedWidth
-            height: stage.fittedHeight
-            anchors.centerIn: parent
-            clip: true
+        // 1. Move the Image out here so it can fill the whole stage area
+        Image {
+            id: cameraFeed
+            anchors.fill: parent
+            fillMode: Image.PreserveAspectFit
+            source: "image://camera/feed"
+            cache: false
+            smooth: true
+            mipmap: true
 
-            Image {
-                id: cameraFeed
-                anchors.fill: parent
-                fillMode: Image.PreserveAspectFit
-                source: "image://camera/feed"
-                cache: false
-                smooth: true
-                mipmap: true
-
-                Timer {
-                    interval: 33
-                    running: true
-                    repeat: true
-                    onTriggered: {
-                        cameraFeed.source = "image://camera/feed?id=" + Math.random()
-                    }
+            Timer {
+                interval: 33
+                running: true
+                repeat: true
+                onTriggered: {
+                    cameraFeed.source = "image://camera/feed?id=" + Math.random()
                 }
             }
+        }
+
+        // 2. The Viewport now dynamically snaps to the exact painted pixels of the video!
+        Item {
+            id: cameraViewport
+            
+            readonly property real contentWidth: cameraFeed.paintedWidth > 0 ? cameraFeed.paintedWidth : cameraFeed.width
+            readonly property real contentHeight: cameraFeed.paintedHeight > 0 ? cameraFeed.paintedHeight : cameraFeed.height
+
+            x: cameraFeed.x + ((cameraFeed.width - contentWidth) / 2)
+            y: cameraFeed.y + ((cameraFeed.height - contentHeight) / 2)
+            width: contentWidth
+            height: contentHeight
+            clip: true
 
             Rectangle {
                 anchors.fill: parent
