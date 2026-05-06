@@ -231,8 +231,8 @@ Item {
                         anchors.right:  parent.right
                         anchors.rightMargin: 20
                         anchors.bottom: parent.bottom
-                        anchors.bottomMargin: 20
-                        height: parent.height * 0.35
+                        anchors.bottomMargin: 30
+                        height: parent.height * 0.25
                     }
 
                     // Fretboard — sits just below the neck counter chip
