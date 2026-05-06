@@ -229,10 +229,8 @@ Item {
                         id: strumZone
                         anchors.left:   parent.left
                         anchors.right:  parent.right
-                        anchors.rightMargin: 20
                         anchors.bottom: parent.bottom
-                        anchors.bottomMargin: 30
-                        height: parent.height * 0.45
+                        height: parent.height * 0.50
                     }
 
                     // Fretboard — sits just below the neck counter chip
@@ -279,16 +277,15 @@ Item {
     component StrumZone: Item {
         id: sz
 
-        property bool prevLeftPinch:  false
         property bool prevRightPinch: false
-        property bool strumCooldown:  false
         property bool canStrum:       true
 
-        Timer {
-            id: strumCooldownTimer
-            interval: 350   // ms before another strum can fire
-            repeat:   false
-            onTriggered: sz.strumCooldown = false
+        // This is the invisible, precise hit area for the strings.
+        Item {
+            id: hitArea
+            anchors.centerIn: parent
+            width: parent.width * 0.9
+            height: parent.height * 0.5
         }
 
         Connections {
@@ -296,39 +293,23 @@ Item {
             function onHandStateChanged() {
                 if (!root.engineReady) return
 
-                const rightHandInZone = root.rightHandInside(sz)
+                const rightHandInHitArea = root.rightHandInside(hitArea)
 
-                if (!rightHandInZone) {
+                if (!rightHandInHitArea) {
                     sz.canStrum = true
                 }
 
-                const rPinch = appEngine.rightPinch && rightHandInZone
+                const rPinch = appEngine.rightPinch && rightHandInHitArea
 
-                // Rising edge + cooldown + canStrum state → fire strum
-                if (!sz.strumCooldown && sz.canStrum) {
+                if (sz.canStrum) {
                     if (rPinch && !sz.prevRightPinch) {
                         appEngine.triggerGuitarStrum(100)
                         root.strumFlash = true
                         strumFlashTimer.restart()
-                        sz.strumCooldown = true
-                        strumCooldownTimer.restart()
                         sz.canStrum = false // Strum used, must exit and re-enter
                     }
                 }
                 sz.prevRightPinch = rPinch
-
-                // Allow left-hand pinch to work as before, if needed.
-                const lPinch = appEngine.leftPinch && root.leftHandInside(sz)
-                if (!sz.strumCooldown) {
-                    if (lPinch && !sz.prevLeftPinch) {
-                        appEngine.triggerGuitarStrum(100)
-                        root.strumFlash = true
-                        strumFlashTimer.restart()
-                        sz.strumCooldown = true
-                        strumCooldownTimer.restart()
-                    }
-                }
-                sz.prevLeftPinch = lPinch
             }
         }
 

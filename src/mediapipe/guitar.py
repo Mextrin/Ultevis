@@ -12,8 +12,8 @@ OctaveGestureHoldController), so Python only needs to track:
 
 # ── Thresholds ────────────────────────────────────────────────────────────────
 PINCH_ON_THRESHOLD     = 0.035
-PINCH_OFF_THRESHOLD    = 0.05
-PINCH_RELEASE_VELOCITY = 0.008
+PINCH_OFF_THRESHOLD    = 0.1
+PINCH_RELEASE_VELOCITY = 0.015
 STRUM_THRESHOLD = 0.06
 STRUM_COOLDOWN_FRAMES = 3
 THUMB_SCORE_THRESHOLD  = 0.60
@@ -74,7 +74,7 @@ def thumb_down(gesture_categories) -> bool:
 # ── Main detection ────────────────────────────────────────────────────────────
 
 def detect_guitar_hands(detection_result):
-    global active_pinches, previous_pinch_distances, last_right_y, cooldown_frames 
+    global active_pinches, previous_pinch_distances
 
     payload = {
         "instrument": "guitar",
@@ -88,14 +88,12 @@ def detect_guitar_hands(detection_result):
         "rightPinch": False,
         "rightThumbUp": False,
         "rightThumbDown": False,
-        "guitarStrumDirection": "down",
     }
 
     active_zone_names = set()
     displayed_hand_positions = {}
 
     if not detection_result.handedness:
-        last_right_y = None
         active_pinches["Left"] = False
         previous_pinch_distances["Left"] = 1.0
         active_pinches["Right"] = False
@@ -129,22 +127,6 @@ def detect_guitar_hands(detection_result):
             payload["rightThumbUp"]     = thumb_up(gesture_categories)
             payload["rightThumbDown"]   = thumb_down(gesture_categories)
 
-            current_y = display_y
-
-            if last_right_y is not None:
-                velocity = current_y - last_right_y
-
-                if velocity > STRUM_THRESHOLD and cooldown_frames == 0:
-                    payload["guitarStrumHit"] = True
-                    payload["guitarStrumDirection"] = "down"
-                    cooldown_frames = STRUM_COOLDOWN_FRAMES
-                elif velocity < -STRUM_THRESHOLD and cooldown_frames == 0:
-                    payload["guitarStrumHit"] = True
-                    payload["guitarStrumDirection"] = "up"
-                    cooldown_frames = STRUM_COOLDOWN_FRAMES
-
-            last_right_y = current_y
-
         elif label == "Left":
             payload["leftHandVisible"] = True
             payload["leftHandX"] = display_x
@@ -152,7 +134,6 @@ def detect_guitar_hands(detection_result):
             payload["leftPinch"] = is_pinch(label, hand_landmarks)
 
     if "Right" not in processed_labels:
-        last_right_y = None
         active_pinches["Right"] = False
         previous_pinch_distances["Right"] = 1.0
 
