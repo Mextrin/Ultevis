@@ -162,16 +162,21 @@ void AppEngine::goBack() {
 
 void AppEngine::scheduleCameraModeStart(const QString& mode) {
     pendingCameraMode = mode;
+    m_cameraModeRetries = 8;
     cameraModeDelayTimer.start();
 }
 
 void AppEngine::launchPendingCameraMode() {
-    if (pendingCameraMode == "none" || pendingCameraMode.isEmpty()) {
-        return;
-    }
+    if (pendingCameraMode == "none" || pendingCameraMode.isEmpty()) return;
 
     sendCommandToPython(pendingCameraMode.toStdString());
-    pendingCameraMode = "none";
+
+    if (m_cameraModeRetries > 0) {
+        m_cameraModeRetries--;
+        cameraModeDelayTimer.start(); 
+    } else {
+        pendingCameraMode = "none";
+    }
 }
 
 void AppEngine::selectInstrument(const QString &name) {

@@ -144,6 +144,7 @@ private:
     QString m_currentMidiDevice = "None";
     QTimer cameraModeDelayTimer;
     QString pendingCameraMode = "none";
+    int m_cameraModeRetries = 0;
     QTimer handStatePollTimer;
 
     bool m_leftHandVisible = false;
