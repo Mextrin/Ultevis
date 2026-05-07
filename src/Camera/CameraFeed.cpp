@@ -213,6 +213,14 @@ void startCameraFeed(GlobalState* state) {
             state->leftThumbDown.store(parseBool(json,     "leftThumbDown"));
             state->rightThumbUp.store(parseBool(json,      "rightThumbUp"));
             state->rightThumbDown.store(parseBool(json,    "rightThumbDown"));
+
+            if (parseBool(json, "strumDetected")) {
+                bool strumIsDown = parseBool(json, "strumIsDown");
+                state->guitarVelocity.store(100);
+                state->guitarStrumDirection.store(
+                    strumIsDown ? GuitarStrumDirection::Down : GuitarStrumDirection::Up);
+                state->guitarStrumHit.store(true);
+            }
         }
         else if (instrument == "none") {
             state->rightHandVisible.store(false);

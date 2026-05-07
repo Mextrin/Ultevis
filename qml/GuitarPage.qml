@@ -259,125 +259,12 @@ Item {
     component StrumZone: Item {
         id: sz
 
-        property real rightStrumAnchorY: -1
-        property int  rightStrumDirection: 0
-        property real prevRightY: -1
-
-        property real leftStrumAnchorY: -1
-        property int  leftStrumDirection: 0
-        property real prevLeftY: -1
-
-        property bool strumCooldown: false
-
-        Timer {
-            id: strumCooldownTimer
-            interval: 180 
-            repeat:   false
-            onTriggered: sz.strumCooldown = false
-        }
-
-        Item {
-            id: hitArea
-            anchors.centerIn: parent
-            width: parent.width * 0.9
-            height: parent.height * 0.5
-        }
-
         Connections {
             target: root.engineReady ? appEngine : null
             function onHandStateChanged() {
-                if (!root.engineReady) return
-
-                // THE FIX 1: Lower the threshold to 25% of the hit area for much tighter, consistent strums
-                const threshold = hitArea.height * 0.25 
-
-                // --- RIGHT HAND STRUMMING ---
-                const rightHandInHitArea = root.rightHandInside(hitArea)
-                const rPinch = appEngine.rightPinch && rightHandInHitArea
-
-                if (rPinch) {
-                    const localRPt = sz.mapFromItem(cameraViewport, appEngine.rightHandX * cameraViewport.width, appEngine.rightHandY * cameraViewport.height)
-                    const currentY = localRPt.y
-
-                    if (sz.rightStrumAnchorY === -1 || sz.prevRightY === -1) {
-                        sz.rightStrumAnchorY = currentY
-                        sz.rightStrumDirection = 0
-                    } else {
-                        if (sz.rightStrumDirection === 1 && currentY < sz.prevRightY) {
-                            sz.rightStrumAnchorY = sz.prevRightY
-                            sz.rightStrumDirection = -1
-                        } else if (sz.rightStrumDirection === -1 && currentY > sz.prevRightY) {
-                            sz.rightStrumAnchorY = sz.prevRightY
-                            sz.rightStrumDirection = 1
-                        } else if (sz.rightStrumDirection === 0) {
-                            sz.rightStrumDirection = currentY > sz.prevRightY ? 1 : -1
-                        }
-
-                        if (Math.abs(currentY - sz.rightStrumAnchorY) > threshold) {
-                            if (!sz.strumCooldown && root.selectedChordRoot >= 0) {
-                                
-                                // THE FIX 2: Calculate direction (Y=0 is the top of the screen)
-                                var isUpStrum = currentY < sz.rightStrumAnchorY;
-                                
-                                // THE FIX 3: Pass the boolean to your updated C++ function
-                                appEngine.triggerGuitarStrum(100, isUpStrum)
-                                
-                                root.strumFlash = true
-                                strumFlashTimer.restart()
-                                sz.strumCooldown = true
-                                strumCooldownTimer.restart()
-                            }
-                            sz.rightStrumAnchorY = currentY 
-                        }
-                    }
-                    sz.prevRightY = currentY
-                } else {
-                    sz.rightStrumAnchorY = -1
-                    sz.rightStrumDirection = 0
-                    sz.prevRightY = -1
-                }
-
-                // --- LEFT HAND STRUMMING (Fallback) ---
-                const leftHandInHitArea = root.leftHandInside(hitArea)
-                const lPinch = appEngine.leftPinch && leftHandInHitArea
-
-                if (lPinch) {
-                    const localLPt = sz.mapFromItem(cameraViewport, appEngine.leftHandX * cameraViewport.width, appEngine.leftHandY * cameraViewport.height)
-                    const currentY = localLPt.y
-
-                    if (sz.leftStrumAnchorY === -1 || sz.prevLeftY === -1) {
-                        sz.leftStrumAnchorY = currentY
-                        sz.leftStrumDirection = 0
-                    } else {
-                        if (sz.leftStrumDirection === 1 && currentY < sz.prevLeftY) {
-                            sz.leftStrumAnchorY = sz.prevLeftY
-                            sz.leftStrumDirection = -1
-                        } else if (sz.leftStrumDirection === -1 && currentY > sz.prevLeftY) {
-                            sz.leftStrumAnchorY = sz.prevLeftY
-                            sz.leftStrumDirection = 1
-                        } else if (sz.leftStrumDirection === 0) {
-                            sz.leftStrumDirection = currentY > sz.prevLeftY ? 1 : -1
-                        }
-
-                        if (Math.abs(currentY - sz.leftStrumAnchorY) > threshold) {
-                            if (!sz.strumCooldown && root.selectedChordRoot >= 0) {
-                                
-                                var isUpStrumLeft = currentY < sz.leftStrumAnchorY;
-                                appEngine.triggerGuitarStrum(100, isUpStrumLeft)
-                                
-                                root.strumFlash = true
-                                strumFlashTimer.restart()
-                                sz.strumCooldown = true
-                                strumCooldownTimer.restart()
-                            }
-                            sz.leftStrumAnchorY = currentY
-                        }
-                    }
-                    sz.prevLeftY = currentY
-                } else {
-                    sz.leftStrumAnchorY = -1
-                    sz.leftStrumDirection = 0
-                    sz.prevLeftY = -1
+                if (root.engineReady && appEngine.guitarStrumHit) {
+                    root.strumFlash = true
+                    strumFlashTimer.restart()
                 }
             }
         }
