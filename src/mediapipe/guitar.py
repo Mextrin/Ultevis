@@ -8,13 +8,20 @@ Python handles:
   • Right-hand strum detection (frame-level Y-displacement with direction tracking)
 """
 
-PINCH_ON_THRESHOLD     = 0.065
-PINCH_OFF_THRESHOLD    = 0.12
+PINCH_ON_THRESHOLD     = 0.035
+PINCH_OFF_THRESHOLD    = 0.05
 PINCH_RELEASE_VELOCITY = 0.04
 THUMB_SCORE_THRESHOLD  = 0.60
 
 STRUM_THRESHOLD     = 0.07
 STRUM_COOLDOWN      = 5
+
+# Strum zone in normalised viewport coords (must match QML StrumZone bounds).
+# Right half of screen, bottom ~half, with a small margin off the edges.
+STRUM_ZONE_X_MIN = 0.50
+STRUM_ZONE_X_MAX = 0.98
+STRUM_ZONE_Y_MIN = 0.45
+STRUM_ZONE_Y_MAX = 0.97
 
 previous_pinch_distances = {"Left": 1.0, "Right": 1.0}
 active_pinches = {"Left": False, "Right": False}
@@ -178,7 +185,9 @@ def detect_guitar_hands(detection_result):
             payload["rightThumbUp"]   = thumb_up(gesture_categories)
             payload["rightThumbDown"] = thumb_down(gesture_categories)
 
-            strum_fired, strum_down = detect_strum(display_y, r_pinch)
+            in_strum_zone = (STRUM_ZONE_X_MIN <= display_x <= STRUM_ZONE_X_MAX
+                             and STRUM_ZONE_Y_MIN <= display_y <= STRUM_ZONE_Y_MAX)
+            strum_fired, strum_down = detect_strum(display_y, r_pinch and in_strum_zone)
             if strum_fired:
                 payload["strumDetected"] = True
                 payload["strumIsDown"]   = strum_down
