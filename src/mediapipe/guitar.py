@@ -118,6 +118,14 @@ def detect_strum(right_y: float, pinched: bool) -> tuple[bool, bool]:
 def detect_guitar_hands(detection_result):
     global active_pinches, previous_pinch_distances
 
+    # Proactively reset state for hands that are not visible in this frame.
+    # This prevents stale state from carrying over from previous frames.
+    visible_labels = {h[0].category_name for h in detection_result.handedness}
+    for hand in ["Left", "Right"]:
+        if hand not in visible_labels:
+            active_pinches[hand] = False
+            previous_pinch_distances[hand] = 1.0
+
     payload = {
         "instrument": "guitar",
         "leftHandVisible": False,
@@ -138,10 +146,6 @@ def detect_guitar_hands(detection_result):
     displayed_hand_positions = {}
 
     if not detection_result.handedness:
-        active_pinches["Left"] = False
-        previous_pinch_distances["Left"] = 1.0
-        active_pinches["Right"] = False
-        previous_pinch_distances["Right"] = 1.0
         return payload, active_zone_names, displayed_hand_positions
     
     gestures_per_hand = getattr(detection_result, "gestures", None) or []
@@ -184,15 +188,5 @@ def detect_guitar_hands(detection_result):
             payload["leftHandX"] = display_x
             payload["leftHandY"] = display_y
             payload["leftPinch"] = is_pinch(label, hand_landmarks)
-
-    if "Right" not in processed_labels:
-        active_pinches["Right"] = False
-        previous_pinch_distances["Right"] = 1.0
-        detect_strum(0.0, False)
-
-    if "Left" not in processed_labels:
-        active_pinches["Left"] = False
-        previous_pinch_distances["Left"] = 1.0
-
 
     return payload, active_zone_names, displayed_hand_positions
