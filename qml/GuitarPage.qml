@@ -276,15 +276,22 @@ Item {
             onTriggered: sz.strumCooldown = false
         }
 
+        Item {
+            id: hitArea
+            anchors.centerIn: parent
+            width: parent.width * 0.9
+            height: parent.height * 0.5
+        }
+
         Connections {
             target: root.engineReady ? appEngine : null
             function onHandStateChanged() {
                 if (!root.engineReady) return
 
-                const threshold = sz.height * 0.20 
+                const threshold = hitArea.height * 0.40 
 
-                const rightHandInZone = root.rightHandInside(sz)
-                const rPinch = appEngine.rightPinch && rightHandInZone
+                const rightHandInHitArea = root.rightHandInside(hitArea)
+                const rPinch = appEngine.rightPinch && rightHandInHitArea
 
                 if (rPinch) {
                     const localRPt = sz.mapFromItem(cameraViewport, appEngine.rightHandX * cameraViewport.width, appEngine.rightHandY * cameraViewport.height)
@@ -322,8 +329,8 @@ Item {
                     sz.prevRightY = -1
                 }
 
-                const leftHandInZone = root.leftHandInside(sz)
-                const lPinch = appEngine.leftPinch && leftHandInZone
+                const leftHandInHitArea = root.leftHandInside(hitArea)
+                const lPinch = appEngine.leftPinch && leftHandInHitArea
 
                 if (lPinch) {
                     const localLPt = sz.mapFromItem(cameraViewport, appEngine.leftHandX * cameraViewport.width, appEngine.leftHandY * cameraViewport.height)
@@ -577,7 +584,6 @@ Item {
         readonly property var sharpRoots:   ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"]
         readonly property var sharpIndices: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 
-        // --- MAP THE CORRECT ARRAYS TO THE TOGGLE ---
         readonly property var roots:       root.sharpsEnabled ? sharpRoots : naturalRoots
         readonly property var rootIndices: root.sharpsEnabled ? sharpIndices : naturalIndices
         readonly property int numRoots:    roots.length
@@ -585,13 +591,15 @@ Item {
         readonly property var qualities: ["Maj","Min","7","Maj7","Min7","Sus2","Sus4"]
         readonly property int numQ:      7
 
-        readonly property real colX:   width * 0.08   
+        // --- THE FIX: Move the column further right and let the wheel auto-scale ---
+        readonly property real colX:   width * 0.28   
         readonly property real colW:   width * 0.18   
         readonly property real semiCX: colX + colW    
         readonly property real semiCY: height * 0.50  
         readonly property real rowH:   height / numRoots
         readonly property real semiR:  Math.min((width - semiCX) * 0.92, height * 0.46)
         readonly property real innerR: semiR * 0.28
+        // ---------------------------------------------------------------------------
 
         property int  hovRoot:     -1
         property bool dragging:    false
@@ -636,9 +644,11 @@ Item {
                             var dx   = pt.x - cs.semiCX
                             var dy   = pt.y - cs.semiCY
                             
-                            // THE FIX: We completely removed the strict distance requirements! 
-                            // As long as you are basically on the right half of the wheel, it instantly snaps to the quality!
-                            if (dx >= -(cs.colW)) {
+                            // --- THE FIX: Calculate the exact distance from the center ---
+                            var dist = Math.sqrt(dx * dx + dy * dy)
+                            
+                            // --- THE FIX: Strict boundaries. Must be exactly inside the drawn ring! ---
+                            if (dx >= 0 && dist >= cs.innerR && dist <= cs.semiR) {
                                 var newQuality = cs.qualityFromAngle(dx, dy)
                                 if (root.selectedChordQuality !== newQuality) {
                                     root.selectedChordQuality = newQuality
@@ -659,8 +669,6 @@ Item {
 
                     if (lp && !cs.prevLPinch && inCol) {
                         var ri = cs.rootAtY(pt.y)
-                        
-                        // Map the visual column row perfectly to the global C++ Index (0 through 11)
                         var actualRootIndex = cs.rootIndices[ri]
                         
                         root.selectedChordRoot = actualRootIndex
@@ -773,7 +781,6 @@ Item {
                 for (var i = 0; i < n; i++) {
                     var ry    = i * rowH
                     
-                    // The visual row must check against the absolute C++ mapped index
                     var isSel = (cs.rootIndices[i] === sR)
                     var isHov = (i === hR)
 
@@ -914,7 +921,6 @@ Item {
             font.weight: Font.DemiBold; font.letterSpacing: 1.5; color: "#E07826"
         }
 
-        // --- RESTORED: The settings toggle to show 12 roots instead of 7! ---
         SettingsToggle {
             label:   "Show Sharps / Flats"
             checked: root.sharpsEnabled

@@ -172,7 +172,7 @@ def main():
 
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             clean_frame = np.ascontiguousarray(rgb_frame.copy())
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=clean_frame)
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=clean_frame.copy())
 
             # 3: MediaPipe
             if CAMERA_MODE in ["keyboard", "guitar", "theremin", "drums"]:
