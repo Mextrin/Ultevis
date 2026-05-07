@@ -7,7 +7,18 @@ from mediapipe.tasks.python import vision
 from mediapipe.tasks.python.vision import RunningMode
 from mediapipe.tasks.python.vision import face_landmarker as face_landmarker_module
 from dataclasses import dataclass
+import sys
 from pathlib import Path
+
+def get_resource_path(filename: str) -> Path:
+    try:
+        base_path = Path(sys._MEIPASS)
+    except AttributeError:
+        base_path = Path(__file__).parent
+    return base_path / filename
+
+FACE_MODEL_PATH = get_resource_path("face_landmarker.task")
+MODEL_PATH = get_resource_path("gesture_recognizer.task")
 
 PINCH_ON_THRESHOLD = 0.035
 PINCH_OFF_THRESHOLD = 0.05

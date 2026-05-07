@@ -38,7 +38,13 @@ endif()
 add_subdirectory(JUCE)
 add_subdirectory(sfizz)
 
-juce_add_console_app(Airchestra)
+juce_add_gui_app(Airchestra)
+
+if(APPLE)
+    set_target_properties(Airchestra PROPERTIES
+        MACOSX_BUNDLE_INFO_PLIST_ADDITIONS "<key>NSCameraUsageDescription</key><string>Airchestra needs camera access to track your hand movements for the virtual instruments.</string>"
+    )
+endif()
 
 target_sources(Airchestra PRIVATE 
     src/main.cpp

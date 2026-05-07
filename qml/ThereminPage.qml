@@ -84,7 +84,7 @@ Item {
             anchors.right: parent.right
             anchors.rightMargin: 20
             anchors.verticalCenter: parent.verticalCenter
-            value: appEngine.viewState ? appEngine.viewState.thereminWaveform : "sine"
+            value: (typeof appEngine !== "undefined" && appEngine.viewState && appEngine.viewState.thereminWaveform) ? appEngine.viewState.thereminWaveform : "sine"
             font.family: figTreeVariable.name
             onChanged: function(v) { appEngine.setThereminWaveform(v) }
         }

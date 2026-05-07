@@ -5,9 +5,18 @@ from mediapipe.tasks.python import vision
 from mediapipe.tasks.python.vision import RunningMode
 from collections import deque
 from pathlib import Path
+import sys
 
 
-MODEL_PATH = Path(__file__).with_name("hand_landmarker.task")
+def get_resource_path(filename: str) -> Path:
+    try:
+        base_path = Path(sys._MEIPASS)
+    except AttributeError:
+        base_path = Path(__file__).parent
+    return base_path / filename
+
+MODEL_PATH = get_resource_path("hand_landmarker.task")
+
 if not MODEL_PATH.exists():
     raise FileNotFoundError(f"MediaPipe hand landmarker model not found: {MODEL_PATH}")
 

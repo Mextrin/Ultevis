@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import math
 import mediapipe as mp
 import cv2
@@ -11,7 +12,15 @@ from keyboard_gestures import ThumbGestureTracker
 from keyboard_utils import KeyboardZone, PINCH_THRESHOLD, KEYBOARD_ZONES
 
 
-_GESTURE_MODEL_PATH = Path(__file__).with_name("gesture_recognizer.task")
+def get_resource_path(filename: str) -> Path:
+    try:
+        base_path = Path(sys._MEIPASS)
+    except AttributeError:
+        base_path = Path(__file__).parent
+    return base_path / filename
+
+_GESTURE_MODEL_PATH = get_resource_path("gesture_recognizer.task")
+
 if not _GESTURE_MODEL_PATH.exists():
     raise FileNotFoundError(f"MediaPipe gesture recognizer model not found: {_GESTURE_MODEL_PATH}")
 

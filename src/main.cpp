@@ -46,9 +46,13 @@ void launchHandDetector(const GlobalState& state)
     }
 
     const char* detectorScript = std::getenv("ULTEVIS_HAND_DETECTOR_SCRIPT");
+    QString binaryName = "mediapipe/hand_detector";
+#ifdef _WIN32
+    binaryName += ".exe";
+#endif
     const QString scriptPath = detectorScript != nullptr
         ? QString(detectorScript)
-        : airchestra::runtimePath("mediapipe/hand_detector.py");
+        : airchestra::runtimePath("mediapipe/hand_detector");
 
     QFileInfo scriptInfo(scriptPath);
     if (!scriptInfo.exists()) {
@@ -78,12 +82,12 @@ void launchHandDetector(const GlobalState& state)
     pythonProcess->setProcessChannelMode(QProcess::ForwardedChannels);
     pythonProcess->setWorkingDirectory(scriptInfo.absolutePath());
 
-    if (startPythonProcess("python", QStringList() << scriptPath))
+    if (startPythonProcess(scriptPath, QStringList())) {
+        std::cout << "Successfully launched standalone hand_detector binary!" << std::endl;
         return;
-
-#ifdef _WIN32
-    startPythonProcess("py", QStringList() << "-3" << scriptPath);
-#endif
+    }
+    
+    std::cerr << "Failed to launch the standalone binary." << std::endl;
 }
 
 int main(int argc, char* argv[])
