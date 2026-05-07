@@ -217,7 +217,7 @@ Item {
                     anchors.rightMargin: 20
                     anchors.bottom: parent.bottom
                     anchors.bottomMargin: 30
-                    height: parent.height * 0.45
+                    height: parent.height * 0.5
                 }
 
                 FretboardBars {
@@ -288,8 +288,10 @@ Item {
             function onHandStateChanged() {
                 if (!root.engineReady) return
 
-                const threshold = hitArea.height * 0.40 
+                // THE FIX 1: Lower the threshold to 25% of the hit area for much tighter, consistent strums
+                const threshold = hitArea.height * 0.25 
 
+                // --- RIGHT HAND STRUMMING ---
                 const rightHandInHitArea = root.rightHandInside(hitArea)
                 const rPinch = appEngine.rightPinch && rightHandInHitArea
 
@@ -313,7 +315,13 @@ Item {
 
                         if (Math.abs(currentY - sz.rightStrumAnchorY) > threshold) {
                             if (!sz.strumCooldown && root.selectedChordRoot >= 0) {
-                                appEngine.triggerGuitarStrum(100)
+                                
+                                // THE FIX 2: Calculate direction (Y=0 is the top of the screen)
+                                var isUpStrum = currentY < sz.rightStrumAnchorY;
+                                
+                                // THE FIX 3: Pass the boolean to your updated C++ function
+                                appEngine.triggerGuitarStrum(100, isUpStrum)
+                                
                                 root.strumFlash = true
                                 strumFlashTimer.restart()
                                 sz.strumCooldown = true
@@ -329,6 +337,7 @@ Item {
                     sz.prevRightY = -1
                 }
 
+                // --- LEFT HAND STRUMMING (Fallback) ---
                 const leftHandInHitArea = root.leftHandInside(hitArea)
                 const lPinch = appEngine.leftPinch && leftHandInHitArea
 
@@ -352,7 +361,10 @@ Item {
 
                         if (Math.abs(currentY - sz.leftStrumAnchorY) > threshold) {
                             if (!sz.strumCooldown && root.selectedChordRoot >= 0) {
-                                appEngine.triggerGuitarStrum(100)
+                                
+                                var isUpStrumLeft = currentY < sz.leftStrumAnchorY;
+                                appEngine.triggerGuitarStrum(100, isUpStrumLeft)
+                                
                                 root.strumFlash = true
                                 strumFlashTimer.restart()
                                 sz.strumCooldown = true

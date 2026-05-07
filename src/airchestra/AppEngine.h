@@ -82,7 +82,7 @@ public:
     Q_INVOKABLE void setKeyboardInstrument(int instrumentID);
 
     Q_INVOKABLE void setGuitarSound(int soundID);
-    Q_INVOKABLE void triggerGuitarStrum(int velocity);
+    Q_INVOKABLE void triggerGuitarStrum(int velocity, bool isUpStrum = false);
 
     Q_INVOKABLE void setGuitarChord(int rootIndex, int qualityIndex);
     Q_INVOKABLE void adjustGuitarVoicing(int delta);

@@ -555,9 +555,9 @@ void AppEngine::setGuitarSound(int soundID) {
     audioEngine->loadGuitarSound(soundID);
 }
 
-void AppEngine::triggerGuitarStrum(int velocity) {
+void AppEngine::triggerGuitarStrum(int velocity, bool isUpStrum) {
     globalState->guitarVelocity.store(qBound(0, velocity, 127));
-    globalState->guitarStrumDirection.store(GuitarStrumDirection::Down);
+    globalState->guitarStrumDirection.store(isUpStrum ? GuitarStrumDirection::Up : GuitarStrumDirection::Down);
     globalState->guitarStrumHit.store(true);
 }
 
