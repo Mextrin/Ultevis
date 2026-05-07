@@ -333,7 +333,7 @@ Item {
                 for (var s = 0; s < numStrings; s++) {
                     var sy = s0y + s * strSpacing
                     ctx.strokeStyle = "rgba(195,208,224,0.65)"
-                    ctx.lineWidth   = 1.8 + s * 0.45
+                    ctx.lineWidth   = 1.8 + (numStrings - 1 - s) * 0.45
                     ctx.beginPath()
                     ctx.moveTo(bodyLeft,  sy)
                     ctx.lineTo(bodyRight, sy)
@@ -780,16 +780,15 @@ Item {
             color: "#E07826"
         }
 
-        TypeSelector {
+        GuitarDropdownImages {
             anchors.right:          parent.right
             anchors.rightMargin:    20
             anchors.verticalCenter: parent.verticalCenter
-            model: ["Acoustic Guitar", "Clean Electric", "Distorted Electric"]
-            currentIndex: 0
-            onActivated: function(index) {
+            font.family: figTreeVariable.name
+            onChanged: function(key) {
                 if (!root.engineReady) return
-                const soundIds = [2, 0, 1]
-                appEngine.setGuitarSound(soundIds[index] ?? 2)
+                const soundIds = { "acoustic_guitar": 2, "electric_guitar": 0, "distorted_guitar": 1 }
+                appEngine.setGuitarSound(soundIds[key] ?? 2)
             }
         }
     }
@@ -876,10 +875,13 @@ Item {
 
         Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
 
-        Text {
-            text: "CHORD WHEEL"
-            font.family: figTreeVariable.name; font.pixelSize: 11
-            font.weight: Font.DemiBold; font.letterSpacing: 1.5; color: "#E07826"
+         Text {
+            text: "GUITAR SETTINGS"
+            font.family: figTreeVariable.name
+            font.pixelSize: 11
+            font.weight: Font.DemiBold
+            font.letterSpacing: 1.5
+            color: "#E07826"
         }
 
         SettingsToggle {

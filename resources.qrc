@@ -37,8 +37,13 @@
         <file>assets/icons/flute.svg</file>
         <file>assets/icons/harp.svg</file>
         <file>assets/icons/violin.svg</file>
+        <file>assets/icons/acoustic_guitar.svg</file>
+        <file>assets/icons/electric_guitar.svg</file>
+        <file>assets/icons/distorted_guitar.svg</file>
+        <file>assets/icons/distorted_guitar.png</file>
         <file>assets/drums/drum.png</file>
         <file>assets/drums/cymbal.png</file>
         <file>qml/components/KeyboardDropdownImages.qml</file>
+        <file>qml/components/GuitarDropdownImages.qml</file>
     </qresource>
 </RCC>
