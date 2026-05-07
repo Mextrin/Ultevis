@@ -105,6 +105,13 @@ int main(int argc, char* argv[])
     QQuickStyle::setStyle("Basic");
     QObject::connect(&app, &QCoreApplication::aboutToQuit, []() {
         airchestra::writeBlackCameraFrame();
+        
+        if (pythonProcess) {
+            std::cout << "[Airchestra] Shutting down Camera Engine..." << std::endl;
+            pythonProcess->terminate();         
+            pythonProcess->waitForFinished(500); 
+            pythonProcess->kill();     
+        }
     });
 
     //BOOT JUCE
