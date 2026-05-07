@@ -211,35 +211,10 @@ void AppEngine::selectInstrument(const QString &name) {
         // simple rotating test progression
         static int chordIndex = 0;
 
-        switch (chordIndex % 6) {
+        switch (chordIndex % 1) {
             case 0: // C major
-                globalState->currentGuitarRoot.store(GuitarChordRoot::E);
-                globalState->currentGuitarQuality.store(GuitarChordQuality::Minor);
-                break;
-
-            case 1: // G major
-                globalState->currentGuitarRoot.store(GuitarChordRoot::G);
-                globalState->currentGuitarQuality.store(GuitarChordQuality::Major);
-                break;
-
-            case 2: // A minor
-                globalState->currentGuitarRoot.store(GuitarChordRoot::A);
-                globalState->currentGuitarQuality.store(GuitarChordQuality::Minor);
-                break;
-
-            case 3: // F major
-                globalState->currentGuitarRoot.store(GuitarChordRoot::F);
-                globalState->currentGuitarQuality.store(GuitarChordQuality::Major);
-                break;
-
-            case 4: // D minor
-                globalState->currentGuitarRoot.store(GuitarChordRoot::D);
-                globalState->currentGuitarQuality.store(GuitarChordQuality::Minor);
-                break;
-
-            case 5: // G7
-                globalState->currentGuitarRoot.store(GuitarChordRoot::G);
-                globalState->currentGuitarQuality.store(GuitarChordQuality::Dom7);
+                globalState->currentGuitarRoot.store(GuitarChordRoot::C);
+                globalState->currentGuitarQuality.store(GuitarChordQuality::Sus2);
                 break;
         }
 
