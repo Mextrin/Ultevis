@@ -52,7 +52,7 @@ void launchHandDetector(const GlobalState& state)
 #endif
     const QString scriptPath = detectorScript != nullptr
         ? QString(detectorScript)
-        : airchestra::runtimePath("mediapipe/hand_detector");
+        : airchestra::runtimePath(binaryName);
 
     QFileInfo scriptInfo(scriptPath);
     if (!scriptInfo.exists()) {
@@ -79,7 +79,12 @@ void launchHandDetector(const GlobalState& state)
     
     pythonProcess->setProcessEnvironment(env);
 
+#ifdef _WIN32
+    pythonProcess->setProcessChannelMode(QProcess::SeparateChannels);
+#else
     pythonProcess->setProcessChannelMode(QProcess::ForwardedChannels);
+#endif
+
     pythonProcess->setWorkingDirectory(scriptInfo.absolutePath());
 
     if (startPythonProcess(scriptPath, QStringList())) {
