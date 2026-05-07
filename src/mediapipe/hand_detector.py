@@ -47,7 +47,6 @@ def camera_candidates():
     configured_index = os.environ.get("ULTEVIS_CAMERA_INDEX")
     indexes = [int(configured_index)] if configured_index is not None else [0, 1, 2, 3]
 
-    # Windows needs multiple driver fallbacks. Mac/Linux just use 'Any'.
     if sys.platform == "win32":
         backends = [("DirectShow", cv2.CAP_DSHOW), ("Media Foundation", cv2.CAP_MSMF), ("Any", cv2.CAP_ANY)]
     else:
@@ -65,7 +64,6 @@ def open_camera_safely():
         
         if sys.platform == "win32":
             cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-            # Ask for 1080p HD on Windows (10000x10000 is laggy on windows)
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
         else:
@@ -135,7 +133,6 @@ def main():
 
     try:
         while True:
-            # 1: Camera Mode & Hardware
             if CAMERA_MODE != requested_mode:
                 CAMERA_MODE = requested_mode
                 
@@ -160,7 +157,6 @@ def main():
                 time.sleep(0.05)
                 continue
 
-            # 2: Frame Capture 
             ret, frame = cap.read()
             if not ret or frame is None:
                 continue
@@ -174,7 +170,6 @@ def main():
             clean_frame = np.ascontiguousarray(rgb_frame.copy())
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=clean_frame.copy())
 
-            # 3: MediaPipe
             if CAMERA_MODE in ["keyboard", "guitar", "theremin", "drums"]:
                 if CAMERA_MODE == "theremin":
                     recognition_result = recognizer.detect_for_video(mp_image, current_timestamp_ms)
@@ -183,7 +178,6 @@ def main():
             else:
                 recognition_result = recognizer.recognize(mp_image)
 
-            # 4: Payload
             payload = {}
             active_zone_names = set()
             displayed_hand_positions = {}
@@ -223,7 +217,6 @@ def main():
             elif CAMERA_MODE == "theremin":
                 pass
 
-            # Downscale the final UI image here, so the original tracking stays accurate!
             resized_frame = cv2.resize(display_frame, (640, 360))
             cv2.imwrite(TEMP_FRAME_PATH, resized_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
             safe_replace(TEMP_FRAME_PATH, FINAL_FRAME_PATH)

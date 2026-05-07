@@ -8,30 +8,23 @@ Python handles:
   • Right-hand strum detection (frame-level Y-displacement with direction tracking)
 """
 
-# ── THRESHOLDS ────────────────────────────────────────────────────────────────
 PINCH_ON_THRESHOLD     = 0.065
 PINCH_OFF_THRESHOLD    = 0.12
 PINCH_RELEASE_VELOCITY = 0.04
 THUMB_SCORE_THRESHOLD  = 0.60
 
-# Strum: minimum normalised-Y travel from anchor to count as a strum stroke
 STRUM_THRESHOLD     = 0.07
-# Frames to lock out further strums after one fires (~165ms at 30fps)
 STRUM_COOLDOWN      = 5
 
-# ── Module-level hysteresis state ─────────────────────────────────────────────
 previous_pinch_distances = {"Left": 1.0, "Right": 1.0}
 active_pinches = {"Left": False, "Right": False}
 
-# ── Module-level strum state ──────────────────────────────────────────────────
-strum_anchor_y       = -1.0   # Y at the start of current stroke
-strum_direction      =  0     # 1 = down, -1 = up, 0 = undecided
+strum_anchor_y       = -1.0   
+strum_direction      =  0     
 strum_prev_y         = -1.0
-strum_cooldown       =  0     # short debounce after each strum (frames)
-strum_needs_reversal = False  # must reverse direction before the next strum fires
+strum_cooldown       =  0     
+strum_needs_reversal = False 
 
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def is_pinch(label: str, hand_landmarks) -> bool:
     global previous_pinch_distances, active_pinches
@@ -75,8 +68,6 @@ def thumb_down(gesture_categories) -> bool:
     return gesture_score(gesture_categories, "Thumb_Down") >= THUMB_SCORE_THRESHOLD
 
 
-# ── Strum detection ───────────────────────────────────────────────────────────
-
 def detect_strum(right_y: float, pinched: bool) -> tuple[bool, bool]:
     """Return (strum_fired, is_down_strum). Mutates module-level strum state."""
     global strum_anchor_y, strum_direction, strum_prev_y, strum_cooldown, strum_needs_reversal
@@ -97,7 +88,6 @@ def detect_strum(right_y: float, pinched: bool) -> tuple[bool, bool]:
         strum_direction = 0
         return False, False
 
-    # Track direction reversals; a reversal clears the gate for the next strum
     if strum_direction == 1 and right_y < strum_prev_y:
         strum_anchor_y       = strum_prev_y
         strum_direction      = -1
@@ -198,7 +188,7 @@ def detect_guitar_hands(detection_result):
     if "Right" not in processed_labels:
         active_pinches["Right"] = False
         previous_pinch_distances["Right"] = 1.0
-        detect_strum(0.0, False)  # flush strum state
+        detect_strum(0.0, False)
 
     if "Left" not in processed_labels:
         active_pinches["Left"] = False

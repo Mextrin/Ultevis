@@ -263,10 +263,8 @@ def drum_detect(recognition_result, mp_image=None, timestamp_ms=0):
 
     for hand_zone_key, (pinch, label, zone) in hands_in_zones.items():
         if pinch:
-            # We just add the zone.name here so the QML UI still lights up properly!
             active_zone_names.add(zone.name) 
 
-            # Check if THIS specific hand has already triggered THIS drum
             if hand_zone_key not in active_triggered_zones:
                 prefix = "right" if label == "Right" else "left"
 

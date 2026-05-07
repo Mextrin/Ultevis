@@ -35,11 +35,11 @@ left_hand_top_notes = {}
 left_hand_bottom_notes = {}
 
 
-active_finger_presses = {} # {(hand_label, finger_name): bool}
-locked_finger_zones = {}   # {(hand_label, finger_name): KeyboardZone}
+active_finger_presses = {} 
+locked_finger_zones = {}  
 
-PRESS_ON_BEND_RATIO = 0.85  # Must bend knuckle significantly to trigger (roughly 65 degrees)
-PRESS_OFF_BEND_RATIO = 0.91 # Must straighten hand to release (roughly 45 degrees)
+PRESS_ON_BEND_RATIO = 0.85 
+PRESS_OFF_BEND_RATIO = 0.91 
 
 FINGER_DIRECTION_LANDMARKS = {
     "thumb": (2, 4),
@@ -248,12 +248,9 @@ def detect_key_strokes(detection_result):
 
                 if is_pressed:
                     if not was_pressed:
-                        # The exact moment the finger presses down, lock the note!
                         locked_finger_zones[finger_id] = current_zone
                         active_zone = current_zone
                     else:
-                        # The finger is holding the note. Ignore its current X/Y coordinates
-                        # and force it to use the locked note from memory.
                         active_zone = locked_finger_zones.get(finger_id, current_zone)
 
                     if active_zone:
@@ -264,11 +261,9 @@ def detect_key_strokes(detection_result):
                         else:
                             (current_left_top_notes if is_top else current_left_bottom_notes)[active_zone.note] = True
                 else:
-                    # Finger lifted, clear the lock so it can press a new key next time
                     if finger_id in locked_finger_zones:
                         del locked_finger_zones[finger_id]
 
-    # Determine which notes to turn ON
     right_top_on = [n for n in current_right_top_notes if n not in right_hand_top_notes]
     left_top_on = [n for n in current_left_top_notes if n not in left_hand_top_notes]
     right_bottom_on = [n for n in current_right_bottom_notes if n not in right_hand_bottom_notes]
@@ -282,7 +277,6 @@ def detect_key_strokes(detection_result):
     if left_bottom_on:
         keyboard_payload["leftBottomNotesOn"] = " ".join(map(str, left_bottom_on))
 
-    # Determine which notes to turn OFF
     right_top_off = [n for n in right_hand_top_notes if n not in current_right_top_notes]
     left_top_off = [n for n in left_hand_top_notes if n not in current_left_top_notes]
     right_bottom_off = [n for n in right_hand_bottom_notes if n not in current_right_bottom_notes]
@@ -296,7 +290,6 @@ def detect_key_strokes(detection_result):
     if left_bottom_off:
         keyboard_payload["leftBottomNotesOff"] = " ".join(map(str, left_bottom_off))
 
-    # Update state for next frame
     right_hand_top_notes    = current_right_top_notes
     right_hand_bottom_notes = current_right_bottom_notes
     left_hand_top_notes     = current_left_top_notes
