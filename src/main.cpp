@@ -105,12 +105,21 @@ int main(int argc, char* argv[])
     QQuickStyle::setStyle("Basic");
     QObject::connect(&app, &QCoreApplication::aboutToQuit, []() {
         airchestra::writeBlackCameraFrame();
-        
+
         if (pythonProcess) {
             std::cout << "[Airchestra] Shutting down Camera Engine..." << std::endl;
-            pythonProcess->terminate();         
-            pythonProcess->waitForFinished(500); 
-            pythonProcess->kill();     
+    #ifdef _WIN32
+            qint64 pid = pythonProcess->processId();
+            if (pid > 0) {
+                QProcess::execute("taskkill", {"/F", "/T", "/PID", QString::number(pid)});
+            }
+            pythonProcess->waitForFinished(1000);
+            pythonProcess->kill();
+    #else
+            pythonProcess->terminate();
+            pythonProcess->waitForFinished(3000);
+            pythonProcess->kill();
+    #endif
         }
     });
 
