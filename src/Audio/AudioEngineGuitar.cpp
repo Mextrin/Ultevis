@@ -78,7 +78,6 @@ void HeadlessAudioEngine::processGuitar(juce::AudioBuffer<float>& buffer, int nu
         int activeQuality = static_cast<int>(globalState->currentGuitarQuality.load());
         int activeVoicing = globalState->currentGuitarVoicing.load();
 
-        // Bounds check
         if (activeRoot >= 0 && activeRoot < 12 && activeQuality >= 0 && activeQuality < 7) {
             
             const int* chord = airchestra::getGuitarChord(
@@ -96,7 +95,6 @@ void HeadlessAudioEngine::processGuitar(juce::AudioBuffer<float>& buffer, int nu
                     int stringIndex = isUpStrum ? (5 - i) : i;
                     pendingNotes[i] = chord[stringIndex];
                 }
-                // -------------------------------------------------------------------
 
                 pendingVelocity = globalState->guitarVelocity.load();
                 nextStringIndex = 0;

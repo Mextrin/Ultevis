@@ -33,7 +33,7 @@ inline bool writeBlackCameraFrame() {
     return frameFile.commit();
 }
 
-// 1. The Provider that hands the image to QML
+// The Provider that hands the image to QML
 class CameraImageProvider : public QQuickImageProvider {
 public:
     CameraImageProvider() : QQuickImageProvider(QQuickImageProvider::Image) {
@@ -52,14 +52,13 @@ private:
     QImage currentImage;
 };
 
-// 2. The Receiver that reads the Atomic Temp File
+// The Receiver that reads the Atomic Temp File
 class VideoReceiver : public QObject {
     Q_OBJECT
 public:
     VideoReceiver(CameraImageProvider* provider, QObject* parent = nullptr) 
         : QObject(parent), imgProvider(provider) 
     {
-        // Reset the shared temp frame on every launch so stale images cannot survive app restarts.
         framePath = cameraFramePath();
         writeBlackCameraFrame();
         if (imgProvider != nullptr) {
@@ -73,7 +72,6 @@ public:
 private slots:
     void grabFrame() {
         QImage img;
-        // QImage::load safely reads the file and handles the JPEG format instantly
         if (img.load(framePath)) {
             imgProvider->updateImage(img.convertToFormat(QImage::Format_RGB888));
         }
@@ -85,4 +83,4 @@ private:
     CameraImageProvider* imgProvider;
 };
 
-} // namespace airchestra
+}

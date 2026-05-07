@@ -13,7 +13,6 @@ namespace
             case 54: return 49; // Crash Cymbal: translates SM 54 to GM 49
             case 60: return 51; // Ride Cymbal: translates SM 60 to GM 51
 
-            // Kick (36), Snare (38), and Hi-Hats (42, 46), Low Tom (45) are already GM standard
             default: return smNote;
         }
     }

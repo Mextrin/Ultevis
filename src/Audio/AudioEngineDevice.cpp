@@ -15,7 +15,6 @@ void HeadlessAudioEngine::timerCallback()
     deviceManager.getAudioDeviceSetup(setup);
 
 #if JUCE_MAC
-    // Get the current macOS default output device name directly from CoreAudio
     AudioDeviceID defaultDeviceID = 0;
     UInt32 propSize = sizeof(defaultDeviceID);
     AudioObjectPropertyAddress defaultAddr {

@@ -16,4 +16,4 @@ inline QString runtimePath(const QString& relativePath)
     return base + "/" + relativePath;
 }
 
-} // namespace airchestra
+}

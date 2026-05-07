@@ -17,10 +17,8 @@ std::vector<std::pair<std::string, std::string>> HeadlessAudioEngine::getAvailab
 void HeadlessAudioEngine::openMidiDevice(const std::string& identifier)
 {
     if (identifier.empty()) {
-        // If "None" is selected, close the port by resetting the pointer
         midiOut.reset();
     } else {
-        // Ask JUCE to physically open the port to macOS (like your IAC Bus)
         midiOut = juce::MidiOutput::openDevice(identifier);
     }
 }

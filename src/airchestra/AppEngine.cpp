@@ -13,7 +13,7 @@
 #include <QStringList>
 #include <QFileInfo>
 
-// --- Network headers for sendCommandToPython ---
+// Network headers for sendCommandToPython
 #ifdef _WIN32
     #include <winsock2.h>
 #else
@@ -54,7 +54,7 @@ namespace {
         #endif
     }
 
-    // --- Helper function to trim drum SFZ file ---
+    // Helper function to trim drum SFZ file
     QString createTrimmedDrumSfz(const QString& originalSfzPath) {
         QFile originalFile(originalSfzPath);
         if (!originalFile.open(QIODevice::ReadOnly | QIODevice::Text)) return originalSfzPath;
@@ -581,7 +581,6 @@ void AppEngine::adjustGuitarVoicing(int delta) {
     }
 }
 
-// --- ADDED SETTER IMPLEMENTATIONS for Theremin Jingle ---
 void AppEngine::setRightHandVisible(bool visible) {
     if (globalState) {
         globalState->rightHandVisible.store(visible);
@@ -611,6 +610,5 @@ void AppEngine::setLeftHandY(qreal y) {
         globalState->leftHandY.store(y);
     }
 }
-// ------------------------------------
 
-} // namespace airchestra
+}

@@ -168,4 +168,4 @@ private:
     QVariantList m_activeBottomKeyboardNotes;
 };
 
-} // namespace airchestra
+}

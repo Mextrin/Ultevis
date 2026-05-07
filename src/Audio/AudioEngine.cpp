@@ -97,14 +97,14 @@ void HeadlessAudioEngine::audioDeviceAboutToStart(juce::AudioIODevice* device)
         std::lock_guard<std::mutex> lock(drumSynthMutex);
         drumSynth.setSampleRate(device->getCurrentSampleRate());
         drumSynth.setSamplesPerBlock(device->getCurrentBufferSizeSamples());
-        drumSynth.setNumVoices(12); //limit drum voices
+        drumSynth.setNumVoices(12);
     }
 
     {
         std::lock_guard<std::mutex> lock(keyboardSynthMutex);
         keyboardSynth.setSampleRate(device->getCurrentSampleRate());
         keyboardSynth.setSamplesPerBlock(device->getCurrentBufferSizeSamples());
-        keyboardSynth.setNumVoices(16); //limit piano voices
+        keyboardSynth.setNumVoices(16);
     }
 
     {

@@ -1,18 +1,14 @@
 #include "AudioEngine.h"
 #include <cmath>
 
-// Processes the theremin
 void HeadlessAudioEngine::processTheremin(juce::AudioBuffer<float>& buffer, int numSamples)
 {
     const bool isRightVisible = globalState->rightHandVisible.load();
     const bool isLeftVisible = globalState->leftHandVisible.load();
-
-    // We use a static variable to remember exactly which note we turned ON,
-    // so we can turn the correct note OFF even if the user moves the slider mid-note.
     static int activeThereminNote = 60;
 
     if (isRightVisible && !wasRightVisible) {
-        // Read the live UI slider value instead of the hardcoded 60
+        // Read the live UI slider value
         activeThereminNote = globalState->thereminCenterNote.load();
         
         synth.noteOn(1, activeThereminNote, 1.0f);

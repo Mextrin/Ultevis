@@ -12,7 +12,7 @@ namespace
     }
 }
 
-// Resets keyboard playback state so stale notes/pedal are not reused
+// Resets keyboard playback state
 void HeadlessAudioEngine::resetKeyboardPlaybackState()
 {
     if (globalState == nullptr)
@@ -35,7 +35,7 @@ void HeadlessAudioEngine::resetKeyboardPlaybackState()
     }
 }
 
-// Loads selected keyboard instrument based on ID
+// Loads selected keyboard instrument
 void HeadlessAudioEngine::loadKeyboardSound(int keyboardInstrumentID)
 {
     const juce::String instrumentsPath = juce::String(airchestra::runtimePath("Instruments").toStdString()) + "/";
@@ -43,7 +43,6 @@ void HeadlessAudioEngine::loadKeyboardSound(int keyboardInstrumentID)
     juce::String sfzToLoad = "";
 
     if (keyboardInstrumentID == 0) {
-        // Grand Piano
         sfzToLoad = instrumentsPath + "AccurateSalamanderGrandPianoV6.2beta2_48khz24bit/sfz_live/Accurate-SalamanderGrandPiano_flat.Recommended.sfz";
     }
     else if (keyboardInstrumentID == 1) {
@@ -81,14 +80,12 @@ void HeadlessAudioEngine::loadKeyboardSound(int keyboardInstrumentID)
     juce::File sfzFile(sfzToLoad);
     juce::String content = sfzFile.loadFileAsString();
 
-    //inject sustain values into sfz files for violin, flute, organ
     if (keyboardInstrumentID == 1 || keyboardInstrumentID == 2 || keyboardInstrumentID == 4) {
         juce::String patch = "\nampeg_decay=4.0\nampeg_sustain=0\n";
         content = content.replace("<global>", "<global>" + patch)
                          .replace("<group>", "<group>" + patch);
     }
 
-    // Load from memory using the absolute path so sfizz can find the .wav folders
     bool loaded = keyboardSynth.loadSfzString(sfzFile.getFullPathName().toStdString(), content.toStdString());
 
     if (!loaded) {
@@ -106,17 +103,12 @@ void HeadlessAudioEngine::processKeyboard(juce::AudioBuffer<float>& buffer, int 
         return;
 
     std::lock_guard<std::mutex> lock(keyboardSynthMutex);
-
-    // Sustain Pedal
     const bool isPedalPressed = globalState->sustainPedal.load();
 
     if (isPedalPressed != wasSustainPedalPressed) {
         int midiPedalValue = isPedalPressed ? 127 : 0;
-
-        // Send CC 64 to the internal sfizz engine (0 is the delay argument)
         keyboardSynth.cc(0, 64, midiPedalValue);
 
-        // Send CC 64 to Ableton/DAW
         if (midiOut != nullptr) {
             midiOut->sendMessageNow(juce::MidiMessage::controllerEvent(1, 64, midiPedalValue));
         }
@@ -127,9 +119,8 @@ void HeadlessAudioEngine::processKeyboard(juce::AudioBuffer<float>& buffer, int 
     for (int i = 0; i < 128; ++i) {
         bool isPressed = globalState->keyboardState[i].load();
         
-        // If GlobalState different from internal memory, it is a new press/release
         if (isPressed != internalKeyboardState[i]) {
-            internalKeyboardState[i] = isPressed; // Sync memory
+            internalKeyboardState[i] = isPressed;
             
             if (isPressed) {
                 const int vel = midiVelocityFromKeyboardStore(globalState->keyboardNoteVelocity[i].load());
