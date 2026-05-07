@@ -928,20 +928,6 @@ Item {
         z: 30
 
         Text {
-            text: "CHORD WHEEL"
-            font.family: figTreeVariable.name; font.pixelSize: 11
-            font.weight: Font.DemiBold; font.letterSpacing: 1.5; color: "#E07826"
-        }
-
-        SettingsToggle {
-            label:   "Show Sharps / Flats"
-            checked: root.sharpsEnabled
-            onCheckedChanged: root.sharpsEnabled = checked
-        }
-
-        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
-
-        Text {
             text: "MIDI OUTPUT"
             font.family: figTreeVariable.name; font.pixelSize: 11
             font.weight: Font.DemiBold; font.letterSpacing: 1.5; color: "#E07826"
@@ -1002,6 +988,18 @@ Item {
         }
 
         Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
-       
+
+        Text {
+            text: "CHORD WHEEL"
+            font.family: figTreeVariable.name; font.pixelSize: 11
+            font.weight: Font.DemiBold; font.letterSpacing: 1.5; color: "#E07826"
+        }
+
+        SettingsToggle {
+            label:   "Show Sharps / Flats"
+            checked: root.sharpsEnabled
+            onCheckedChanged: root.sharpsEnabled = checked
+        }
+
     }
 }

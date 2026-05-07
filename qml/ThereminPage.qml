@@ -150,6 +150,16 @@ Item {
                 width: 144
                 height: 40
 
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: parent.width
+                    height: parent.height
+                    radius: 10
+                    color: Qt.rgba(0, 0, 0, 0.30)
+                    border.color: Qt.rgba(1, 1, 1, 0.07)
+                    border.width: 1
+                }
+
                 Column {
                     anchors.centerIn: parent
                     spacing: 7
@@ -183,6 +193,16 @@ Item {
                 y: 14
                 width: 144
                 height: 40
+
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: parent.width
+                    height: parent.height
+                    radius: 10
+                    color: Qt.rgba(0, 0, 0, 0.30)
+                    border.color: Qt.rgba(1, 1, 1, 0.07)
+                    border.width: 1
+                }
 
                 Column {
                     anchors.centerIn: parent
