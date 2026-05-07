@@ -20,8 +20,8 @@ STRUM_COOLDOWN      = 5
 # Right half of screen, bottom ~half, with a small margin off the edges.
 STRUM_ZONE_X_MIN = 0.50
 STRUM_ZONE_X_MAX = 0.98
-STRUM_ZONE_Y_MIN = 0.45
-STRUM_ZONE_Y_MAX = 0.97
+STRUM_ZONE_Y_MIN = 0.55
+STRUM_ZONE_Y_MAX = 0.75
 
 previous_pinch_distances = {"Left": 1.0, "Right": 1.0}
 active_pinches = {"Left": False, "Right": False}
