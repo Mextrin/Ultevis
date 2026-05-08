@@ -317,22 +317,22 @@ Item {
                 var shCX = W * 0.62
                 var shR  = Math.min(W * 0.26, H * 0.44)
 
-                ctx.strokeStyle = "rgba(255,255,255,0.04)"
+                ctx.strokeStyle = "rgba(255,255,255,0.02)"
                 ctx.lineWidth   = 1
                 ctx.beginPath(); ctx.arc(shCX, cy, shR + 14, 0, Math.PI * 2); ctx.stroke()
 
-                ctx.strokeStyle = "rgba(224,120,38,0.18)"
+                ctx.strokeStyle = "rgba(224,120,38,0.08)"
                 ctx.lineWidth   = 1
                 ctx.beginPath(); ctx.arc(shCX, cy, shR + 10, 0, Math.PI * 2); ctx.stroke()
 
-                ctx.strokeStyle = "rgba(224,120,38,0.40)"
+                ctx.strokeStyle = "rgba(224,120,38,0.15)"
                 ctx.lineWidth   = 1.5
                 ctx.beginPath(); ctx.arc(shCX, cy, shR + 4,  0, Math.PI * 2); ctx.stroke()
 
-                ctx.fillStyle = "#040305"
+                ctx.fillStyle = "rgba(4, 3, 5, 0.40)"
                 ctx.beginPath(); ctx.arc(shCX, cy, shR, 0, Math.PI * 2); ctx.fill()
 
-                ctx.strokeStyle = "rgba(224,120,38,0.60)"
+                ctx.strokeStyle = "rgba(224,120,38,0.25)"
                 ctx.lineWidth   = 1.5
                 ctx.beginPath(); ctx.arc(shCX, cy, shR, 0, Math.PI * 2); ctx.stroke()
 
