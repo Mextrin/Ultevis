@@ -103,6 +103,21 @@ Item {
         smooth: true
         mipmap: true
 
+        Text {
+            id: loadingText
+            anchors.centerIn: parent
+            text: "Initializing Camera..."
+            font.family: figTreeVariable.name
+            font.pixelSize: 18
+            font.weight: Font.Medium
+            color: "#949AA5"
+            
+            SequentialAnimation on opacity {
+                PauseAnimation { duration: 2500 }
+                NumberAnimation { to: 0.0; duration: 500 }
+            }
+        }
+
         Timer {
             interval: 33
             running: true
