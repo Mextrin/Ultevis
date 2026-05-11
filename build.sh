@@ -20,7 +20,6 @@ build_python() {
     pip install --upgrade pip
     pip install opencv-python mediapipe numpy psutil pyinstaller
     
-    # Note: Mac uses colons (:) for data separation, unlike Windows!
     pyinstaller -y -D --collect-all mediapipe --add-data "face_landmarker.task:." --add-data "gesture_recognizer.task:." --add-data "hand_landmarker.task:." hand_detector.py
     
     deactivate
