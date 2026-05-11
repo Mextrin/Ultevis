@@ -8,17 +8,23 @@ EXE_PATH="${APP_ARTEFACT_DIR}/Airchestra"
 APP_BUNDLE_EXE="${APP_ARTEFACT_DIR}/Airchestra.app/Contents/MacOS/Airchestra"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# --- NEW HELPER FUNCTION ---
-setup_and_activate_python() {
-    if [ ! -d "${SCRIPT_DIR}/venv" ]; then
-        python3 -m venv "${SCRIPT_DIR}/venv"
-        
-        "${SCRIPT_DIR}/venv/bin/pip" install --upgrade pip
-        "${SCRIPT_DIR}/venv/bin/pip" install mediapipe opencv-python
+build_python() {
+    echo "[build-python] Building Python executable..."
+    cd "${SCRIPT_DIR}/src/mediapipe"
+    
+    if [ ! -d "venv" ]; then
+        python3 -m venv venv
     fi
-
-    # Activate it for the current bash session
-    source "${SCRIPT_DIR}/venv/bin/activate"
+    source venv/bin/activate
+    
+    pip install --upgrade pip
+    pip install opencv-python mediapipe numpy psutil pyinstaller
+    
+    # Note: Mac uses colons (:) for data separation, unlike Windows!
+    pyinstaller -y -D --collect-all mediapipe --add-data "face_landmarker.task:." --add-data "gesture_recognizer.task:." --add-data "hand_landmarker.task:." hand_detector.py
+    
+    deactivate
+    cd "${SCRIPT_DIR}"
 }
 
 app_executable() {
@@ -58,7 +64,7 @@ copy_runtime_files() {
     local runtime_dir
     runtime_dir="$(app_runtime_dir)"
 
-    copy_runtime_dir "${SCRIPT_DIR}/src/mediapipe" "${runtime_dir}/mediapipe" "MediaPipe scripts"
+    copy_runtime_dir "${SCRIPT_DIR}/src/mediapipe/dist/hand_detector" "${runtime_dir}/mediapipe" "MediaPipe Engine"
 
     if [ -d "${SCRIPT_DIR}/Instruments" ]; then
         copy_runtime_dir "${SCRIPT_DIR}/Instruments" "${runtime_dir}/Instruments" "Instruments"
@@ -68,6 +74,8 @@ copy_runtime_files() {
 }
 
 build_app() {
+    build_python
+
     cmake --build "${BUILD_DIR}" --config "${BUILD_CONFIG}"
     copy_runtime_files
 }
@@ -90,7 +98,6 @@ case "${1:-}" in
         ;;
 
     run)
-        setup_and_activate_python
         
         # Run C++ app in the current terminal
         "$(app_executable)"
@@ -99,7 +106,6 @@ case "${1:-}" in
     compile-and-run)
         build_app
         
-        setup_and_activate_python
         
         # Run C++ app in the current terminal
         "$(app_executable)"

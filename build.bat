@@ -90,6 +90,9 @@ exit /b
 exit /b
 
 :compile-app
+
+    call :build-python
+
     if not exist "%BUILD_DIR%\CMakeCache.txt" (
         echo Build directory is not configured. Run build.bat build-all first.
         set "BUILD_FAILED=1"
@@ -162,7 +165,7 @@ exit /b
     if errorlevel 1 exit /b 1
     call :copy-runtime-dir "%QT_QML_DIR%"          "%APP_OUTPUT_DIR%qml"          "Qt QML"
     if errorlevel 1 exit /b 1
-    call :copy-runtime-dir "%~dp0src\mediapipe"    "%APP_OUTPUT_DIR%mediapipe"    "MediaPipe scripts"
+    call :copy-runtime-dir "%~dp0src\mediapipe\dist\hand_detector"    "%APP_OUTPUT_DIR%mediapipe"    "MediaPipe Engine"
     if errorlevel 1 exit /b 1
     call :copy-runtime-dir "%~dp0Instruments"      "%APP_OUTPUT_DIR%Instruments"  "Instruments"
     if errorlevel 1 exit /b 1
@@ -187,3 +190,20 @@ exit /b
         exit /b 1
     )
 exit /b 0
+
+:build-python
+    echo [build-python] Building Python executable...
+    pushd "%~dp0src\mediapipe"
+    if not exist venv (
+        python -m venv venv
+    )
+    call venv\Scripts\activate.bat
+    pip install --upgrade pip
+    pip install opencv-python mediapipe numpy psutil pyinstaller
+    
+    rem Use -y to automatically overwrite old builds without asking
+    pyinstaller -y -D --collect-all mediapipe --add-data "face_landmarker.task;." --add-data "gesture_recognizer.task;." --add-data "hand_landmarker.task;." hand_detector.py
+    
+    call venv\Scripts\deactivate.bat
+    popd
+exit /b
